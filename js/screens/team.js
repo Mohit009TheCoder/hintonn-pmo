@@ -53,22 +53,41 @@ const TeamScreen = {
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Full Name <span style="color:#EF4444">*</span></label>
-          <input type="text" id="member-name" class="form-input" placeholder="e.g. Alex Morgan" required style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);" />
+          <input type="text" id="member-name" class="form-input" placeholder="e.g. Alex Morgan" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Email Address <span style="color:#EF4444">*</span></label>
-          <input type="email" id="member-email" class="form-input" placeholder="e.g. alex@hintonn.com" required style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);" />
+          <input type="email" id="member-email" class="form-input" placeholder="e.g. alex@hintonn.com" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role / Designation</label>
-          <select id="member-role-select" class="form-select" onchange="TeamScreen.handleRoleSelectChange(this)" style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);">
-            ${presets.map(p => `<option value="${p}">${p}</option>`).join('')}
-            <option value="__custom__">Custom Designation...</option>
-          </select>
+          <div id="role-dropdown-wrap" style="position:relative;">
+            <button type="button" id="role-dropdown-btn" onclick="TeamScreen.toggleRoleDropdown()" style="width:100%;height:42px;padding:0 36px 0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 150ms;">
+              <span id="role-dropdown-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">AI Developer</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" width="18" height="18" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="role-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface,#FFF);border:1px solid var(--color-border,#E5E7EB);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);z-index:1000;overflow:hidden;max-height:280px;overflow-y:auto;">
+              ${presets.map((p, i) => {
+                const active = i === 0;
+                return `<button type="button" data-role="${p}" onclick="TeamScreen.selectRole('${p}')" style="width:100%;padding:10px 14px;border:none;background:${active?'var(--color-primary-50,#EFF6FF)':'transparent'};color:${active?'var(--color-primary-700,#1D4ED8)':'var(--color-text-primary,#111827)'};font-size:13.5px;font-weight:${active?'600':'500'};text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 120ms;">
+                  <svg class="role-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;${active?'':'display:none;'}"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span class="role-spacer" style="width:14px;flex-shrink:0;${active?'display:none;':''}"></span>
+                  <span>${p}</span>
+                </button>`;
+              }).join('')}
+              <div style="height:1px;background:var(--color-border,#E5E7EB);margin:4px 0;"></div>
+              <button type="button" data-role="__custom__" onclick="TeamScreen.selectRole('__custom__')" style="width:100%;padding:10px 14px;border:none;background:transparent;color:var(--color-text-muted,#6B7280);font-size:13.5px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 120ms;">
+                <svg class="role-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;display:none;"><polyline points="20 6 9 17 4 12"/></svg>
+                <span class="role-spacer" style="width:14px;flex-shrink:0;"></span>
+                <span>Custom Designation...</span>
+              </button>
+            </div>
+            <input type="hidden" id="member-role-select" value="AI Developer">
+          </div>
         </div>
         <div id="member-custom-designation-wrap" style="display:none;">
           <label class="form-label" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;color:var(--color-text-secondary);">Custom Designation Title</label>
-          <input type="text" id="member-custom-designation" class="form-input" placeholder="e.g. Lead Solutions Architect, Prompt Engineer, MLOps Specialist" style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);" />
+          <input type="text" id="member-custom-designation" class="form-input" placeholder="e.g. Lead Solutions Architect, Prompt Engineer, MLOps Specialist" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
           <span style="font-size:11.5px;color:var(--color-text-muted);display:block;margin-top:4px;">Enter any specialized title or custom domain role.</span>
         </div>
       </div>
@@ -134,14 +153,33 @@ const TeamScreen = {
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role / Designation</label>
-          <select id="member-role-select" class="form-select" onchange="TeamScreen.handleRoleSelectChange(this)" style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);">
-            ${presets.map(p => `<option value="${p}" ${isPreset&&currentDesignation===p?'selected':''}>${p}</option>`).join('')}
-            <option value="__custom__" ${!isPreset?'selected':''}>Custom Designation...</option>
-          </select>
+          <div id="role-dropdown-wrap" style="position:relative;">
+            <button type="button" id="role-dropdown-btn" onclick="TeamScreen.toggleRoleDropdown()" style="width:100%;height:42px;padding:0 36px 0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all 150ms;">
+              <span id="role-dropdown-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${currentDesignation}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" width="18" height="18" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="role-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface,#FFF);border:1px solid var(--color-border,#E5E7EB);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);z-index:1000;overflow:hidden;max-height:280px;overflow-y:auto;">
+              ${presets.map(p => {
+                const active = p === currentDesignation;
+                return `<button type="button" data-role="${p}" onclick="TeamScreen.selectRole('${p}')" style="width:100%;padding:10px 14px;border:none;background:${active?'var(--color-primary-50,#EFF6FF)':'transparent'};color:${active?'var(--color-primary-700,#1D4ED8)':'var(--color-text-primary,#111827)'};font-size:13.5px;font-weight:${active?'600':'500'};text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 120ms;">
+                  <svg class="role-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;${active?'':'display:none;'}"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span class="role-spacer" style="width:14px;flex-shrink:0;${active?'display:none;':''}"></span>
+                  <span>${p}</span>
+                </button>`;
+              }).join('')}
+              <div style="height:1px;background:var(--color-border,#E5E7EB);margin:4px 0;"></div>
+              <button type="button" data-role="__custom__" onclick="TeamScreen.selectRole('__custom__')" style="width:100%;padding:10px 14px;border:none;background:${!isPreset?'var(--color-primary-50,#EFF6FF)':'transparent'};color:${!isPreset?'var(--color-primary-700,#1D4ED8)':'var(--color-text-muted,#6B7280)'};font-size:13.5px;font-weight:${!isPreset?'600':'500'};text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 120ms;">
+                <svg class="role-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;${!isPreset?'':'display:none;'}"><polyline points="20 6 9 17 4 12"/></svg>
+                <span class="role-spacer" style="width:14px;flex-shrink:0;${!isPreset?'display:none;':''}"></span>
+                <span>Custom Designation...</span>
+              </button>
+            </div>
+            <input type="hidden" id="member-role-select" value="${isPreset ? currentDesignation : '__custom__'}">
+          </div>
         </div>
         <div id="member-custom-designation-wrap" style="display:${isPreset?'none':'block'};">
           <label class="form-label" style="display:block;margin-bottom:4px;font-size:12px;font-weight:600;color:var(--color-text-secondary);">Custom Designation Title</label>
-          <input type="text" id="member-custom-designation" class="form-input" placeholder="e.g. Lead Solutions Architect" value="${!isPreset?currentDesignation:''}" style="width:100%;height:38px;padding:0 12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);" />
+          <input type="text" id="member-custom-designation" class="form-input" placeholder="e.g. Lead Solutions Architect" value="${!isPreset?currentDesignation:''}" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
         </div>
       </div>
     `;
@@ -153,17 +191,71 @@ const TeamScreen = {
     Modal.open(`Edit Role & Designation: ${m.name}`, bodyHtml, footerHtml);
   },
 
+  _roleDropdownOpen: false,
+  toggleRoleDropdown() {
+    this._roleDropdownOpen = !this._roleDropdownOpen;
+    const menu = document.getElementById('role-dropdown-menu');
+    const btn = document.getElementById('role-dropdown-btn');
+    if (menu) menu.style.display = this._roleDropdownOpen ? 'block' : 'none';
+    if (btn) btn.style.borderColor = this._roleDropdownOpen ? 'var(--color-primary,#2563EB)' : '';
+    if (this._roleDropdownOpen) {
+      this._closeRoleDropdownHandler = (e) => {
+        const wrap = document.getElementById('role-dropdown-wrap');
+        if (wrap && !wrap.contains(e.target)) this.toggleRoleDropdown();
+      };
+      setTimeout(() => document.addEventListener('click', this._closeRoleDropdownHandler), 0);
+    } else if (this._closeRoleDropdownHandler) {
+      document.removeEventListener('click', this._closeRoleDropdownHandler);
+      this._closeRoleDropdownHandler = null;
+    }
+  },
+  selectRole(value) {
+    const hiddenInput = document.getElementById('member-role-select');
+    const label = document.getElementById('role-dropdown-label');
+    const customWrap = document.getElementById('member-custom-designation-wrap');
+    if (hiddenInput) hiddenInput.value = value;
+    if (value === '__custom__') {
+      if (label) label.textContent = 'Custom Designation...';
+      if (customWrap) customWrap.style.display = 'block';
+      const customInput = document.getElementById('member-custom-designation');
+      if (customInput) setTimeout(() => customInput.focus(), 100);
+    } else {
+      if (label) label.textContent = value;
+      if (customWrap) customWrap.style.display = 'none';
+    }
+    this._roleDropdownOpen = false;
+    const menu = document.getElementById('role-dropdown-menu');
+    if (menu) menu.style.display = 'none';
+    const btn = document.getElementById('role-dropdown-btn');
+    if (btn) btn.style.borderColor = '';
+    // Update checkmarks via data-role attribute
+    if (menu) {
+      menu.querySelectorAll('[data-role]').forEach(item => {
+        const role = item.getAttribute('data-role');
+        const isActive = role === value;
+        item.style.background = isActive ? 'var(--color-primary-50,#EFF6FF)' : 'transparent';
+        item.style.color = isActive ? 'var(--color-primary-700,#1D4ED8)' : 'var(--color-text-primary,#111827)';
+        item.style.fontWeight = isActive ? '600' : '500';
+        const check = item.querySelector('.role-check');
+        if (check) check.style.display = isActive ? 'inline' : 'none';
+        const spacer = item.querySelector('.role-spacer');
+        if (spacer) spacer.style.display = isActive ? 'none' : 'inline';
+      });
+    }
+  },
+
   openEditMemberModal(memberId) { this.openEditRoleModal(memberId); },
 
   saveMemberRole(memberId) {
-    const select = document.getElementById('member-role-select');
+    const hiddenInput = document.getElementById('member-role-select');
     const customInput = document.getElementById('member-custom-designation');
-    if (!select) return;
+    if (!hiddenInput) { Toast.show('Could not read role selection.', 'error'); return; }
     let finalDesignation = '';
-    if (select.value === '__custom__') {
+    if (hiddenInput.value === '__custom__') {
       finalDesignation = (customInput ? customInput.value : '').trim();
       if (!finalDesignation) { Toast.show('Please enter a custom designation title.', 'error'); return; }
-    } else { finalDesignation = select.value.trim(); }
+    } else { finalDesignation = hiddenInput.value.trim(); }
+    if (!finalDesignation) { Toast.show('Please select a role.', 'error'); return; }
     const member = Store.getMember(memberId);
     if (!member) { Toast.show('Member not found.', 'error'); return; }
 
@@ -174,10 +266,14 @@ const TeamScreen = {
     // Use Store.updateMember to sync to Firebase
     Store.updateMember(memberId, updateData);
 
-    // Sync to Auth users
+    // Sync to Auth users so it persists across refresh
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       const authUser = Auth.users.find(u => u.memberId === memberId || u.id === memberId || u.name === member.name);
-      if (authUser) { authUser.designation = finalDesignation; authUser.title = finalDesignation; authUser.role = finalDesignation; }
+      if (authUser) {
+        authUser.designation = finalDesignation;
+        authUser.title = finalDesignation;
+        authUser.role = finalDesignation;
+      }
     }
     Toast.show(`Updated designation for ${member.name} to "${finalDesignation}".`, 'success');
     Modal.closeAll();

@@ -7,7 +7,7 @@ const DLPTimelinesScreen = {
   render() {
     const items = this._getDLPData();
     const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
-    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M'; if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); };
+    const fmtAmt = (n) => { if (!n || n === 0) return '₹0'; const s = Math.round(n).toString(); let result = ''; const len = s.length; if (len <= 3) return '₹' + s; result = s.slice(-3); let remaining = s.slice(0, -3); while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); } if (remaining.length > 0) result = remaining + ',' + result; return '₹' + result; };
     const activeDLPCount = items.filter(d => d.readiness < 100).length;
     const totalWarrantyVal = fmtAmt(items.reduce((s,d) => s + parseAmt(d.warrantyValue), 0));
     const openDefectsCount = items.reduce((s,d) => s + (d.openDefects || 0), 0);
@@ -51,7 +51,7 @@ const DLPTimelinesScreen = {
           <div class="kpi-value" style="font-size:20px">${nextExitDate}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
             <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Exit Pending</span>
-            PKG-05 ($140K Retention)
+            PKG-05 (₹1.18Cr Retention)
           </div>
         </div>
 
@@ -71,7 +71,7 @@ const DLPTimelinesScreen = {
             <span class="kpi-label">Warranty Retention</span>
             <div class="kpi-icon-wrap">${Icons.check}</div>
           </div>
-          <div class="kpi-value">$705K</div>
+          <div class="kpi-value">₹5.92Cr</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
             Guaranteed under DLP Bank Guarantees
           </div>

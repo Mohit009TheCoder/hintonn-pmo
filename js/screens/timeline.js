@@ -9,210 +9,165 @@ const TimelineScreen = {
   get _scale() { return this._viewScale; },
   set _scale(val) { this._viewScale = val; },
 
-  // Commercial EPC Packages Data
-  _projects: [
-    {
-      id: 'p1',
-      packageNo: 'PKG-01',
-      name: 'Main Substation EPC',
-      stage: 'execution',
-      stageLabel: 'Execution / Construction',
-      stagePillClass: 'stage-pill-exec',
-      barClass: 'stage-exec',
-      fillClass: 'fill-exec',
-      contractValue: '$5.4M',
-      progress: 68,
-      startDate: '2026-07-01',
-      endDate: '2026-12-31',
-      bgExpiry: 'Jan 15, 2027 (PBG $1.42M)',
-      assigneeIds: ['m2', 'm3'],
-      phases: [
-        { id: 'ph1-1', name: 'Engineering & Procurement', start: '2026-07-01', end: '2026-08-31', progress: 100, stage: 'execution', assigneeIds: ['m2'] },
-        { id: 'ph1-2', name: 'Substation Erection & Civil', start: '2026-09-01', end: '2026-10-31', progress: 75, stage: 'execution', assigneeIds: ['m3'] },
-        { id: 'ph1-3', name: 'Testing & Commissioning', start: '2026-11-01', end: '2026-12-31', progress: 10, stage: 'execution', assigneeIds: ['m2', 'm4'] }
-      ],
-      milestones: [
-        { id: 'ms1-1', name: 'Transformer Arrival & Base Seating', date: '2026-09-28', status: 'active-sep', isPulse: true, priority: 'high', color: '#DC2626' },
-        { id: 'ms1-2', name: 'Energization Milestone', date: '2026-12-15', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' }
-      ]
-    },
-    {
-      id: 'p2',
-      packageNo: 'PKG-02',
-      name: 'Civil & Site Facilities',
-      stage: 'execution',
-      stageLabel: 'Execution / Construction',
-      stagePillClass: 'stage-pill-exec',
-      barClass: 'stage-exec',
-      fillClass: 'fill-exec',
-      contractValue: '$3.8M',
-      progress: 42,
-      startDate: '2026-08-15',
-      endDate: '2026-11-30',
-      bgExpiry: 'Dec 15, 2026 (PBG $680K)',
-      assigneeIds: ['m3', 'm4'],
-      phases: [
-        { id: 'ph2-1', name: 'Earthworks & Foundation', start: '2026-08-15', end: '2026-09-30', progress: 80, stage: 'execution', assigneeIds: ['m3'] },
-        { id: 'ph2-2', name: 'Superstructure & Cladding', start: '2026-10-01', end: '2026-11-30', progress: 15, stage: 'execution', assigneeIds: ['m4'] }
-      ],
-      milestones: [
-        { id: 'ms2-1', name: 'Foundation Plinth Inspection', date: '2026-09-24', status: 'active-sep', isPulse: true, priority: 'normal', color: '#059669' },
-        { id: 'ms2-2', name: 'Roof Truss Structural Lock', date: '2026-10-25', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' }
-      ]
-    },
-    {
-      id: 'p3',
-      packageNo: 'PKG-03',
-      name: 'HVAC & Utilities Package',
-      stage: 'planning',
-      stageLabel: 'Planning / Design',
-      stagePillClass: 'stage-pill-plan',
-      barClass: 'stage-plan',
-      fillClass: 'fill-plan',
-      contractValue: '$2.1M',
-      progress: 15,
-      startDate: '2026-09-15',
-      endDate: '2027-01-31',
-      bgExpiry: 'Feb 28, 2027 (ABG $280K)',
-      assigneeIds: ['m2', 'm4'],
-      phases: [
-        { id: 'ph3-1', name: 'Detailed Design Approval', start: '2026-09-15', end: '2026-10-15', progress: 40, stage: 'planning', assigneeIds: ['m2'] },
-        { id: 'ph3-2', name: 'Ductwork & Piping Fab', start: '2026-10-16', end: '2026-12-15', progress: 0, stage: 'planning', assigneeIds: ['m4'] },
-        { id: 'ph3-3', name: 'Chiller Unit Installation', start: '2026-12-16', end: '2027-01-31', progress: 0, stage: 'planning', assigneeIds: ['m2'] }
-      ],
-      milestones: [
-        { id: 'ms3-1', name: 'Design Baseline Approval', date: '2026-10-10', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' }
-      ]
-    },
-    {
-      id: 'p4',
-      packageNo: 'PKG-04',
-      name: 'Automation & SCADA',
-      stage: 'dlp',
-      stageLabel: 'Handover & DLP Timelines',
-      stagePillClass: 'stage-pill-dlp',
-      barClass: 'stage-dlp',
-      fillClass: 'fill-dlp',
-      contractValue: '$1.6M',
-      progress: 90,
-      startDate: '2026-06-01',
-      endDate: '2026-11-15',
-      bgExpiry: 'Nov 30, 2026 (PBG $320K)',
-      assigneeIds: ['m2', 'm3', 'm4'],
-      phases: [
-        { id: 'ph4-1', name: 'SCADA Logic FAT', start: '2026-06-01', end: '2026-07-31', progress: 100, stage: 'dlp', assigneeIds: ['m2'] },
-        { id: 'ph4-2', name: 'Site SAT & Integration', start: '2026-08-01', end: '2026-09-30', progress: 95, stage: 'dlp', assigneeIds: ['m3'] },
-        { id: 'ph4-3', name: 'Handover & Trial Ops', start: '2026-10-01', end: '2026-11-15', progress: 20, stage: 'dlp', assigneeIds: ['m4'] }
-      ],
-      milestones: [
-        { id: 'ms4-1', name: 'SAT Verification Sign-off', date: '2026-09-30', status: 'active-sep', isPulse: true, priority: 'high', color: '#DC2626' },
-        { id: 'ms4-2', name: 'Taking-Over Certificate (TOC)', date: '2026-11-15', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' }
-      ]
-    },
-    {
-      id: 'p5',
-      packageNo: 'PKG-05',
-      name: 'Transmission Line Package',
-      stage: 'dlp',
-      stageLabel: 'Handover & DLP Timelines',
-      stagePillClass: 'stage-pill-dlp',
-      barClass: 'stage-dlp',
-      fillClass: 'fill-dlp',
-      contractValue: '$1.3M',
-      progress: 100,
-      startDate: '2026-05-01',
-      endDate: '2027-02-28',
-      bgExpiry: 'Mar 31, 2027 (MBG $190K)',
-      assigneeIds: ['m3'],
-      phases: [
-        { id: 'ph5-1', name: 'Final Handover / TOC', start: '2026-05-01', end: '2026-08-31', progress: 100, stage: 'dlp', assigneeIds: ['m3'] },
-        { id: 'ph5-2', name: 'Defect Liability Period (DLP)', start: '2026-09-01', end: '2027-02-28', progress: 25, stage: 'dlp', assigneeIds: ['m3'] }
-      ],
-      milestones: [
-        { id: 'ms5-1', name: 'Quarterly DLP Defect Audit', date: '2026-11-15', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' },
-        { id: 'ms5-2', name: 'Final DLP Discharge & Retention Release', date: '2027-02-28', status: 'upcoming', isPulse: false, priority: 'normal', color: '#059669' }
-      ]
-    }
-  ],
+  // Commercial EPC Packages Data — now loaded dynamically from Store
+  _projects: [],
 
-  // ─── Time Windows Config ───
+  // ─── Build timeline projects from Store data ───
+  _loadFromStore() {
+    if (typeof Store === 'undefined') return;
+    const storeProjects = Store.getProjects();
+    const storeTasks = Store.getTasks();
+    const storeMilestones = Store.getMilestones();
+
+    this._projects = storeProjects.map((p, idx) => {
+      // Derive stage from status
+      const stageMap = { 'planning': 'planning', 'active': 'execution', 'execution': 'execution', 'completed': 'dlp', 'on-hold': 'planning' };
+      const stage = stageMap[p.status] || 'planning';
+      const stageLabels = { 'execution': 'Execution / Construction', 'dlp': 'Handover & DLP Timelines', 'planning': 'Planning / Design' };
+      const stagePillClasses = { 'execution': 'stage-pill-exec', 'dlp': 'stage-pill-dlp', 'planning': 'stage-pill-plan' };
+      const barClasses = { 'execution': 'stage-exec', 'dlp': 'stage-dlp', 'planning': 'stage-plan' };
+      const fillClasses = { 'execution': 'fill-exec', 'dlp': 'fill-dlp', 'planning': 'fill-plan' };
+
+      // Get tasks for this project
+      const projTasks = storeTasks.filter(t => t.projectId === p.id);
+      const doneTasks = projTasks.filter(t => t.status === 'done');
+      const progress = projTasks.length > 0 ? Math.round((doneTasks.length / projTasks.length) * 100) : (p.progress || 0);
+
+      // Get milestones for this project
+      const projMilestones = storeMilestones.filter(m => m.projectId === p.id);
+
+      // Build phases from tasks grouped by status
+      const statusGroups = { 'todo': [], 'in-progress': [], 'review': [], 'done': [] };
+      projTasks.forEach(t => { if (statusGroups[t.status]) statusGroups[t.status].push(t); });
+      const phases = [];
+      const startDate = p.startDate || new Date().toISOString().split('T')[0];
+      const endDate = p.endDate || new Date(Date.now() + 90*86400000).toISOString().split('T')[0];
+
+      if (projTasks.length > 0) {
+        // Create phases from task groups
+        Object.entries(statusGroups).forEach(([status, tasks]) => {
+          if (tasks.length === 0) return;
+          const phaseProgress = status === 'done' ? 100 : status === 'review' ? 75 : status === 'in-progress' ? 40 : 0;
+          phases.push({
+            id: `ph-${p.id}-${status}`,
+            name: `${Utils.humanize(status)} Tasks`,
+            start: startDate,
+            end: endDate,
+            progress: phaseProgress,
+            stage: stage,
+            assigneeIds: [...new Set(tasks.map(t => t.assigneeId).filter(Boolean))]
+          });
+        });
+      } else {
+        phases.push({ id: `ph-${p.id}-default`, name: 'Project Duration', start: startDate, end: endDate, progress: progress, stage: stage, assigneeIds: p.memberIds || [] });
+      }
+
+      // Build milestones
+      const milestones = projMilestones.map(m => ({
+        id: m.id,
+        name: m.name,
+        date: m.dueDate || startDate,
+        status: m.status === 'completed' ? 'completed' : 'upcoming',
+        isPulse: m.status !== 'completed',
+        priority: 'normal',
+        color: m.status === 'completed' ? '#059669' : '#2563EB'
+      }));
+
+      // Package number
+      const packageNo = `PKG-${String(idx + 1).padStart(2, '0')}`;
+
+      return {
+        id: p.id,
+        packageNo,
+        name: p.name,
+        stage,
+        stageLabel: stageLabels[stage] || 'Planning / Design',
+        stagePillClass: stagePillClasses[stage] || 'stage-pill-plan',
+        barClass: barClasses[stage] || 'stage-plan',
+        fillClass: fillClasses[stage] || 'fill-plan',
+        contractValue: p.description || '₹0',
+        progress,
+        startDate,
+        endDate,
+        bgExpiry: '',
+        assigneeIds: p.memberIds || [],
+        phases,
+        milestones
+      };
+    });
+  },
+
+  // ─── Time Windows Config (Dynamic based on project dates) ───
   _getWindow() {
+    // Compute date range from actual projects
+    const projects = this._projects.length > 0 ? this._projects : [];
+    let minDate = new Date();
+    let maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 6);
+
+    if (projects.length > 0) {
+      const dates = projects.flatMap(p => [new Date(p.startDate), new Date(p.endDate)]).filter(d => !isNaN(d.getTime()));
+      if (dates.length > 0) {
+        minDate = new Date(Math.min(...dates));
+        maxDate = new Date(Math.max(...dates));
+        // Add 1 month buffer on each side
+        minDate.setMonth(minDate.getMonth() - 1);
+        maxDate.setMonth(maxDate.getMonth() + 1);
+      }
+    }
+
+    const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24));
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
     if (this._viewScale === 'day') {
-      return {
-        key: 'day',
-        start: new Date(2026, 8, 1, 0, 0, 0),     // Sept 1, 2026
-        end: new Date(2026, 8, 30, 23, 59, 59),   // Sept 30, 2026
-        totalDays: 30,
-        days: [
-          { num: 1, day: 'Tue', isToday: false },
-          { num: 2, day: 'Wed', isToday: false },
-          { num: 3, day: 'Thu', isToday: false },
-          { num: 4, day: 'Fri', isToday: false },
-          { num: 5, day: 'Sat', isToday: false },
-          { num: 6, day: 'Sun', isToday: false },
-          { num: 7, day: 'Mon', isToday: false },
-          { num: 8, day: 'Tue', isToday: false },
-          { num: 9, day: 'Wed', isToday: false },
-          { num: 10, day: 'Thu', isToday: false },
-          { num: 11, day: 'Fri', isToday: false },
-          { num: 12, day: 'Sat', isToday: false },
-          { num: 13, day: 'Sun', isToday: false },
-          { num: 14, day: 'Mon', isToday: false },
-          { num: 15, day: 'Tue', isToday: false },
-          { num: 16, day: 'Wed', isToday: false },
-          { num: 17, day: 'Thu', isToday: false },
-          { num: 18, day: 'Fri', isToday: false },
-          { num: 19, day: 'Sat', isToday: false },
-          { num: 20, day: 'Sun', isToday: false },
-          { num: 21, day: 'Mon', isToday: false },
-          { num: 22, day: 'Tue', isToday: false },
-          { num: 23, day: 'Wed', isToday: true },  // TODAY
-          { num: 24, day: 'Thu', isToday: false },
-          { num: 25, day: 'Fri', isToday: false },
-          { num: 26, day: 'Sat', isToday: false },
-          { num: 27, day: 'Sun', isToday: false },
-          { num: 28, day: 'Mon', isToday: false },
-          { num: 29, day: 'Tue', isToday: false },
-          { num: 30, day: 'Wed', isToday: false }
-        ]
-      };
+      // Day view: show current month
+      const dayStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const dayEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const daysInMonth = dayEnd.getDate();
+      const days = [];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(today.getFullYear(), today.getMonth(), d);
+        days.push({ num: d, day: dayNames[dt.getDay()], isToday: d === today.getDate() && dt.getMonth() === today.getMonth() });
+      }
+      return { key: 'day', start: dayStart, end: dayEnd, totalDays: daysInMonth, days };
     } else if (this._viewScale === 'week') {
-      return {
-        key: 'week',
-        start: new Date(2026, 8, 1, 0, 0, 0),     // Sept 1, 2026
-        end: new Date(2026, 10, 24, 23, 59, 59),  // Nov 24, 2026 (12 weeks = 84 days)
-        totalDays: 84,
-        weeks: [
-          { key: 'w1', label: 'Week 1', range: 'Sep 1 - Sep 7', isCurrent: false },
-          { key: 'w2', label: 'Week 2', range: 'Sep 8 - Sep 14', isCurrent: false },
-          { key: 'w3', label: 'Week 3', range: 'Sep 15 - Sep 21', isCurrent: false },
-          { key: 'w4', label: 'Week 4', range: 'Sep 22 - Sep 28', isCurrent: true }, // TODAY
-          { key: 'w5', label: 'Week 5', range: 'Sep 29 - Oct 5', isCurrent: false },
-          { key: 'w6', label: 'Week 6', range: 'Oct 6 - Oct 12', isCurrent: false },
-          { key: 'w7', label: 'Week 7', range: 'Oct 13 - Oct 19', isCurrent: false },
-          { key: 'w8', label: 'Week 8', range: 'Oct 20 - Oct 26', isCurrent: false },
-          { key: 'w9', label: 'Week 9', range: 'Oct 27 - Nov 2', isCurrent: false },
-          { key: 'w10', label: 'Week 10', range: 'Nov 3 - Nov 9', isCurrent: false },
-          { key: 'w11', label: 'Week 11', range: 'Nov 10 - Nov 16', isCurrent: false },
-          { key: 'w12', label: 'Week 12', range: 'Nov 17 - Nov 24', isCurrent: false }
-        ]
-      };
+      // Week view: 12 weeks from project start or today
+      const weekStart = projects.length > 0 ? new Date(minDate) : new Date(today);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 84);
+      const weeks = [];
+      for (let w = 0; w < 12; w++) {
+        const ws = new Date(weekStart);
+        ws.setDate(ws.getDate() + w * 7);
+        const we = new Date(ws);
+        we.setDate(we.getDate() + 6);
+        const isCurrent = today >= ws && today <= we;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        weeks.push({
+          key: `w${w+1}`, label: `Week ${w+1}`,
+          range: `${monthNames[ws.getMonth()]} ${ws.getDate()} - ${monthNames[we.getMonth()]} ${we.getDate()}`,
+          isCurrent
+        });
+      }
+      return { key: 'week', start: weekStart, end: weekEnd, totalDays: 84, weeks };
     } else {
-      // Month View (Default 6-Month Horizon)
-      return {
-        key: 'month',
-        start: new Date(2026, 8, 1, 0, 0, 0),   // Sept 1, 2026
-        end: new Date(2027, 1, 28, 23, 59, 59), // Feb 28, 2027
-        totalDays: 181,
-        months: [
-          { key: 'sep', label: 'SEP 2026', days: 30, isCurrent: true },
-          { key: 'oct', label: 'OCT 2026', days: 31, isCurrent: false },
-          { key: 'nov', label: 'NOV 2026', days: 30, isCurrent: false },
-          { key: 'dec', label: 'DEC 2026', days: 31, isCurrent: false },
-          { key: 'jan', label: 'JAN 2027', days: 31, isCurrent: false },
-          { key: 'feb', label: 'FEB 2027', days: 28, isCurrent: false }
-        ]
-      };
+      // Month view: from min to max project dates
+      const months = [];
+      const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+      while (cursor <= maxDate) {
+        const isCurrent = cursor.getFullYear() === today.getFullYear() && cursor.getMonth() === today.getMonth();
+        const daysInM = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        months.push({ key: `${monthNames[cursor.getMonth()]}-${cursor.getFullYear()}`, label: `${monthNames[cursor.getMonth()]} ${cursor.getFullYear()}`, days: daysInM, isCurrent });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+      if (months.length === 0) {
+        months.push({ key: `${monthNames[today.getMonth()]}-${today.getFullYear()}`, label: `${monthNames[today.getMonth()]} ${today.getFullYear()}`, days: 30, isCurrent: true });
+      }
+      return { key: 'month', start: minDate, end: maxDate, totalDays, months };
     }
   },
 
@@ -257,6 +212,7 @@ const TimelineScreen = {
 
   // ─── Filter & Search Handlers ───
   _getFilteredData() {
+    this._loadFromStore();
     let list = this._projects;
 
     if (this._activeStage !== 'all') {
@@ -379,7 +335,7 @@ const TimelineScreen = {
 
   // ─── Coordinate Conversion Helpers ───
   _getTodayPositionPercent() {
-    const today = new Date(2026, 8, 23, 12, 0, 0); // Sept 23, 2026
+    const today = new Date();
     const win = this._getWindow();
     const diffDays = (today - win.start) / (1000 * 60 * 60 * 24);
     const pct = (diffDays / win.totalDays) * 100;

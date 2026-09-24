@@ -22,7 +22,7 @@ const BankGuaranteesScreen = {
 
     const totalActive = allBGs.filter(b => b.status !== 'released').length;
     const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
-    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M'; if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); };
+    const fmtAmt = (n) => { if (!n || n === 0) return '₹0'; const s = Math.round(n).toString(); let result = ''; const len = s.length; if (len <= 3) return '₹' + s; result = s.slice(-3); let remaining = s.slice(0, -3); while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); } if (remaining.length > 0) result = remaining + ',' + result; return '₹' + result; };
     const totalValue = fmtAmt(allBGs.filter(b => b.status !== 'released').reduce((s,b) => s + parseAmt(b.amount), 0));
     const criticalCount = allBGs.filter(b => b.risk === 'critical').length;
     const warningCount = allBGs.filter(b => b.risk === 'warning').length;
@@ -75,7 +75,7 @@ const BankGuaranteesScreen = {
           </div>
           <div class="kpi-value">${warningCount} BGs</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            Expiring in 30–60 Days ($480,000)
+            Expiring in 30–60 Days (₹4.03Cr)
           </div>
         </div>
 
@@ -247,7 +247,7 @@ const BankGuaranteesScreen = {
           <input type="text" class="form-control" id="new-bg-bank" placeholder="e.g. Standard Chartered / HSBC">
         </div>
         <div class="form-group">
-          <label class="form-label">Guarantee Amount ($)</label>
+          <label class="form-label">Guarantee Amount (₹)</label>
           <input type="text" class="form-control" id="new-bg-amount" placeholder="e.g. 350,000">
         </div>
         <div class="form-group">
@@ -282,7 +282,7 @@ const BankGuaranteesScreen = {
     Store.createBankGuarantee({
       projectId,
       issuingBank: bank,
-      amount: amount.startsWith('$') ? amount : `$${amount}`,
+      amount: amount.startsWith('₹') ? amount : `₹${amount}`,
       type,
       expiryDate: expiry
     });

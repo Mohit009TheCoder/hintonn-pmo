@@ -17,7 +17,7 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','bankGuarantees','dlpRecords','retentionRecords']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','bankGuarantees','dlpRecords','retentionRecords','companies']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
@@ -64,7 +64,7 @@ const Store = {
       this._firestoreInitialized = true;
       console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: project-management-syste-bf69f)');
 
-      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords'];
+      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies'];
 
       syncCollections.forEach(colName => {
         this._db.collection(colName).onSnapshot(snapshot => {
@@ -339,6 +339,40 @@ const Store = {
     this._save(); this._notify();
     this._deleteFromFirestore('members', id);
     return m;
+  },
+
+  // ─── Companies ───
+  getCompanies() { return this._data.companies || []; },
+  getCompany(id) { return (this._data.companies || []).find(c => c.id === id); },
+  createCompany(d) {
+    const c = { id: d.id || this._genId(), name: d.name, contactPerson: d.contactPerson || '',
+      totalContractValue: d.totalContractValue || '', activePackage: d.activePackage || '',
+      totalBilledFormatted: d.totalBilledFormatted || '', totalPendingFormatted: d.totalPendingFormatted || '',
+      paymentStatus: d.paymentStatus || '', paymentStatusBadge: d.paymentStatusBadge || '',
+      billsCountText: d.billsCountText || '', hasRevisions: d.hasRevisions || false,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this._data.companies.push(c);
+    this._addActivity('company', `Added company <strong>${c.name}</strong>`);
+    this._addNotification('company', `New company added: ${c.name}`);
+    this._save(); this._notify();
+    this._syncToFirestore('companies', c.id, c);
+    return c;
+  },
+  updateCompany(id, d) {
+    const c = this.getCompany(id); if (!c) return null;
+    Object.assign(c, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('company', `Updated company <strong>${c.name}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('companies', c.id, c);
+    return c;
+  },
+  deleteCompany(id) {
+    const c = this.getCompany(id); if (!c) return;
+    this._data.companies = this._data.companies.filter(x => x.id !== id);
+    this._addActivity('company', `Deleted company <strong>${c.name}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('companies', id);
+    return c;
   },
 
   // ─── Invoices (Billing) ───
@@ -938,8 +972,36 @@ const Store = {
     const dlpRecords = [];
     const retentionRecords = [];
 
+    const companies = [
+      { id: 'c1', name: 'Apex Power & Energy Corp', contactPerson: 'Rohan Verma (VP Commercial)',
+        totalContractValue: '₹48,34,00,000', activePackage: 'PKG-01 · Core EPC Phase 1',
+        totalBilledFormatted: '₹16,12,80,000', totalPendingFormatted: '₹6,04,80,000',
+        paymentStatus: 'Partially Paid', paymentStatusBadge: 'badge-medium',
+        billsCountText: '3 Bills Issued · 2 Revisions', hasRevisions: true },
+      { id: 'c2', name: 'Vertex Grid Utilities Ltd', contactPerson: 'Deepak Shinde (Lead Engineer)',
+        totalContractValue: '₹28,56,00,000', activePackage: 'PKG-02 · Substation Package',
+        totalBilledFormatted: '₹10,58,40,000', totalPendingFormatted: '₹3,44,40,000',
+        paymentStatus: 'Partially Paid', paymentStatusBadge: 'badge-medium',
+        billsCountText: '2 Bills Issued · 1 Revision', hasRevisions: true },
+      { id: 'c3', name: 'Northern Powertech Systems', contactPerson: 'Sunil Mehta (Procurement Head)',
+        totalContractValue: '₹17,64,00,000', activePackage: 'PKG-03 · Utilities & Balance of Plant',
+        totalBilledFormatted: '₹2,35,20,000', totalPendingFormatted: '₹2,35,20,000',
+        paymentStatus: 'Pending Release', paymentStatusBadge: 'badge-review',
+        billsCountText: '1 Active Bill', hasRevisions: false },
+      { id: 'c4', name: 'Solaris Infra Concessions', contactPerson: 'Vikram Sen (Director Projects)',
+        totalContractValue: '₹12,60,00,000', activePackage: 'PKG-04 · SCADA & Grid Automation',
+        totalBilledFormatted: '₹8,73,60,000', totalPendingFormatted: '₹1,59,60,000',
+        paymentStatus: 'Partially Paid', paymentStatusBadge: 'badge-medium',
+        billsCountText: '2 Active Bills · 1 Revision', hasRevisions: true },
+      { id: 'c5', name: 'Metro Rail Transmission Authority', contactPerson: 'Anand Kulkarni (General Manager)',
+        totalContractValue: '₹11,76,00,000', activePackage: 'PKG-05 · Civil & Site Facilities',
+        totalBilledFormatted: '₹5,46,00,000', totalPendingFormatted: '₹0',
+        paymentStatus: 'Paid', paymentStatusBadge: 'badge-completed',
+        billsCountText: '1 Settled Bill', hasRevisions: false }
+    ];
+
     return { projects, tasks, members, milestones, issues, comments, notifications, activities,
-      invoices, bankGuarantees, dlpRecords, retentionRecords,
+      invoices, bankGuarantees, dlpRecords, retentionRecords, companies,
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };

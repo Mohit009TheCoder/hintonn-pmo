@@ -8,73 +8,7 @@ const BillingScreen = {
   _invoices: null,
 
   _getCompanies() {
-    return [
-      {
-        id: 'c1',
-        name: 'Apex Power & Energy Corp',
-        contactPerson: 'Rohan Verma (VP Commercial)',
-        totalContractValue: '₹48,34,00,000',
-        activePackage: 'PKG-01 · Core EPC Phase 1',
-        totalBilledFormatted: '₹16,12,80,000',
-        totalPendingFormatted: '₹6,04,80,000',
-        paymentStatus: 'Partially Paid',
-        paymentStatusBadge: 'badge-medium',
-        billsCountText: '3 Bills Issued · 2 Revisions',
-        hasRevisions: true
-      },
-      {
-        id: 'c2',
-        name: 'Vertex Grid Utilities Ltd',
-        contactPerson: 'Deepak Shinde (Lead Engineer)',
-        totalContractValue: '₹28,56,00,000',
-        activePackage: 'PKG-02 · Substation Package',
-        totalBilledFormatted: '₹10,58,40,000',
-        totalPendingFormatted: '₹3,44,40,000',
-        paymentStatus: 'Partially Paid',
-        paymentStatusBadge: 'badge-medium',
-        billsCountText: '2 Bills Issued · 1 Revision',
-        hasRevisions: true
-      },
-      {
-        id: 'c3',
-        name: 'Northern Powertech Systems',
-        contactPerson: 'Sunil Mehta (Procurement Head)',
-        totalContractValue: '₹17,64,00,000',
-        activePackage: 'PKG-03 · Utilities & Balance of Plant',
-        totalBilledFormatted: '₹2,35,20,000',
-        totalPendingFormatted: '₹2,35,20,000',
-        paymentStatus: 'Pending Release',
-        paymentStatusBadge: 'badge-review',
-        billsCountText: '1 Active Bill',
-        hasRevisions: false
-      },
-      {
-        id: 'c4',
-        name: 'Solaris Infra Concessions',
-        contactPerson: 'Vikram Sen (Director Projects)',
-        totalContractValue: '₹12,60,00,000',
-        activePackage: 'PKG-04 · SCADA & Grid Automation',
-        totalBilledFormatted: '₹8,73,60,000',
-        totalPendingFormatted: '₹1,59,60,000',
-        paymentStatus: 'Partially Paid',
-        paymentStatusBadge: 'badge-medium',
-        billsCountText: '2 Active Bills · 1 Revision',
-        hasRevisions: true
-      },
-      {
-        id: 'c5',
-        name: 'Metro Rail Transmission Authority',
-        contactPerson: 'Anand Kulkarni (General Manager)',
-        totalContractValue: '₹11,76,00,000',
-        activePackage: 'PKG-05 · Civil & Site Facilities',
-        totalBilledFormatted: '₹5,46,00,000',
-        totalPendingFormatted: '₹0',
-        paymentStatus: 'Paid',
-        paymentStatusBadge: 'badge-completed',
-        billsCountText: '1 Settled Bill',
-        hasRevisions: false
-      }
-    ];
+    return Store.getCompanies();
   },
 
   // ─── Normalize $ → ₹ for any legacy Firestore data ───

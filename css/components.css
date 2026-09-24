@@ -2693,3 +2693,193 @@
 
 
 
+
+
+/* ==========================================================================
+   Connectors Screen (Integrations, Data Sources & Knowledge Layer)
+   ========================================================================== */
+
+.connectors-screen {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  box-sizing: border-box;
+}
+
+.screen-content {
+  padding: 0;
+}
+
+.screen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.section-title-wrap {
+  margin-bottom: 14px;
+}
+
+.connector-section {
+  margin-bottom: 8px;
+}
+
+.connector-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.connector-card {
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.connector-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.connector-icon-wrap {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.file-section-icon-wrap {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* File Dropzone */
+.file-dropzone {
+  border: 2px dashed #CBD5E1;
+  border-radius: 10px;
+  background: #F8FAFC;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 24px;
+}
+
+.file-dropzone:hover {
+  border-color: var(--color-primary, #2563EB);
+  background: #EFF6FF;
+}
+
+.file-dropzone.drag-over {
+  border-color: var(--color-primary, #2563EB);
+  background: #EFF6FF;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.dropzone-icon-wrap {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px auto;
+  flex-shrink: 0;
+}
+
+/* Data Flow / Knowledge Layer Footer */
+.data-flow-section {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 22px 24px;
+  box-sizing: border-box;
+}
+
+.flow-diagram-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.flow-step-card {
+  flex: 1;
+  min-width: 220px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Spinner animation for sync buttons */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+/* Connectors Responsive */
+@media (max-width: 768px) {
+  .connectors-screen {
+    padding: 16px;
+  }
+
+  .connector-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .flow-diagram-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .flow-step-card {
+    min-width: 100%;
+  }
+
+  .flow-arrow {
+    transform: rotate(90deg);
+    padding: 4px 0;
+  }
+}

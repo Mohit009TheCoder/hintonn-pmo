@@ -102,7 +102,7 @@ const ConnectorsScreen = {
           </div>
           <div style="display: flex; gap: 10px;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.syncAllSources(this)" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-              \${Icons.refresh || ''}
+              ${Icons.refresh || ''}
               <span>Sync All Sources</span>
             </button>
           </div>
@@ -124,7 +124,7 @@ const ConnectorsScreen = {
             </div>
 
             <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
-              \${this._renderFcmCard()}
+              ${this._renderFcmCard()}
             </div>
           </section>
 
@@ -141,7 +141,7 @@ const ConnectorsScreen = {
             </div>
 
             <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
-              \${this._renderWebhooksCard()}
+              ${this._renderWebhooksCard()}
             </div>
           </section>
 
@@ -158,10 +158,10 @@ const ConnectorsScreen = {
             </div>
 
             <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px;">
-              \${this._renderGoogleSheetsCard()}
-              \${this._renderJiraCard()}
-              \${this._renderSlackCard()}
-              \${this._renderFilesCard()}
+              ${this._renderGoogleSheetsCard()}
+              ${this._renderJiraCard()}
+              ${this._renderSlackCard()}
+              ${this._renderFilesCard()}
             </div>
           </section>
 
@@ -187,7 +187,7 @@ const ConnectorsScreen = {
               </div>
               <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                 <span class="badge" style="background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
-                  <span id="files-count-badge">\${this.state.files.length}</span> Indexed Files
+                  <span id="files-count-badge">${this.state.files.length}</span> Indexed Files
                 </span>
               </div>
             </div>
@@ -223,7 +223,7 @@ const ConnectorsScreen = {
 
             <!-- Mock Interactive File List -->
             <div id="connector-files-list-container">
-              \${this._renderFileList()}
+              ${this._renderFileList()}
             </div>
           </section>
 
@@ -328,7 +328,7 @@ const ConnectorsScreen = {
           </p>
 
           <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);background:#F8FAFC;padding:8px 12px;border-radius:6px;border:1px solid #E2E8F0;">
-            <span>Project: <strong style="color:var(--color-text-primary);">\${this.state.fcm.projectId}</strong></span>
+            <span>Project: <strong style="color:var(--color-text-primary);">${this.state.fcm.projectId}</strong></span>
             <span>•</span>
             <span>Push: <strong style="color:#166534;">Enabled</strong></span>
           </div>
@@ -371,7 +371,7 @@ const ConnectorsScreen = {
           </p>
 
           <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);background:#F8FAFC;padding:8px 12px;border-radius:6px;border:1px solid #E2E8F0;">
-            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Endpoint: <strong style="color:var(--color-text-primary);">\${this.state.webhooks.url}</strong></span>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Endpoint: <strong style="color:var(--color-text-primary);">${this.state.webhooks.url}</strong></span>
           </div>
         </div>
 
@@ -412,13 +412,13 @@ const ConnectorsScreen = {
           </p>
 
           <div style="font-size:12px;color:var(--color-text-muted);">
-            Last synced: <strong style="color:var(--color-text-primary);">\${this.state.sheets.lastSynced}</strong> (\${this.state.sheets.recordCount} rows)
+            Last synced: <strong style="color:var(--color-text-primary);">${this.state.sheets.lastSynced}</strong> (${this.state.sheets.recordCount} rows)
           </div>
         </div>
 
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
           <button type="button" class="btn btn-outline btn-sm" id="btn-sync-sheets" onclick="ConnectorsScreen.syncGoogleSheets(this)" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
-            \${Icons.refresh || ''}
+            ${Icons.refresh || ''}
             <span>Sync Now</span>
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openSheetModal()" style="font-weight:600;">
@@ -446,16 +446,16 @@ const ConnectorsScreen = {
                 <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Issue Tracker / Atlassian</span>
               </div>
             </div>
-            \${isConn ? \`
+            ${isConn ? `
               <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
                 <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
                 Connected
               </span>
-            \` : \`
+            ` : `
               <span class="badge" style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;flex-shrink:0;">
                 Available
               </span>
-            \`}
+            `}
           </div>
 
           <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
@@ -463,13 +463,13 @@ const ConnectorsScreen = {
           </p>
 
           <div style="font-size:12px;color:var(--color-text-muted);">
-            \${isConn ? \`Workspace: <strong style="color:var(--color-text-primary);">\${this.state.jira.workspaceUrl || 'atlassian.net'}</strong>\` : 'Direct two-way sync for sprint tracking'}
+            ${isConn ? `Workspace: <strong style="color:var(--color-text-primary);">${this.state.jira.workspaceUrl || 'atlassian.net'}</strong>` : 'Direct two-way sync for sprint tracking'}
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn \${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openJiraModal()" style="font-weight:600;">
-            \${isConn ? 'Manage' : 'Connect'}
+          <button type="button" class="btn ${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openJiraModal()" style="font-weight:600;">
+            ${isConn ? 'Manage' : 'Connect'}
           </button>
         </div>
       </div>
@@ -493,16 +493,16 @@ const ConnectorsScreen = {
                 <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Team Chat & Incident Feeds</span>
               </div>
             </div>
-            \${isConn ? \`
+            ${isConn ? `
               <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
                 <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
                 Connected
               </span>
-            \` : \`
+            ` : `
               <span class="badge" style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;flex-shrink:0;">
                 Available
               </span>
-            \`}
+            `}
           </div>
 
           <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
@@ -510,13 +510,13 @@ const ConnectorsScreen = {
           </p>
 
           <div style="font-size:12px;color:var(--color-text-muted);">
-            \${isConn ? \`Channel: <strong style="color:var(--color-text-primary);">\${this.state.slack.channel || '#pmo-updates'}</strong>\` : 'Automated daily standup broadcasts'}
+            ${isConn ? `Channel: <strong style="color:var(--color-text-primary);">${this.state.slack.channel || '#pmo-updates'}</strong>` : 'Automated daily standup broadcasts'}
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn \${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openSlackModal()" style="font-weight:600;">
-            \${isConn ? 'Manage' : 'Connect'}
+          <button type="button" class="btn ${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openSlackModal()" style="font-weight:600;">
+            ${isConn ? 'Manage' : 'Connect'}
           </button>
         </div>
       </div>
@@ -550,13 +550,13 @@ const ConnectorsScreen = {
           </p>
 
           <div style="font-size:12px;color:var(--color-text-muted);">
-            <strong style="color:var(--color-text-primary);">\${this.state.files.length} documents</strong> processed into vector memory
+            <strong style="color:var(--color-text-primary);">${this.state.files.length} documents</strong> processed into vector memory
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;">
           <button type="button" class="btn btn-primary btn-sm" onclick="ConnectorsScreen.scrollToUpload()" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;">
-            \${Icons.upload || ''}
+            ${Icons.upload || ''}
             <span>Upload Files</span>
           </button>
         </div>
@@ -595,31 +595,31 @@ const ConnectorsScreen = {
             </tr>
           </thead>
           <tbody>
-            \${this.state.files.map(f => {
+            ${this.state.files.map(f => {
               const b = badgeStyles[f.ext] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
-              return \`
+              return `
                 <tr style="border-bottom:1px solid var(--color-border-subtle);transition:background 0.15s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
                   <td style="padding:12px 14px;">
                     <div style="display:flex;align-items:center;gap:10px;">
-                      <span style="background:\${b.bg};color:\${b.color};border:1px solid \${b.border};font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.03em;">
-                        \${f.ext}
+                      <span style="background:${b.bg};color:${b.color};border:1px solid ${b.border};font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.03em;">
+                        ${f.ext}
                       </span>
-                      <span style="font-weight:600;color:var(--color-text-primary);">\${f.name}</span>
+                      <span style="font-weight:600;color:var(--color-text-primary);">${f.name}</span>
                     </div>
                   </td>
-                  <td style="padding:12px 14px;color:var(--color-text-secondary);font-size:13px;">\${f.size}</td>
-                  <td style="padding:12px 14px;color:var(--color-text-muted);font-size:13px;">\${f.uploadedAt}</td>
+                  <td style="padding:12px 14px;color:var(--color-text-secondary);font-size:13px;">${f.size}</td>
+                  <td style="padding:12px 14px;color:var(--color-text-muted);font-size:13px;">${f.uploadedAt}</td>
                   <td style="padding:12px 14px;">
                     <span style="display:inline-flex;align-items:center;gap:6px;background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:12px;">
                       <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      \${f.status}
+                      ${f.status}
                     </span>
                   </td>
                   <td style="padding:12px 14px;text-align:right;">
                     <button 
                       type="button" 
                       class="btn btn-ghost btn-icon btn-sm" 
-                      onclick="ConnectorsScreen.openDeleteFileModal('\${f.id}')"
+                      onclick="ConnectorsScreen.openDeleteFileModal('${f.id}')"
                       title="Remove file from Knowledge Layer"
                       style="color:#94A3B8;transition:color 0.15s;"
                       onmouseover="this.style.color='#DC2626'"
@@ -629,7 +629,7 @@ const ConnectorsScreen = {
                     </button>
                   </td>
                 </tr>
-              \`;
+              `;
             }).join('')}
           </tbody>
         </table>
@@ -702,7 +702,7 @@ const ConnectorsScreen = {
       const parts = file.name.split('.');
       const ext = parts.length > 1 ? parts.pop().toUpperCase() : 'DOC';
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      const sizeStr = file.size < 1024 * 1024 ? \`\${Math.round(file.size / 1024)} KB\` : \`\${sizeMb} MB\`;
+      const sizeStr = file.size < 1024 * 1024 ? `${Math.round(file.size / 1024)} KB` : `${sizeMb} MB`;
       return {
         id: 'f-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
         name: file.name,
@@ -714,7 +714,7 @@ const ConnectorsScreen = {
     });
 
     this.state.files = [...newFiles, ...this.state.files];
-    Toast.show(\`Uploaded and indexed \${newFiles.length} file(s) into Knowledge Layer\`, 'success');
+    Toast.show(`Uploaded and indexed ${newFiles.length} file(s) into Knowledge Layer`, 'success');
     this._refreshFileList();
   },
 
@@ -731,10 +731,10 @@ const ConnectorsScreen = {
 
     Modal.confirm(
       'Remove File from Knowledge Base',
-      \`Are you sure you want to remove <strong>\${file.name}</strong>? This document will be unindexed from the AI Assistant context memory.\`,
+      `Are you sure you want to remove <strong>${file.name}</strong>? This document will be unindexed from the AI Assistant context memory.`,
       () => {
         this.state.files = this.state.files.filter(f => f.id !== fileId);
-        Toast.show(\`Removed \${file.name} from Knowledge Layer\`, 'success');
+        Toast.show(`Removed ${file.name} from Knowledge Layer`, 'success');
         this._refreshFileList();
       },
       { confirmText: 'Remove File', danger: true }
@@ -744,40 +744,40 @@ const ConnectorsScreen = {
   // 1. Firebase Cloud Messaging Modal
   openFcmModal() {
     const fcm = this.state.fcm;
-    const body = \`
+    const body = `
       <form id="fcm-config-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveFcmConfig(this);" style="display:flex;flex-direction:column;gap:14px;">
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Firebase Project ID</label>
-          <input type="text" id="fcm-project-id" class="form-input" value="\${fcm.projectId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="fcm-project-id" class="form-input" value="${fcm.projectId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">FCM Sender ID</label>
-          <input type="text" id="fcm-sender-id" class="form-input" value="\${fcm.senderId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="fcm-sender-id" class="form-input" value="${fcm.senderId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Server API Key / Service Account</label>
-          <input type="password" id="fcm-server-key" class="form-input" value="\${fcm.serverKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="password" id="fcm-server-key" class="form-input" value="${fcm.serverKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-text-primary);cursor:pointer;">
-            <input type="checkbox" id="fcm-push-toggle" \${fcm.pushEnabled ? 'checked' : ''} />
+            <input type="checkbox" id="fcm-push-toggle" ${fcm.pushEnabled ? 'checked' : ''} />
             <span>Enable real-time push notifications for assigned tasks</span>
           </label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-text-primary);cursor:pointer;">
-            <input type="checkbox" id="fcm-incident-toggle" \${fcm.incidentAlerts ? 'checked' : ''} />
+            <input type="checkbox" id="fcm-incident-toggle" ${fcm.incidentAlerts ? 'checked' : ''} />
             <span>Dispatch high-priority incident and blocker broadcasts</span>
           </label>
         </div>
       </form>
-    \`;
+    `;
 
-    const footer = \`
+    const footer = `
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
       <button type="button" class="btn btn-primary" onclick="document.getElementById('fcm-config-form').requestSubmit()">Save Configuration</button>
-    \`;
+    `;
 
     Modal.open('Configure Firebase Cloud Messaging (FCM)', body, footer);
   },
@@ -801,16 +801,16 @@ const ConnectorsScreen = {
   // 2. Webhooks Configuration Modal
   openWebhooksModal() {
     const wh = this.state.webhooks;
-    const body = \`
+    const body = `
       <form id="webhook-config-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveWebhooksConfig(this);" style="display:flex;flex-direction:column;gap:14px;">
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Webhook Destination URL</label>
-          <input type="url" id="wh-url" class="form-input" value="\${wh.url}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="url" id="wh-url" class="form-input" value="${wh.url}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Secret Signing Key (HMAC-SHA256)</label>
-          <input type="text" id="wh-secret" class="form-input" value="\${wh.secretKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;font-family:monospace;" />
+          <input type="text" id="wh-secret" class="form-input" value="${wh.secretKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;font-family:monospace;" />
         </div>
 
         <div style="text-align:left;">
@@ -823,14 +823,14 @@ const ConnectorsScreen = {
           </div>
         </div>
       </form>
-    \`;
+    `;
 
-    const footer = \`
+    const footer = `
       <button type="button" class="btn btn-secondary" onclick="ConnectorsScreen.testWebhookPing()">Send Test Ping</button>
       <div style="flex:1;"></div>
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
       <button type="button" class="btn btn-primary" onclick="document.getElementById('webhook-config-form').requestSubmit()">Save Webhook</button>
-    \`;
+    `;
 
     Modal.open('Manage Webhooks & Event Dispatches', body, footer, { large: true });
   },
@@ -850,10 +850,10 @@ const ConnectorsScreen = {
   // 3. Google Sheets Modal & Sync
   openSheetModal() {
     const sheets = this.state.sheets;
-    const body = \`
+    const body = `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 14px;font-size:13px;color:#166534;">
-          <strong>Active Spreadsheet:</strong> \${sheets.sheetName} (\${sheets.recordCount} rows synchronized)
+          <strong>Active Spreadsheet:</strong> ${sheets.sheetName} (${sheets.recordCount} rows synchronized)
         </div>
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Google Sheet Document URL or ID</label>
@@ -868,12 +868,12 @@ const ConnectorsScreen = {
           </select>
         </div>
       </div>
-    \`;
+    `;
 
-    const footer = \`
+    const footer = `
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
       <button type="button" class="btn btn-primary" onclick="Modal.closeAll(); Toast.show('Google Sheets configuration saved', 'success');">Save Settings</button>
-    \`;
+    `;
 
     Modal.open('Manage Google Sheets Data Source', body, footer);
   },
@@ -881,13 +881,13 @@ const ConnectorsScreen = {
   syncGoogleSheets(btnEl) {
     if (btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = \`<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...\`;
+      btnEl.innerHTML = `<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...`;
     }
     setTimeout(() => {
       this.state.sheets.lastSynced = 'Just now';
       if (btnEl) {
         btnEl.disabled = false;
-        btnEl.innerHTML = \`\${Icons.refresh || ''} <span>Sync Now</span>\`;
+        btnEl.innerHTML = `${Icons.refresh || ''} <span>Sync Now</span>`;
       }
       Toast.show('Google Sheets synchronized: 428 records updated in Knowledge Layer', 'success');
       if (App.currentScreen === 'connectors') App.refresh();
@@ -897,7 +897,7 @@ const ConnectorsScreen = {
   // 4. Jira Connection Modal
   openJiraModal() {
     const isConn = this.state.jira.connected;
-    const body = \`
+    const body = `
       <form id="jira-connection-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveJiraConnection(this);" style="display:flex;flex-direction:column;gap:14px;">
         <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0;">
           Authenticate Atlassian Jira to map epics, stories, and sprint tasks directly into PMS milestones.
@@ -905,29 +905,29 @@ const ConnectorsScreen = {
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Jira Workspace Domain</label>
-          <input type="text" id="jira-domain" class="form-input" placeholder="e.g. hintonn-tech.atlassian.net" value="\${this.state.jira.workspaceUrl || 'hintonn-team.atlassian.net'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="jira-domain" class="form-input" placeholder="e.g. hintonn-tech.atlassian.net" value="${this.state.jira.workspaceUrl || 'hintonn-team.atlassian.net'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Atlassian API Token / OAuth Key</label>
-          <input type="password" id="jira-token" class="form-input" placeholder="Enter API token" value="\${this.state.jira.apiToken || '••••••••••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="password" id="jira-token" class="form-input" placeholder="Enter API token" value="${this.state.jira.apiToken || '••••••••••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Target Project Key</label>
-          <input type="text" id="jira-key" class="form-input" value="\${this.state.jira.projectKey || 'PMO'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="jira-key" class="form-input" value="${this.state.jira.projectKey || 'PMO'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
       </form>
-    \`;
+    `;
 
-    const footer = \`
-      \${isConn ? \`
+    const footer = `
+      ${isConn ? `
         <button type="button" class="btn btn-danger" onclick="ConnectorsScreen.disconnectJira()">Disconnect</button>
-      \` : ''}
+      ` : ''}
       <div style="flex:1;"></div>
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('jira-connection-form').requestSubmit()">\${isConn ? 'Update Connection' : 'Save Connection'}</button>
-    \`;
+      <button type="button" class="btn btn-primary" onclick="document.getElementById('jira-connection-form').requestSubmit()">${isConn ? 'Update Connection' : 'Save Connection'}</button>
+    `;
 
     Modal.open(isConn ? 'Manage Jira Connection' : 'Connect Jira Workspace', body, footer);
   },
@@ -957,7 +957,7 @@ const ConnectorsScreen = {
   // 5. Slack Connection Modal
   openSlackModal() {
     const isConn = this.state.slack.connected;
-    const body = \`
+    const body = `
       <form id="slack-connection-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveSlackConnection(this);" style="display:flex;flex-direction:column;gap:14px;">
         <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0;">
           Connect your Slack workspace for automated daily task summaries and team event dispatching.
@@ -965,29 +965,29 @@ const ConnectorsScreen = {
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Slack Workspace URL</label>
-          <input type="text" id="slack-domain" class="form-input" placeholder="e.g. hintonn.slack.com" value="\${this.state.slack.workspaceUrl || 'hintonn-ai.slack.com'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="slack-domain" class="form-input" placeholder="e.g. hintonn.slack.com" value="${this.state.slack.workspaceUrl || 'hintonn-ai.slack.com'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Bot User OAuth Token (xoxb-...)</label>
-          <input type="password" id="slack-token" class="form-input" placeholder="xoxb-..." value="\${this.state.slack.botToken || 'xoxb-948291048102-••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="password" id="slack-token" class="form-input" placeholder="xoxb-..." value="${this.state.slack.botToken || 'xoxb-948291048102-••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
 
         <div class="form-group" style="text-align:left;">
           <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Broadcast Channel</label>
-          <input type="text" id="slack-channel" class="form-input" value="\${this.state.slack.channel || '#pmo-updates'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+          <input type="text" id="slack-channel" class="form-input" value="${this.state.slack.channel || '#pmo-updates'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
         </div>
       </form>
-    \`;
+    `;
 
-    const footer = \`
-      \${isConn ? \`
+    const footer = `
+      ${isConn ? `
         <button type="button" class="btn btn-danger" onclick="ConnectorsScreen.disconnectSlack()">Disconnect</button>
-      \` : ''}
+      ` : ''}
       <div style="flex:1;"></div>
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('slack-connection-form').requestSubmit()">\${isConn ? 'Update Channel' : 'Save Connection'}</button>
-    \`;
+      <button type="button" class="btn btn-primary" onclick="document.getElementById('slack-connection-form').requestSubmit()">${isConn ? 'Update Channel' : 'Save Connection'}</button>
+    `;
 
     Modal.open(isConn ? 'Manage Slack Connection' : 'Connect Slack Workspace', body, footer);
   },
@@ -1003,7 +1003,7 @@ const ConnectorsScreen = {
     this.state.slack.channel = channel;
 
     Modal.closeAll();
-    Toast.show(\`Slack Workspace connected to \${channel}\`, 'success');
+    Toast.show(`Slack Workspace connected to ${channel}`, 'success');
     if (App.currentScreen === 'connectors') App.refresh();
   },
 
@@ -1018,13 +1018,13 @@ const ConnectorsScreen = {
   syncAllSources(btnEl) {
     if (btnEl) {
       btnEl.disabled = true;
-      btnEl.innerHTML = \`<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...\`;
+      btnEl.innerHTML = `<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...`;
     }
     setTimeout(() => {
       this.state.sheets.lastSynced = 'Just now';
       if (btnEl) {
         btnEl.disabled = false;
-        btnEl.innerHTML = \`\${Icons.refresh || ''} <span>Sync All Sources</span>\`;
+        btnEl.innerHTML = `${Icons.refresh || ''} <span>Sync All Sources</span>`;
       }
       Toast.show('All active connectors and knowledge repositories synchronized', 'success');
       if (App.currentScreen === 'connectors') App.refresh();

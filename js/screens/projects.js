@@ -25,10 +25,7 @@ const ProjectsScreen = {
         (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
       );
       const myProjectIds = new Set(myTasks.map(t => t.projectId));
-      projects = projects.filter(p => 
-        myProjectIds.has(p.id) || 
-        (p.memberIds && (p.memberIds.includes(currentUser.id) || (userMemberId && p.memberIds.includes(userMemberId))))
-      );
+      projects = projects.filter(p => myProjectIds.has(p.id));
     }
 
     if (this._filter.status) projects = projects.filter(p => p.status === this._filter.status);
@@ -203,7 +200,7 @@ const ProjectsScreen = {
     return `<div class="project-grid projects-grid">${projects.map((p, i) => {
       const tasks = Store.getTasks(p.id);
       const doneTasks = tasks.filter(t => t.status === 'done').length;
-      const members = (p.memberIds || []).map(id => Store.getMember(id)).filter(Boolean);
+      const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
       return `<div class="project-card" onclick="App.navigate('project-detail','${p.id}')">
         <div class="project-card-header">
           <div>
@@ -236,7 +233,7 @@ const ProjectsScreen = {
     return `<div class="section-card"><div class="section-card-body no-pad"><div class="table-wrap"><table class="table">
       <thead><tr><th>Project</th><th>Type</th><th>Status</th><th>Progress</th><th>Team</th><th>Due</th></tr></thead>
       <tbody>${projects.map(p => {
-        const members = (p.memberIds || []).map(id => Store.getMember(id)).filter(Boolean);
+        const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
         return `<tr style="cursor:pointer" onclick="App.navigate('project-detail','${p.id}')">
           <td><span class="task-title">${p.name}</span><br><span style="font-size:11px;color:var(--color-text-muted)">${Utils.truncate(p.description, 60)}</span></td>
           <td><span style="font-size:12px">${p.type}</span></td>
@@ -295,7 +292,7 @@ const ProjectsScreen = {
         <label class="form-label">Team Members</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
           ${members.map(m => {
-            const checked = isEdit && (project.memberIds || []).includes(m.id);
+            const checked = isEdit && project.memberIds.includes(m.id);
             return `<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid ${checked?'var(--color-primary)':'var(--color-border)'};border-radius:var(--radius-md);cursor:pointer;font-size:13px;${checked?'background:var(--color-primary-50)':''}">
               <input type="checkbox" value="${m.id}" class="project-member-check" ${checked?'checked':''} style="display:none">
               <div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>

@@ -122,7 +122,7 @@ const FirebaseAuth = {
   async _saveOrUpdateUserSession(user, providerType) {
     if (!user) return;
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
-    const isAdminEmail = user.email && user.email.toLowerCase() === 'ayush@hintonn.com';
+    const isAdminEmail = user.email && user.email.toLowerCase() === 'mohithintonn@gmail.com';
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
 
     // 1. Immediately sync session to localStorage so UI and route guards recognize user
@@ -197,7 +197,7 @@ const FirebaseAuth = {
     try {
       const userRef = this._db.collection('users').doc(user.uid);
       const name = (extra && extra.name) || user.displayName || user.email.split('@')[0];
-      const isAdminEmail = user.email && user.email.toLowerCase() === 'ayush@hintonn.com';
+      const isAdminEmail = user.email && user.email.toLowerCase() === 'mohithintonn@gmail.com';
 
       await userRef.set({
         uid: user.uid,

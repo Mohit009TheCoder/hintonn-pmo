@@ -1,0 +1,274 @@
+// ─── Firebase Auth & Firestore Backend ───
+// Google Sign-In uses REDIRECT (not popup) — works on all browsers, no popup blockers.
+
+const FirebaseAuth = {
+  _auth: null,
+  _db: null,
+  _initialized: false,
+
+  // ── Initialize Firebase ──
+  init() {
+    if (this._initialized) return;
+    const firebaseConfig = {
+      apiKey: "AIzaSyBemgBMjkCnIAhFVl5ZVn8F6H7mAn-SzvA",
+      authDomain: "project-management-syste-bf69f.firebaseapp.com",
+      projectId: "project-management-syste-bf69f",
+      storageBucket: "project-management-syste-bf69f.firebasestorage.app",
+      messagingSenderId: "207649582216",
+      appId: "1:207649582216:web:a776cf0599d940e5cfc33d",
+      measurementId: "G-KJ50SFCMWR"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    this._auth = firebase.auth();
+    this._db = firebase.firestore();
+    this._initialized = true;
+  },
+
+  // ── Auth State Observer ──
+  onAuthStateChanged(callback) {
+    this._ensureInit();
+    return this._auth.onAuthStateChanged(callback);
+  },
+
+  // ── Email / Password Sign-In ──
+  async signInEmail(email, password) {
+    this._ensureInit();
+    try {
+      const userCredential = await this._auth.signInWithEmailAndPassword(email, password);
+      await this._saveOrUpdateUserSession(userCredential.user, 'password');
+      return userCredential.user;
+    } catch (err) {
+      throw this._mapAuthError(err);
+    }
+  },
+
+  // ── Email / Password Sign-Up ──
+  async signUpEmail(name, email, password) {
+    this._ensureInit();
+    try {
+      const userCredential = await this._auth.createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      await user.updateProfile({ displayName: name });
+      await this._createUserDocument(user, 'password', { name });
+      return user;
+    } catch (err) {
+      throw this._mapAuthError(err);
+    }
+  },
+
+  // ── Google Sign-In (Popup preferred, redirect fallback) ──
+  async signInGoogle() {
+    this._ensureInit();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('email');
+    provider.addScope('profile');
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      const result = await this._auth.signInWithPopup(provider);
+      if (result && result.user) {
+        await this._saveOrUpdateUserSession(result.user, 'google');
+        return result.user;
+      }
+    } catch (err) {
+      if (err.code === 'auth/popup-blocked') {
+        console.warn('Google sign-in popup blocked; falling back to redirect...');
+        await this._auth.signInWithRedirect(provider);
+        return null;
+      }
+      throw this._mapGoogleError(err);
+    }
+  },
+
+  // ── Handle redirect result (call once on every page load) ──
+  async handleRedirectResult() {
+    this._ensureInit();
+    try {
+      const result = await this._auth.getRedirectResult();
+      if (result && result.user) {
+        await this._saveOrUpdateUserSession(result.user, 'google');
+        return result.user;
+      }
+    } catch (err) {
+      console.error('Google redirect error:', err.code, err.message);
+    }
+    return null;
+  },
+
+  // ── Send Password Reset Email ──
+  async sendResetEmail(email) {
+    this._ensureInit();
+    try {
+      await this._auth.sendPasswordResetEmail(email);
+    } catch (err) {
+      throw this._mapAuthError(err);
+    }
+  },
+
+  // ── Sign Out ──
+  async signOut() {
+    this._ensureInit();
+    await this._auth.signOut();
+  },
+
+  // ── Get Current User ──
+  getCurrentUser() {
+    return this._auth ? this._auth.currentUser : null;
+  },
+
+  // ─── Firestore: Save / Update User Session & Sync with Local Auth ───
+  async _saveOrUpdateUserSession(user, providerType) {
+    if (!user) return;
+    const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+    const isAdminEmail = user.email && user.email.toLowerCase() === 'ayush@hintonn.com';
+    const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+
+    // 1. Immediately sync session to localStorage so UI and route guards recognize user
+    const localUser = {
+      id: user.uid,
+      memberId: 'm_' + user.uid.slice(0, 6),
+      loginId: (user.email ? user.email.split('@')[0] : defaultName),
+      email: user.email || '',
+      googleEmail: user.email || '',
+      name: defaultName,
+      role: isAdminEmail ? 'Admin' : 'AI Developer',
+      avatar: initials,
+      initials: initials,
+      color: '#2563EB',
+      title: isAdminEmail ? 'Executive PMO & Lead' : 'AI Developer',
+      photoURL: user.photoURL || null
+    };
+
+    try {
+      localStorage.setItem('hintonn-current-user', JSON.stringify(localUser));
+    } catch (e) {}
+
+    if (typeof Auth !== 'undefined') {
+      Auth.currentUser = localUser;
+      if (Array.isArray(Auth.users) && !Auth.users.some(u => u.id === localUser.id || (u.email && u.email.toLowerCase() === (localUser.email || '').toLowerCase()))) {
+        Auth.users.push(localUser);
+      }
+    }
+
+    if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
+      Store._data.settings.currentUser = localUser.memberId;
+      if (typeof Store._save === 'function') Store._save();
+    }
+
+    // 2. Persist to Firestore
+    try {
+      const userRef = this._db.collection('users').doc(user.uid);
+      const doc = await userRef.get();
+
+      if (!doc.exists) {
+        await userRef.set({
+          uid: user.uid,
+          name: defaultName,
+          email: user.email,
+          photoURL: user.photoURL || null,
+          role: isAdminEmail ? 'Admin' : 'AI Developer',
+          isActive: true,
+          provider: providerType || 'password',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('New user document created in Firestore for:', user.email);
+      } else {
+        const existingData = doc.data() || {};
+        await userRef.set({
+          email: user.email,
+          name: existingData.name || defaultName,
+          photoURL: user.photoURL || existingData.photoURL || null,
+          role: existingData.role || (isAdminEmail ? 'Admin' : 'AI Developer'),
+          isActive: true,
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        console.log('Existing user session updated in Firestore for:', user.email);
+      }
+    } catch (err) {
+      console.warn('Firestore user session sync warning:', err.message || err);
+    }
+  },
+
+  // ─── Firestore: Create User Document ───
+  async _createUserDocument(user, providerType, extra) {
+    try {
+      const userRef = this._db.collection('users').doc(user.uid);
+      const name = (extra && extra.name) || user.displayName || user.email.split('@')[0];
+      const isAdminEmail = user.email && user.email.toLowerCase() === 'ayush@hintonn.com';
+
+      await userRef.set({
+        uid: user.uid,
+        name: name,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        role: isAdminEmail ? 'Admin' : 'developer',
+        isActive: true,
+        provider: providerType || 'password',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log('User document created in Firestore for:', user.email);
+    } catch (err) {
+      console.error('Error creating user document in Firestore:', err);
+    }
+  },
+
+  // ─── Error Mapping: Firebase Auth ───
+  _mapAuthError(err) {
+    const code = err.code || '';
+    let message = 'Login failed. Please try again.';
+
+    if (code === 'auth/user-not-found') message = 'No account found with this email.';
+    else if (code === 'auth/wrong-password') message = 'Incorrect password. Please try again.';
+    else if (code === 'auth/invalid-email') message = 'Please enter a valid email address.';
+    else if (code === 'auth/too-many-requests') message = 'Too many attempts. Please try again later.';
+    else if (code === 'auth/invalid-credential') message = 'Invalid email or password.';
+    else if (code === 'auth/network-request-failed') message = 'Network error. Check your connection.';
+    else if (code === 'auth/email-already-in-use') message = 'An account with this email already exists.';
+    else if (code === 'auth/weak-password') message = 'Password is too weak. Use at least 6 characters.';
+
+    console.error('Firebase Auth error:', code, err.message);
+    return new Error(message);
+  },
+
+  // ─── Error Mapping: Google OAuth ───
+  _mapGoogleError(err) {
+    const code = err.code || '';
+    console.error('Google sign-in error:', code, err.message);
+
+    if (code === 'auth/unauthorized-domain') {
+      return new Error('This domain is not authorized. Add it in Firebase Console.');
+    }
+    if (code === 'auth/operation-not-allowed') {
+      return new Error('Google sign-in is not enabled in Firebase Console.');
+    }
+    if (code === 'auth/network-request-failed') {
+      return new Error('Network error. Check your connection.');
+    }
+    return new Error('Google sign-in failed. Please try again.');
+  },
+
+  // ── Ensure Firebase is initialized before use ──
+  _ensureInit() {
+    if (!this._auth) this.init();
+  }
+};
+
+// Auto-initialize on load
+FirebaseAuth.init();
+
+// Handle Google redirect result when page loads after OAuth redirect
+FirebaseAuth.handleRedirectResult().then(user => {
+  if (user) {
+    console.log('Google redirect login successful:', user.email);
+    window.location.hash = '#dashboard';
+    if (typeof App !== 'undefined' && App.handleRoute) {
+      App.handleRoute();
+    }
+  }
+}).catch(err => {
+  console.error('Redirect handling error:', err);
+});

@@ -230,14 +230,6 @@ const BillingScreen = {
             </div>
             <p>Multi-bill company grouping, invoice version tracking (v1.0, v1.1, v2.0), and commercial revision history audit ledger.</p>
           </div>
-          <div class="page-header-actions" style="display:flex;align-items:center;gap:10px">
-            <button class="btn btn-secondary" onclick="BillingScreen.exportLedger()">
-              ${Icons.download} Export Audit Ledger
-            </button>
-            <button class="btn btn-primary" onclick="BillingScreen.openCreateModal()">
-              ${Icons.plus} New Bill / Revision
-            </button>
-          </div>
         </div>
 
         <!-- Top Commercial KPI Strip -->
@@ -507,11 +499,6 @@ const BillingScreen = {
                                 <button class="btn btn-outline btn-xs" onclick="BillingScreen.openVersionHistory('${inv.id}')" title="View Version History">
                                   📜 Version History
                                 </button>
-                                ${inv.status !== 'paid' ? `
-                                  <button class="btn btn-primary btn-xs" onclick="BillingScreen.openReviseModal('${inv.id}')" title="Revise this bill to next version">
-                                    ✏️ Revise Bill
-                                  </button>
-                                ` : ''}
                                 <button class="btn btn-ghost btn-xs" onclick="BillingScreen.viewInvoice('${inv.id}')" title="View Certificate">
                                   View
                                 </button>
@@ -603,11 +590,6 @@ const BillingScreen = {
                       <button class="btn btn-outline btn-xs" onclick="BillingScreen.openVersionHistory('${inv.id}')" title="Version History">
                         History
                       </button>
-                      ${inv.status !== 'paid' ? `
-                        <button class="btn btn-primary btn-xs" onclick="BillingScreen.openReviseModal('${inv.id}')" title="Revise Bill">
-                          Revise
-                        </button>
-                      ` : ''}
                       <button class="btn btn-ghost btn-xs" onclick="BillingScreen.viewInvoice('${inv.id}')">
                         View
                       </button>
@@ -725,18 +707,10 @@ const BillingScreen = {
 
     Modal.open(`Bill Version History: ${inv.id} (${inv.companyName})`, html, `
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
-      ${inv.status !== 'paid' ? `
-        <button class="btn btn-primary" onclick="Modal.closeAll(); BillingScreen.openReviseModal('${inv.id}')">
-          ✏️ Create Next Revision
-        </button>
-      ` : ''}
-      <button class="btn btn-outline" onclick="Toast.show('Version control audit trail exported.', 'success'); Modal.closeAll();">
-        ${Icons.download} Export Audit History
-      </button>
       <button class="btn btn-outline" onclick="Modal.closeAll(); BillingScreen.generateBillPDF('${inv.id}')">
         🖨️ Generate Tax Invoice PDF
       </button>
-      <button class="btn btn-secondary" onclick="BillingScreen.viewInvoice('${inv.id}')">
+      <button class="btn btn-secondary" onclick="Modal.closeAll(); BillingScreen.viewInvoice('${inv.id}')">
         View Active Invoice
       </button>
     `, { large: true });
@@ -1397,84 +1371,7 @@ const BillingScreen = {
   },
 
   exportLedger() {
-    Toast.show('Commercial Invoicing Ledger & Version Audit Trail exported to CSV.', 'success', 3000);
-  },
-
-  openCreateModal() {
-    const companies = this._getCompanies();
-    const html = `
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div class="form-group">
-          <label class="form-label">Client Company</label>
-          <select class="form-control" id="new-inv-company">
-            ${companies.map(c => `
-              <option value="${c.id}">${c.name} (${c.totalContractValue})</option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Project & Package</label>
-          <select class="form-control" id="new-inv-project">
-            <option value="p1">Hintonn AI Core Platform (₹4,83,40,000 · PKG-01)</option>
-            <option value="p2">Client Substation Package (₹2,85,60,000 · PKG-02)</option>
-            <option value="p3">Utilities & Plant Balance (₹1,76,40,000 · PKG-03)</option>
-            <option value="p4">Grid Automation & LoRA AI (₹1,26,00,000 · PKG-04)</option>
-            <option value="p5">Website & Site Facilities (₹1,17,60,000 · PKG-05)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Version Type</label>
-          <select class="form-control" id="new-inv-version-type">
-            <option value="v1.0">v1.0 - New Baseline Bill</option>
-            <option value="v1.1">v1.1 - Minor Revision to Existing Bill</option>
-            <option value="v2.0">v2.0 - Major Re-negotiated Addendum</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Base Billing Amount (₹)</label>
-          <input type="text" class="form-control" id="new-inv-amount" placeholder="e.g. 250,000">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Milestone Trigger Reference</label>
-          <input type="text" class="form-control" id="new-inv-milestone" placeholder="e.g. Milestone 4 Acceptance Certificate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Due Date</label>
-          <input type="date" class="form-control" id="new-inv-date" value="2026-11-15">
-        </div>
-      </div>
-    `;
-
-    Modal.open('Create Commercial Invoice & Version', html, `
-      <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button class="btn btn-primary" onclick="BillingScreen._saveInvoice()">Create & Version Log</button>
-    `);
-  },
-
-  _saveInvoice() {
-    const companyId = document.getElementById('new-inv-company') ? document.getElementById('new-inv-company').value : 'c1';
-    const projectId = document.getElementById('new-inv-project') ? document.getElementById('new-inv-project').value : 'p1';
-    const versionType = document.getElementById('new-inv-version-type') ? document.getElementById('new-inv-version-type').value : 'v1.0';
-    const amount = document.getElementById('new-inv-amount') ? document.getElementById('new-inv-amount').value : '0';
-    const milestone = document.getElementById('new-inv-milestone') ? document.getElementById('new-inv-milestone').value : '';
-    const dueDate = document.getElementById('new-inv-date') ? document.getElementById('new-inv-date').value : '';
-
-    Store.createInvoice({
-      companyId,
-      projectId,
-      version: versionType,
-      amountDue: amount.startsWith('₹') ? amount : `₹${amount}`,
-      milestone,
-      dueDate,
-      status: 'under-certification',
-      statusLabel: 'Under Certification',
-      badgeClass: 'badge-active'
-    });
-
-    this._invoices = null; // Invalidate cache
-    Modal.closeAll();
-    Toast.show('New commercial invoice version created and queued for client certification.', 'success', 4000);
-    this.updateBillingContainer();
+    Toast.show('Commercial Invoicing Ledger exported.', 'success', 3000);
   }
 };
 

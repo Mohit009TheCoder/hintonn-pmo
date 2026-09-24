@@ -73,7 +73,7 @@ const RetentionScreen = {
           </div>
           <div class="kpi-value" style="font-size:22px">${nextReleaseDate}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            $140,000 · PKG-05 Final DLP
+            ${nextRelease ? nextRelease.retentionHeld + ' · ' + (nextRelease.packageCode || nextRelease.projectName || '') : 'No releases scheduled'}
           </div>
         </div>
       </div>

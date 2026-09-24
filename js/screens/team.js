@@ -259,12 +259,18 @@ const TeamScreen = {
     const member = Store.getMember(memberId);
     if (!member) { Toast.show('Member not found.', 'error'); return; }
 
-    // Build update payload
-    const updateData = { designation: finalDesignation };
-    if (member.role !== 'Admin') updateData.role = finalDesignation;
+    // Build update payload — role and designation always stay in sync
+    const updateData = { designation: finalDesignation, role: finalDesignation };
 
     // Use Store.updateMember to sync to Firebase
     Store.updateMember(memberId, updateData);
+
+    // Also write directly to Firestore to avoid snapshot-listener race condition
+    if (Store._db) {
+      try {
+        Store._db.collection('members').doc(String(memberId)).set({ role: finalDesignation, designation: finalDesignation, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch(e) {}
+    }
 
     // Sync to Auth users so it persists across refresh
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {

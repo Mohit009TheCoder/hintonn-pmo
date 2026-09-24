@@ -103,6 +103,9 @@ const AIAssistantScreen = {
           <p>Your project management copilot for real-time tracking, risk detection, and workflow analysis</p>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="AIAssistantScreen.promptApiKey()">
+            ⚙️ Configure API Key
+          </button>
           <button class="btn btn-secondary btn-sm" onclick="AIAssistantScreen.clearChat()">
             ${Icons.refresh} Reset Conversation
           </button>
@@ -272,7 +275,7 @@ const AIAssistantScreen = {
     this.onSubmitInput();
   },
 
-  onSubmitInput() {
+  async onSubmitInput() {
     const input = document.getElementById('ai-assistant-input');
     if (!input) return;
     const query = input.value.trim();
@@ -290,17 +293,105 @@ const AIAssistantScreen = {
     input.value = '';
     this._scrollBottom();
 
-    // Process intelligence query locally
-    setTimeout(() => {
-      const response = this._processQuery(query);
+    const apiKey = localStorage.getItem('hintonn-gemini-key');
+    if (!apiKey) {
+      // Process intelligence query locally if no API key
+      setTimeout(() => {
+        const response = this._processQuery(query);
+        this._messages.push({
+          sender: 'assistant',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          text: response.text,
+          cards: response.cards || []
+        });
+        this.refresh();
+      }, 150);
+      return;
+    }
+
+    // Agentic Gemini API Request
+    const typingMsgId = 'msg_' + Date.now();
+    this._messages.push({
+      id: typingMsgId,
+      sender: 'assistant',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: "🧠 Thinking... (Querying Agentic Database using Gemini)"
+    });
+    this.refresh();
+
+    try {
+      const response = await this._callGeminiAPI(apiKey, query);
+      const msgIndex = this._messages.findIndex(m => m.id === typingMsgId);
+      if (msgIndex !== -1) {
+        this._messages[msgIndex] = {
+          sender: 'assistant',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          text: response,
+          cards: [] 
+        };
+        this.refresh();
+      }
+    } catch (e) {
+      const msgIndex = this._messages.findIndex(m => m.id === typingMsgId);
+      if (msgIndex !== -1) {
+        this._messages[msgIndex] = {
+          sender: 'assistant',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          text: `⚠️ Error calling Gemini API: ${e.message}. Please check your API key or internet connection.`
+        };
+        this.refresh();
+      }
+    }
+  },
+
+  async _callGeminiAPI(apiKey, userQuery) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const dbDump = {
+        projects: Store.getProjects(),
+        tasks: Store.getTasks(),
+        issues: Store.getIssues(),
+        milestones: Store.getMilestones(),
+        members: Store.getMembers()
+    };
+    
+    const prompt = \`You are Hintonn Copilot, an advanced AI project management assistant.
+The user is querying their internal workspace database.
+Here is the live JSON dump of their entire database:
+\${JSON.stringify(dbDump)}
+
+User Query: "\${userQuery}"
+
+Provide a concise, helpful, and highly accurate answer based ONLY on the provided JSON data. 
+If the user asks to create, assign, or delete something, inform them that you are currently in "Read-Only Analysis Mode" but they can use the local prompt pills to perform those actions.
+Format your answer beautifully using standard Markdown. Do not output raw JSON.\`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    
+    if (!res.ok) {
+        throw new Error(\`HTTP \${res.status}\`);
+    }
+    const data = await res.json();
+    return data.candidates[0].content.parts[0].text;
+  },
+
+  promptApiKey() {
+    const key = prompt("Please enter your Google Gemini API Key to enable full Agentic capabilities:");
+    if (key) {
+      localStorage.setItem('hintonn-gemini-key', key.trim());
       this._messages.push({
         sender: 'assistant',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: response.text,
-        cards: response.cards || []
+        text: "✅ **API Key saved successfully!** I am now powered by Google Gemini and can understand complex natural language queries about your entire database. Try asking me something specific!"
       });
       this.refresh();
-    }, 150);
+    }
   },
 
   _processQuery(rawQuery) {

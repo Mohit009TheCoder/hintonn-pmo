@@ -25,7 +25,10 @@ const ProjectsScreen = {
         (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
       );
       const myProjectIds = new Set(myTasks.map(t => t.projectId));
-      projects = projects.filter(p => myProjectIds.has(p.id));
+      projects = projects.filter(p => 
+        myProjectIds.has(p.id) || 
+        (p.memberIds && (p.memberIds.includes(currentUser.id) || (userMemberId && p.memberIds.includes(userMemberId))))
+      );
     }
 
     if (this._filter.status) projects = projects.filter(p => p.status === this._filter.status);

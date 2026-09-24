@@ -305,6 +305,42 @@ const Store = {
   getMemberInitials(id) { const m = this.getMember(id); return m ? (m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2)) : '??'; },
   getMemberColor(id) { const m = this.getMember(id); return m ? m.color : '#94A3B8'; },
 
+  // Member CRUD
+  createMember(d) {
+    const m = { id: d.id || this._genId(), name: d.name, role: d.role || 'AI Developer',
+      designation: d.designation || d.role || 'AI Developer', email: d.email || '',
+      initials: d.initials || '', color: d.color || '#2563EB' };
+    this._data.members.push(m);
+    this._addActivity('member', `Added team member <strong>${m.name}</strong> as ${m.designation}`);
+    this._addNotification('member', `New team member: ${m.name}`);
+    this._save(); this._notify();
+    this._syncToFirestore('members', m.id, m);
+    return m;
+  },
+  updateMember(id, d) {
+    const m = this.getMember(id); if (!m) return null;
+    Object.assign(m, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('member', `Updated member <strong>${m.name}</strong> — ${Object.keys(d).join(', ')}`);
+    this._save(); this._notify();
+    this._syncToFirestore('members', m.id, m);
+    return m;
+  },
+  deleteMember(id) {
+    const m = this.getMember(id); if (!m) return;
+    // Unassign all tasks from this member
+    this._data.tasks.forEach(t => {
+      if (t.assigneeId === id) {
+        t.assigneeId = '';
+        this._syncToFirestore('tasks', t.id, t);
+      }
+    });
+    this._data.members = this._data.members.filter(x => x.id !== id);
+    this._addActivity('member', `Removed team member <strong>${m.name}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('members', id);
+    return m;
+  },
+
   // Milestones
   getMilestones(projectId) { return projectId ? this._data.milestones.filter(m => m.projectId === projectId) : this._data.milestones; },
   createMilestone(d) {

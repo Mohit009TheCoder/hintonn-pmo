@@ -100,12 +100,11 @@ const TeamScreen = {
     const newId = 'm_' + Date.now();
     const colors = ['#2563EB', '#7C3AED', '#4F46E5', '#1D4ED8', '#059669', '#D97706', '#0891B2'];
     const chosenColor = colors[Math.floor(Math.random() * colors.length)];
-    const newMember = { id: newId, name, role: designation, designation, email, initials, color: chosenColor };
-    if (typeof Store !== 'undefined' && Store._data && Store._data.members) {
-      Store._data.members.push(newMember);
-      if (typeof Store._save === 'function') Store._save();
-      if (typeof Store._notify === 'function') Store._notify();
-    }
+
+    // Use Store.createMember to sync to Firebase
+    Store.createMember({ id: newId, name, role: designation, designation, email, initials, color: chosenColor });
+
+    // Also add to Auth users for login
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       Auth.users.push({
         id: 'user_' + Date.now(), memberId: newId, loginId: name.split(' ')[0] || name,
@@ -147,6 +146,7 @@ const TeamScreen = {
       </div>
     `;
     const footerHtml = `
+      <button type="button" class="btn btn-danger btn-sm" onclick="Modal.closeAll();setTimeout(()=>TeamScreen.openRemoveMemberModal('${m.id}'),300);" style="margin-right:auto;">Remove</button>
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
       <button type="button" class="btn btn-primary" onclick="TeamScreen.saveMemberRole('${m.id}')">Save Changes</button>
     `;
@@ -166,14 +166,75 @@ const TeamScreen = {
     } else { finalDesignation = select.value.trim(); }
     const member = Store.getMember(memberId);
     if (!member) { Toast.show('Member not found.', 'error'); return; }
-    member.designation = finalDesignation;
-    if (member.role !== 'Admin') member.role = finalDesignation;
-    Store._save(); Store._notify();
+
+    // Build update payload
+    const updateData = { designation: finalDesignation };
+    if (member.role !== 'Admin') updateData.role = finalDesignation;
+
+    // Use Store.updateMember to sync to Firebase
+    Store.updateMember(memberId, updateData);
+
+    // Sync to Auth users
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       const authUser = Auth.users.find(u => u.memberId === memberId || u.id === memberId || u.name === member.name);
-      if (authUser) { authUser.designation = finalDesignation; authUser.title = finalDesignation; }
+      if (authUser) { authUser.designation = finalDesignation; authUser.title = finalDesignation; authUser.role = finalDesignation; }
     }
     Toast.show(`Updated designation for ${member.name} to "${finalDesignation}".`, 'success');
+    Modal.closeAll();
+    this.refresh();
+  },
+
+  // ─── Remove Member ───
+  openRemoveMemberModal(memberId) {
+    const m = Store.getMember(memberId);
+    if (!m) { Toast.show('Member not found.', 'error'); return; }
+    const memberTasks = this._getMemberTasks(m);
+    const activeTasks = memberTasks.filter(t => t.status !== 'done');
+
+    const bodyHtml = `
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-bg-page);border-radius:8px;border:1px solid var(--color-border);">
+          <div class="avatar avatar-md" style="background:${m.color||'#7C3AED'};font-weight:700;">${m.initials||'??'}</div>
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;">${m.name}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);">${m.email}</div>
+          </div>
+          <span class="badge badge-medium" style="font-size:11px;">${m.designation || m.role || 'AI Developer'}</span>
+        </div>
+        <div style="padding:14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+              <div style="font-weight:700;color:#991B1B;font-size:14px;margin-bottom:4px;">Remove ${m.name} from the team?</div>
+              <div style="font-size:13px;color:#7F1D1D;line-height:1.5;">
+                This will remove them from all projects. 
+                ${activeTasks.length > 0 ? `<strong style="color:#991B1B;">They have ${activeTasks.length} active task${activeTasks.length!==1?'s':''} that will become unassigned.</strong>` : 'They have no active tasks.'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-danger" onclick="TeamScreen.confirmRemoveMember('${m.id}')" style="background:#DC2626;color:white;border-color:#DC2626;">Remove Member</button>
+    `;
+    Modal.open(`Remove Member: ${m.name}`, bodyHtml, footerHtml);
+  },
+
+  confirmRemoveMember(memberId) {
+    const m = Store.getMember(memberId);
+    if (!m) return;
+
+    // Store.deleteMember unassigns tasks, removes from array, syncs to Firebase
+    Store.deleteMember(memberId);
+
+    // Remove from Auth users too
+    if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
+      Auth.users = Auth.users.filter(u => u.memberId !== memberId && u.id !== memberId);
+    }
+
+    Toast.show(`${m.name} has been removed from the team.`, 'success');
     Modal.closeAll();
     this.refresh();
   },
@@ -445,6 +506,10 @@ const TeamScreen = {
                   <button type="button" class="btn btn-ghost btn-xs" onclick="TeamScreen.openEditRoleModal('${m.id}')" title="Edit Role" style="font-size:11px;color:var(--color-text-muted);padding:3px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);display:inline-flex;align-items:center;gap:4px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                     Role
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-xs" onclick="TeamScreen.openRemoveMemberModal('${m.id}')" title="Remove member" style="font-size:11px;color:#DC2626;padding:3px 8px;border:1px solid #FECACA;border-radius:var(--radius-sm);background:#FEF2F2;display:inline-flex;align-items:center;gap:4px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Remove
                   </button>
                 ` : ''}
               </div>

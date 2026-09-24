@@ -274,7 +274,7 @@ const ReportsScreen = {
                   <td style="font-size:12.5px;color:${projectIssues.filter(i=>i.status==='open').length>0 ? 'var(--color-ai-700);font-weight:600' : 'var(--color-text-muted)'}">
                     ${projectIssues.filter(i=>i.status==='open').length} open
                   </td>
-                  <td style="font-size:12.5px">${p.memberIds.length}</td>
+                  <td style="font-size:12.5px">${(p.memberIds || []).length}</td>
                 </tr>`;
               }).join('')}</tbody>
             </table>

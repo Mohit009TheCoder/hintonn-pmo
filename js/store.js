@@ -117,6 +117,18 @@ const Store = {
 
             this._data[colName] = remoteItems;
 
+            // Normalize array fields that may be missing on remote Firestore docs
+            if (colName === 'projects') {
+              remoteItems.forEach(p => {
+                if (!Array.isArray(p.memberIds)) p.memberIds = [];
+                if (!Array.isArray(p.taskIds)) p.taskIds = [];
+                if (!Array.isArray(p.milestoneIds)) p.milestoneIds = [];
+                if (!Array.isArray(p.issueIds)) p.issueIds = [];
+                if (!Array.isArray(p.tags)) p.tags = [];
+                if (p.progress == null) p.progress = 0;
+              });
+            }
+
             if (colName === 'tasks' || colName === 'projects') {
               this._data.projects.forEach(p => this._recalcProgress(p.id));
             }

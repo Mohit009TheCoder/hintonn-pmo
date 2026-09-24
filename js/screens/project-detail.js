@@ -84,7 +84,7 @@ const ProjectDetailScreen = {
         (currentUser.memberId === 'm4' && i.assigneeId === 'hirvi')
       );
     }
-    const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
+    const members = (p.memberIds || []).map(id => Store.getMember(id)).filter(Boolean);
     const activities = Store.getActivities(20).filter(a => {
       return tasks.some(t => a.html.includes(t.title)) || a.html.includes(p.name);
     }).slice(0, 5);

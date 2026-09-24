@@ -61,7 +61,7 @@ const Topbar = {
   openUserMenu() {
     const dropdown = this.getUserDropdown();
     if (!dropdown) return;
-    const user = (typeof Auth !== 'undefined' && Auth.getCurrentUser()) || { name: 'Ayush Desai', role: 'Admin', email: 'ayush@hintonn.com', initials: 'AD', color: '#2563EB' };
+    const user = (typeof Auth !== 'undefined' && Auth.getCurrentUser()) || { name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5' };
     const isAdmin = user && user.role === 'Admin';
 
     dropdown.innerHTML = `

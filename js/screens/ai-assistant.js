@@ -103,9 +103,6 @@ const AIAssistantScreen = {
           <p>Your project management copilot for real-time tracking, risk detection, and workflow analysis</p>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-secondary btn-sm" onclick="AIAssistantScreen.promptApiKey()">
-            ⚙️ Configure API Key
-          </button>
           <button class="btn btn-secondary btn-sm" onclick="AIAssistantScreen.clearChat()">
             ${Icons.refresh} Reset Conversation
           </button>
@@ -275,7 +272,7 @@ const AIAssistantScreen = {
     this.onSubmitInput();
   },
 
-  async onSubmitInput() {
+  onSubmitInput() {
     const input = document.getElementById('ai-assistant-input');
     if (!input) return;
     const query = input.value.trim();
@@ -293,105 +290,17 @@ const AIAssistantScreen = {
     input.value = '';
     this._scrollBottom();
 
-    const apiKey = localStorage.getItem('hintonn-gemini-key');
-    if (!apiKey) {
-      // Process intelligence query locally if no API key
-      setTimeout(() => {
-        const response = this._processQuery(query);
-        this._messages.push({
-          sender: 'assistant',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: response.text,
-          cards: response.cards || []
-        });
-        this.refresh();
-      }, 150);
-      return;
-    }
-
-    // Agentic Gemini API Request
-    const typingMsgId = 'msg_' + Date.now();
-    this._messages.push({
-      id: typingMsgId,
-      sender: 'assistant',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      text: "🧠 Thinking... (Querying Agentic Database using Gemini)"
-    });
-    this.refresh();
-
-    try {
-      const response = await this._callGeminiAPI(apiKey, query);
-      const msgIndex = this._messages.findIndex(m => m.id === typingMsgId);
-      if (msgIndex !== -1) {
-        this._messages[msgIndex] = {
-          sender: 'assistant',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: response,
-          cards: [] 
-        };
-        this.refresh();
-      }
-    } catch (e) {
-      const msgIndex = this._messages.findIndex(m => m.id === typingMsgId);
-      if (msgIndex !== -1) {
-        this._messages[msgIndex] = {
-          sender: 'assistant',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          text: `⚠️ Error calling Gemini API: ${e.message}. Please check your API key or internet connection.`
-        };
-        this.refresh();
-      }
-    }
-  },
-
-  async _callGeminiAPI(apiKey, userQuery) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    
-    const dbDump = {
-        projects: Store.getProjects(),
-        tasks: Store.getTasks(),
-        issues: Store.getIssues(),
-        milestones: Store.getMilestones(),
-        members: Store.getMembers()
-    };
-    
-    const prompt = \`You are Hintonn Copilot, an advanced AI project management assistant.
-The user is querying their internal workspace database.
-Here is the live JSON dump of their entire database:
-\${JSON.stringify(dbDump)}
-
-User Query: "\${userQuery}"
-
-Provide a concise, helpful, and highly accurate answer based ONLY on the provided JSON data. 
-If the user asks to create, assign, or delete something, inform them that you are currently in "Read-Only Analysis Mode" but they can use the local prompt pills to perform those actions.
-Format your answer beautifully using standard Markdown. Do not output raw JSON.\`;
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
-    
-    if (!res.ok) {
-        throw new Error(\`HTTP \${res.status}\`);
-    }
-    const data = await res.json();
-    return data.candidates[0].content.parts[0].text;
-  },
-
-  promptApiKey() {
-    const key = prompt("Please enter your Google Gemini API Key to enable full Agentic capabilities:");
-    if (key) {
-      localStorage.setItem('hintonn-gemini-key', key.trim());
+    // Process intelligence query locally
+    setTimeout(() => {
+      const response = this._processQuery(query);
       this._messages.push({
         sender: 'assistant',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: "✅ **API Key saved successfully!** I am now powered by Google Gemini and can understand complex natural language queries about your entire database. Try asking me something specific!"
+        text: response.text,
+        cards: response.cards || []
       });
       this.refresh();
-    }
+    }, 150);
   },
 
   _processQuery(rawQuery) {
@@ -538,109 +447,7 @@ Format your answer beautifully using standard Markdown. Do not output raw JSON.\
       };
     }
 
-    // 8. Create Task (Action)
-    if (q.startsWith('create task') || q.startsWith('add task') || q.includes('create a task') || q.includes('+ create a task')) {
-      let title = rawQuery.replace(/create( a)? task/i, '').replace(/\+ create a task/i, '').replace(/^[:\s\-]+/, '').trim();
-      if (!title) title = "AI Generated Task";
-      
-      const newId = 't_' + Date.now();
-      const currentUser = this._getCurrentUser();
-      const userId = currentUser.memberId || currentUser.id || 'm3';
-      
-      const newTask = {
-        id: newId,
-        projectId: projects.length > 0 ? projects[0].id : '',
-        title: title,
-        description: 'Auto-generated by AI Copilot via chat prompt.',
-        status: 'todo',
-        priority: 'medium',
-        assigneeId: userId,
-        startDate: Utils.formatDate(new Date(), 'YYYY-MM-DD'),
-        dueDate: Utils.formatDate(new Date(Date.now() + 7*24*60*60*1000), 'YYYY-MM-DD'),
-        tags: ['AI-Generated'],
-        order: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      if (Store._data) {
-        Store._data.tasks = Store._data.tasks || [];
-        Store._data.tasks.push(newTask);
-        
-        // Link to project if possible
-        if (projects.length > 0 && Store._data.projects) {
-           const p = Store._data.projects.find(proj => proj.id === projects[0].id);
-           if (p) {
-               p.taskIds = p.taskIds || [];
-               p.taskIds.push(newId);
-               if(typeof Store._syncToFirestore === 'function') Store._syncToFirestore('projects', p.id, p);
-           }
-        }
-        if (typeof Store._save === 'function') Store._save();
-        if (typeof Store._syncToFirestore === 'function') Store._syncToFirestore('tasks', newId, newTask);
-        if (typeof Store._notify === 'function') Store._notify();
-      }
-
-      return {
-        text: `I have successfully orchestrated and created the task **"${title}"** and assigned it to your queue. It has been synced to the cloud database.`,
-        cards: [{ type: 'task-list', title: 'Newly Created Task', tasks: [newTask] }]
-      };
-    }
-    
-    // 9. Create Project (Action)
-    if (q.startsWith('create project') || q.startsWith('add project') || q.includes('create a project')) {
-      let name = rawQuery.replace(/create( a)? project/i, '').replace(/^[:\s\-]+/, '').trim();
-      if (!name) name = "AI Generated Project";
-      
-      const newId = 'p_' + Date.now();
-      const currentUser = this._getCurrentUser();
-      const userId = currentUser.memberId || currentUser.id || 'm3';
-
-      const newProject = {
-        id: newId,
-        name: name,
-        description: 'Auto-generated project workspace initialized by AI Copilot.',
-        type: 'Software',
-        status: 'planning',
-        priority: 'medium',
-        progress: 0,
-        startDate: Utils.formatDate(new Date(), 'YYYY-MM-DD'),
-        endDate: Utils.formatDate(new Date(Date.now() + 30*24*60*60*1000), 'YYYY-MM-DD'),
-        memberIds: [userId],
-        taskIds: [],
-        milestoneIds: [],
-        issueIds: [],
-        tags: ['AI-Generated'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      if (Store._data) {
-        Store._data.projects = Store._data.projects || [];
-        Store._data.projects.push(newProject);
-        if (typeof Store._save === 'function') Store._save();
-        if (typeof Store._syncToFirestore === 'function') Store._syncToFirestore('projects', newId, newProject);
-        if (typeof Store._notify === 'function') Store._notify();
-      }
-
-      return {
-        text: `Project workspace **"${name}"** has been securely initialized and synced to Firestore. You are added as the primary stakeholder.`,
-        cards: [{ type: 'project-list', title: 'Newly Initialized Project', projects: [newProject] }]
-      };
-    }
-
-    // 10. "Show my tasks"
-    if (q.includes('my task') || q.includes('my active task')) {
-       const currentUser = this._getCurrentUser();
-       const userId = currentUser.memberId || currentUser.id;
-       const myTasks = tasks.filter(t => t.assigneeId === userId && t.status !== 'done');
-       return {
-         text: `You currently have **${myTasks.length} active tasks** in your personal queue.`,
-         cards: myTasks.length > 0 ? [{ type: 'task-list', title: 'Your Active Tasks', tasks: myTasks }] : []
-       };
-    }
-
-    // 11. General search / fallback query matching
+    // 8. General search / fallback query matching
     const searchRes = Store.search(q);
     if (searchRes.tasks.length || searchRes.projects.length || searchRes.issues.length) {
       return {

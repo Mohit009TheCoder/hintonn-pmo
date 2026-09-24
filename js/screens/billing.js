@@ -81,372 +81,7 @@ const BillingScreen = {
   _getInvoices() {
     if (this._invoices) return this._invoices;
 
-    this._invoices = [
-      {
-        id: 'INV-2026-104',
-        billNumber: 'Bill #2',
-        companyId: 'c1',
-        companyName: 'Apex Power & Energy Corp',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01 · Core EPC',
-        contractValue: '$5,800,000',
-        amountDue: '$410,000',
-        taxAmount: '$73,800',
-        deductions: '$20,500',
-        netPayable: '$463,300',
-        milestone: 'Execution Milestone 3 (SCADA & Orchestration)',
-        dueDate: '2026-10-15',
-        status: 'pending-client',
-        statusLabel: 'Pending Client Sign-off',
-        badgeClass: 'badge-review',
-        issueDate: '2026-09-15',
-        version: 'v2.0',
-        versionLabel: 'v2.0 - Re-negotiated / Re-issued',
-        versionBadgeClass: 'version-pill-v2',
-        isRevised: true,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Draft',
-            date: '2026-09-01',
-            baseAmount: '$380,000',
-            tax: '$68,400',
-            deductions: '$19,000',
-            netPayable: '$429,400',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Initial milestone 3 achievement draft submitted for commercial certification.',
-            modifiedFields: ['Initial Baseline Draft'],
-            isCurrent: false
-          },
-          {
-            version: 'v1.1',
-            label: 'Surveyor Quantity Adjustment',
-            date: '2026-09-08',
-            baseAmount: '$395,000',
-            tax: '$71,100',
-            deductions: '$19,750',
-            netPayable: '$446,350',
-            editor: 'Preet Bhavsar (AI Developer)',
-            changeReason: 'Joint measurement sheet reconciliation with client site engineer (+15,000 USD cabling variance).',
-            modifiedFields: ['BOQ Item 3.4 Quantity', 'Base Amount', 'Tax'],
-            isCurrent: false
-          },
-          {
-            version: 'v2.0',
-            label: 'Re-negotiated & Final Submission',
-            date: '2026-09-15',
-            baseAmount: '$410,000',
-            tax: '$73,800',
-            deductions: '$20,500',
-            netPayable: '$463,300',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Finalized scope extension addendum approved by Apex Power commercial council.',
-            modifiedFields: ['Scope Addendum #2', 'Base Amount (+15K)', 'Net Due'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-103',
-        billNumber: 'Supplemental Bill #1',
-        companyId: 'c1',
-        companyName: 'Apex Power & Energy Corp',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01 · Core EPC',
-        contractValue: '$5,800,000',
-        amountDue: '$310,000',
-        taxAmount: '$55,800',
-        deductions: '$15,500',
-        netPayable: '$350,300',
-        milestone: 'API Gateway & Integration Tranche',
-        dueDate: '2026-10-28',
-        status: 'under-certification',
-        statusLabel: 'Under Certification',
-        badgeClass: 'badge-active',
-        issueDate: '2026-09-18',
-        version: 'v1.1',
-        versionLabel: 'v1.1 - Minor Adjustment',
-        versionBadgeClass: 'version-pill-v1-1',
-        isRevised: true,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Draft',
-            date: '2026-09-10',
-            baseAmount: '$300,000',
-            tax: '$54,000',
-            deductions: '$15,000',
-            netPayable: '$339,000',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Initial supplementary billing draft for Phase 1 API tranche.',
-            modifiedFields: ['Initial Draft'],
-            isCurrent: false
-          },
-          {
-            version: 'v1.1',
-            label: 'Minor Tax Recalculation',
-            date: '2026-09-18',
-            baseAmount: '$310,000',
-            tax: '$55,800',
-            deductions: '$15,500',
-            netPayable: '$350,300',
-            editor: 'Preet Bhavsar (AI Developer)',
-            changeReason: 'Updated GST surcharge calculation as per revised state tariff circular.',
-            modifiedFields: ['Tax Surcharge', 'Base Amount'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-092',
-        billNumber: 'Bill #1',
-        companyId: 'c1',
-        companyName: 'Apex Power & Energy Corp',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01 · Core EPC',
-        contractValue: '$5,800,000',
-        amountDue: '$1,200,000',
-        taxAmount: '$216,000',
-        deductions: '$60,000',
-        netPayable: '$1,356,000',
-        milestone: 'Architecture Blueprint & Mobilization Acceptance',
-        dueDate: '2026-07-30',
-        status: 'paid',
-        statusLabel: 'Paid & Certified',
-        badgeClass: 'badge-completed',
-        issueDate: '2026-07-05',
-        version: 'v1.0',
-        versionLabel: 'v1.0 - Original Baseline',
-        versionBadgeClass: 'version-pill-v1',
-        isRevised: false,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Submission',
-            date: '2026-07-05',
-            baseAmount: '$1,200,000',
-            tax: '$216,000',
-            deductions: '$60,000',
-            netPayable: '$1,356,000',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Mobilization advance milestone certified and settled by client bank wire.',
-            modifiedFields: ['Initial Baseline'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-108',
-        billNumber: 'Bill #2',
-        companyId: 'c2',
-        companyName: 'Vertex Grid Utilities Ltd',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02 · Substation',
-        contractValue: '$3,400,000',
-        amountDue: '$410,000',
-        taxAmount: '$73,800',
-        deductions: '$20,500',
-        netPayable: '$463,300',
-        milestone: 'Detailed Engineering Design Phase Certification',
-        dueDate: '2026-11-10',
-        status: 'pending-client',
-        statusLabel: 'Pending Client Sign-off',
-        badgeClass: 'badge-review',
-        issueDate: '2026-09-10',
-        version: 'v1.1',
-        versionLabel: 'v1.1 - Minor Adjustment',
-        versionBadgeClass: 'version-pill-v1-1',
-        isRevised: true,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Draft',
-            date: '2026-08-25',
-            baseAmount: '$400,000',
-            tax: '$72,000',
-            deductions: '$20,000',
-            netPayable: '$452,000',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Initial engineering acceptance draft submission.',
-            modifiedFields: ['Initial Submission'],
-            isCurrent: false
-          },
-          {
-            version: 'v1.1',
-            label: 'Substation Transformer Addendum',
-            date: '2026-09-10',
-            baseAmount: '$410,000',
-            tax: '$73,800',
-            deductions: '$20,500',
-            netPayable: '$463,300',
-            editor: 'Mohit Jain (AI Developer)',
-            changeReason: 'Added seismic damper specification costs agreed during client design review.',
-            modifiedFields: ['Base Amount (+$10K)', 'Tax', 'Net Due'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-088',
-        billNumber: 'Bill #1',
-        companyId: 'c2',
-        companyName: 'Vertex Grid Utilities Ltd',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02 · Substation',
-        contractValue: '$3,400,000',
-        amountDue: '$850,000',
-        taxAmount: '$153,000',
-        deductions: '$42,500',
-        netPayable: '$960,500',
-        milestone: 'Advance Payment Mobilization Tranche',
-        dueDate: '2026-08-15',
-        status: 'paid',
-        statusLabel: 'Paid & Certified',
-        badgeClass: 'badge-completed',
-        issueDate: '2026-08-01',
-        version: 'v1.0',
-        versionLabel: 'v1.0 - Original Baseline',
-        versionBadgeClass: 'version-pill-v1',
-        isRevised: false,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Submission',
-            date: '2026-08-01',
-            baseAmount: '$850,000',
-            tax: '$153,000',
-            deductions: '$42,500',
-            netPayable: '$960,500',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Advance payment mobilization tranche fully paid.',
-            modifiedFields: ['Initial Baseline'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-112',
-        billNumber: 'Bill #1',
-        companyId: 'c3',
-        companyName: 'Northern Powertech Systems',
-        projectName: 'Utilities & Plant Balance',
-        projectId: 'p3',
-        packageCode: 'PKG-03 · Utilities',
-        contractValue: '$2,100,000',
-        amountDue: '$280,000',
-        taxAmount: '$50,400',
-        deductions: '$14,000',
-        netPayable: '$316,400',
-        milestone: 'Long-Lead Equipment Procurement Tranche',
-        dueDate: '2026-11-25',
-        status: 'under-certification',
-        statusLabel: 'Under Certification',
-        badgeClass: 'badge-active',
-        issueDate: '2026-09-20',
-        version: 'v1.0',
-        versionLabel: 'v1.0 - Original Baseline',
-        versionBadgeClass: 'version-pill-v1',
-        isRevised: false,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Submission',
-            date: '2026-09-20',
-            baseAmount: '$280,000',
-            tax: '$50,400',
-            deductions: '$14,000',
-            netPayable: '$316,400',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Turbine cooling equipment procurement milestone submitted.',
-            modifiedFields: ['Initial Baseline'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-115',
-        billNumber: 'Bill #1',
-        companyId: 'c4',
-        companyName: 'Solaris Infra Concessions',
-        projectName: 'Grid Automation & LoRA AI',
-        projectId: 'p4',
-        packageCode: 'PKG-04 · Automation',
-        contractValue: '$1,500,000',
-        amountDue: '$190,000',
-        taxAmount: '$34,200',
-        deductions: '$9,500',
-        netPayable: '$214,700',
-        milestone: 'Telemetry Node Testing Phase',
-        dueDate: '2026-12-05',
-        status: 'under-certification',
-        statusLabel: 'Under Certification',
-        badgeClass: 'badge-active',
-        issueDate: '2026-09-21',
-        version: 'v1.0',
-        versionLabel: 'v1.0 - Original Baseline',
-        versionBadgeClass: 'version-pill-v1',
-        isRevised: false,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Submission',
-            date: '2026-09-21',
-            baseAmount: '$190,000',
-            tax: '$34,200',
-            deductions: '$9,500',
-            netPayable: '$214,700',
-            editor: 'Hirvi Sanghavi (AI Developer)',
-            changeReason: 'LoRA transmitter field verification milestone submitted.',
-            modifiedFields: ['Initial Baseline'],
-            isCurrent: true
-          }
-        ]
-      },
-      {
-        id: 'INV-2026-098',
-        billNumber: 'Final Bill #4',
-        companyId: 'c5',
-        companyName: 'Metro Rail Transmission Authority',
-        projectName: 'Website & Site Facilities',
-        projectId: 'p5',
-        packageCode: 'PKG-05 · Civil',
-        contractValue: '$1,400,000',
-        amountDue: '$650,000',
-        taxAmount: '$117,000',
-        deductions: '$65,000',
-        netPayable: '$702,000',
-        milestone: 'Final Commissioning & Takeover Certificate',
-        dueDate: '2026-08-30',
-        status: 'paid',
-        statusLabel: 'Paid & Certified',
-        badgeClass: 'badge-completed',
-        issueDate: '2026-08-01',
-        version: 'v1.0',
-        versionLabel: 'v1.0 - Original Baseline',
-        versionBadgeClass: 'version-pill-v1',
-        isRevised: false,
-        versionHistory: [
-          {
-            version: 'v1.0',
-            label: 'Original Baseline Submission',
-            date: '2026-08-01',
-            baseAmount: '$650,000',
-            tax: '$117,000',
-            deductions: '$65,000',
-            netPayable: '$702,000',
-            editor: 'Ayush Desai (Admin)',
-            changeReason: 'Final civil handover milestone certified and settled.',
-            modifiedFields: ['Initial Baseline'],
-            isCurrent: true
-          }
-        ]
-      }
-    ];
+    this._invoices = Store.getInvoices();
 
     return this._invoices;
   },
@@ -549,9 +184,15 @@ const BillingScreen = {
     const companies = this._getCompanies();
     const invoices = this._getFilteredInvoices();
 
-    const totalBilled = '$4.90M';
-    const totalCollected = '$2.70M';
-    const totalPending = '$2.20M';
+    // Parse dollar strings like "$410,000" or "$5.8M" to numbers
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
+    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M'; if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); };
+    const totalBilledNum = allInvoices.reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
+    const collectedNum = allInvoices.filter(i => i.status === 'paid').reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
+    const pendingNum = totalBilledNum - collectedNum;
+    const totalBilled = fmtAmt(totalBilledNum);
+    const totalCollected = fmtAmt(collectedNum);
+    const totalPending = fmtAmt(pendingNum);
     const totalRevisedBills = allInvoices.filter(i => i.isRevised).length;
 
     return `
@@ -1180,13 +821,7 @@ const BillingScreen = {
     const numRet = parseInt(retAmt.replace(/[^0-9]/g, ''), 10) || 0;
     const netFormatted = `$${(numBase + numTax - numRet).toLocaleString()}`;
 
-    // Mark previous history items as not current
-    if (inv.versionHistory) {
-      inv.versionHistory.forEach(h => h.isCurrent = false);
-    } else {
-      inv.versionHistory = [];
-    }
-
+    // Build version history entry
     const newRevObj = {
       version: newVer,
       label: newVer.startsWith('v2') || newVer.startsWith('v3') ? 'Re-negotiated & Final Submission' : 'Minor Revision & Adjustment',
@@ -1201,15 +836,17 @@ const BillingScreen = {
       isCurrent: true
     };
 
-    inv.versionHistory.push(newRevObj);
-    inv.version = newVer;
-    inv.versionLabel = `${newVer} - Active Revision`;
-    inv.versionBadgeClass = newVer.startsWith('v2') || newVer.startsWith('v3') ? 'version-pill-v2' : 'version-pill-v1-1';
-    inv.isRevised = true;
-    inv.amountDue = baseFormatted;
-    inv.taxAmount = taxFormatted;
-    inv.deductions = retFormatted;
-    inv.netPayable = netFormatted;
+    Store.updateInvoice(invoiceId, {
+      versionHistory: [...(inv.versionHistory || []).map(h => ({...h, isCurrent: false})), newRevObj],
+      version: newVer,
+      versionLabel: `${newVer} - Active Revision`,
+      versionBadgeClass: newVer.startsWith('v2') || newVer.startsWith('v3') ? 'version-pill-v2' : 'version-pill-v1-1',
+      isRevised: true,
+      amountDue: baseFormatted,
+      taxAmount: taxFormatted,
+      deductions: retFormatted,
+      netPayable: netFormatted
+    });
 
     Modal.closeAll();
     Toast.show(`Bill ${inv.id} revised to ${newVer}. Version audit trail updated.`, 'success', 4000);
@@ -1392,8 +1029,29 @@ const BillingScreen = {
   },
 
   _saveInvoice() {
+    const companyId = document.getElementById('new-inv-company') ? document.getElementById('new-inv-company').value : 'c1';
+    const projectId = document.getElementById('new-inv-project') ? document.getElementById('new-inv-project').value : 'p1';
+    const versionType = document.getElementById('new-inv-version-type') ? document.getElementById('new-inv-version-type').value : 'v1.0';
+    const amount = document.getElementById('new-inv-amount') ? document.getElementById('new-inv-amount').value : '0';
+    const milestone = document.getElementById('new-inv-milestone') ? document.getElementById('new-inv-milestone').value : '';
+    const dueDate = document.getElementById('new-inv-date') ? document.getElementById('new-inv-date').value : '';
+
+    Store.createInvoice({
+      companyId,
+      projectId,
+      version: versionType,
+      amountDue: amount.startsWith('$') ? amount : `$${amount}`,
+      milestone,
+      dueDate,
+      status: 'under-certification',
+      statusLabel: 'Under Certification',
+      badgeClass: 'badge-active'
+    });
+
+    this._invoices = null; // Invalidate cache
     Modal.closeAll();
     Toast.show('New commercial invoice version created and queued for client certification.', 'success', 4000);
+    this.updateBillingContainer();
   }
 };
 

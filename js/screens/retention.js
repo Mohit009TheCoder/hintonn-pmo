@@ -1,91 +1,18 @@
 // ─── Retention Summary Screen (Commercial PMO) ───
 const RetentionScreen = {
   _getRetentionData() {
-    return [
-      {
-        id: 'ret-1',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01 · Core EPC Phase 1',
-        contractValue: '$5,800,000',
-        retentionPct: '5.0%',
-        retentionHeld: '$290,000',
-        releaseDueDate: '2027-03-15',
-        releaseTrigger: 'Final EPC Commissioning & Handover Acceptance',
-        status: 'on-schedule',
-        statusLabel: 'On Schedule',
-        badgeClass: 'badge-active',
-        tranchePhase: 'Tranche 3 (Q1 2027)'
-      },
-      {
-        id: 'ret-2',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02 · Substation Package',
-        contractValue: '$3,400,000',
-        retentionPct: '5.0%',
-        retentionHeld: '$170,000',
-        releaseDueDate: '2026-11-30',
-        releaseTrigger: 'Substation Energization & Grid Interconnect',
-        status: 'under-review',
-        statusLabel: 'Under Review',
-        badgeClass: 'badge-review',
-        tranchePhase: 'Tranche 2 (Q4 2026)'
-      },
-      {
-        id: 'ret-3',
-        projectName: 'Utilities & Plant Balance',
-        projectId: 'p3',
-        packageCode: 'PKG-03 · Utilities & Aux',
-        contractValue: '$2,100,000',
-        retentionPct: '5.0%',
-        retentionHeld: '$105,000',
-        releaseDueDate: '2027-05-20',
-        releaseTrigger: '72-Hour Performance Guarantee Demonstration',
-        status: 'on-schedule',
-        statusLabel: 'On Schedule',
-        badgeClass: 'badge-active',
-        tranchePhase: 'Tranche 4 (Q2 2027)'
-      },
-      {
-        id: 'ret-4',
-        projectName: 'Grid Automation & LoRA AI',
-        projectId: 'p4',
-        packageCode: 'PKG-04 · Automation & SCADA',
-        contractValue: '$1,500,000',
-        retentionPct: '5.0%',
-        retentionHeld: '$75,000',
-        releaseDueDate: '2027-08-15',
-        releaseTrigger: 'SCADA Telemetry Final Site Acceptance',
-        status: 'on-schedule',
-        statusLabel: 'On Schedule',
-        badgeClass: 'badge-active',
-        tranchePhase: 'Tranche 5 (Q3 2027)'
-      },
-      {
-        id: 'ret-5',
-        projectName: 'Website & Site Facilities Package',
-        projectId: 'p5',
-        packageCode: 'PKG-05 · Civil & Architectural',
-        contractValue: '$1,400,000',
-        retentionPct: '10.0%',
-        retentionHeld: '$140,000',
-        releaseDueDate: '2026-10-30',
-        releaseTrigger: 'Defects Liability Period (DLP) Final Clearance',
-        status: 'release-initiated',
-        statusLabel: 'Release Initiated',
-        badgeClass: 'badge-in-progress',
-        tranchePhase: 'Tranche 1 (Oct 2026)'
-      }
-    ];
+    return Store.getRetentionRecords();
   },
 
   render() {
     const items = this._getRetentionData();
-    const totalRetention = '$780,000';
-    const activeRetention = '$450,000';
-    const dlpRetention = '$330,000';
-    const nextReleaseDate = 'Oct 30, 2026';
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
+    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M'; if (n >= 1000) return '$' + Math.round(n/1000) + 'K'; return '$' + n.toLocaleString(); };
+    const totalRetention = fmtAmt(items.reduce((s,r) => s + parseAmt(r.retentionHeld), 0));
+    const activeRetention = fmtAmt(items.filter(r => r.status === 'on-schedule').reduce((s,r) => s + parseAmt(r.retentionHeld), 0));
+    const dlpRetention = fmtAmt(items.filter(r => r.status === 'under-review' || r.status === 'release-initiated').reduce((s,r) => s + parseAmt(r.retentionHeld), 0));
+    const nextRelease = items.filter(r => r.releaseDueDate).sort((a,b) => new Date(a.releaseDueDate) - new Date(b.releaseDueDate))[0];
+    const nextReleaseDate = nextRelease ? Utils.formatDate(nextRelease.releaseDueDate) : '—';
 
     return `
       <div class="page-header">

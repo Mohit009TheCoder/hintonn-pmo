@@ -3,136 +3,7 @@ const BankGuaranteesScreen = {
   _filter: 'all',
 
   _getBGs() {
-    return [
-      {
-        ref: 'BG-2026-001',
-        type: 'Performance Guarantee (10%)',
-        issuingBank: 'Standard Chartered Bank',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01',
-        amount: '$580,000',
-        issueDate: '2026-01-15',
-        expiryDate: '2026-10-16',
-        daysLeft: 24,
-        risk: 'critical',
-        status: 'critical',
-        statusLabel: 'Critical · 24d Left',
-        badgeClass: 'badge-high'
-      },
-      {
-        ref: 'BG-2025-091',
-        type: 'Defects Liability (DLP) BG (10%)',
-        issuingBank: 'HSBC Commercial Bank',
-        projectName: 'Website & Site Facilities',
-        projectId: 'p5',
-        packageCode: 'PKG-05',
-        amount: '$140,000',
-        issueDate: '2025-10-30',
-        expiryDate: '2026-10-30',
-        daysLeft: 38,
-        risk: 'warning',
-        status: 'warning',
-        statusLabel: 'DLP Exit · 38d Left',
-        badgeClass: 'badge-medium'
-      },
-      {
-        ref: 'BG-2026-014',
-        type: 'Performance Guarantee (10%)',
-        issuingBank: 'Barclays Corporate',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02',
-        amount: '$340,000',
-        issueDate: '2026-02-10',
-        expiryDate: '2026-11-13',
-        daysLeft: 52,
-        risk: 'warning',
-        status: 'warning',
-        statusLabel: 'Warning · 52d Left',
-        badgeClass: 'badge-medium'
-      },
-      {
-        ref: 'BG-2026-022',
-        type: 'Advance Payment Guarantee (10%)',
-        issuingBank: 'Citibank N.A.',
-        projectName: 'Utilities & Plant Balance',
-        projectId: 'p3',
-        packageCode: 'PKG-03',
-        amount: '$210,000',
-        issueDate: '2026-05-20',
-        expiryDate: '2027-01-20',
-        daysLeft: 120,
-        risk: 'safe',
-        status: 'active',
-        statusLabel: 'Active Safe · 120d',
-        badgeClass: 'badge-active'
-      },
-      {
-        ref: 'BG-2026-002',
-        type: 'Advance Payment Guarantee (5%)',
-        issuingBank: 'Standard Chartered Bank',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01',
-        amount: '$290,000',
-        issueDate: '2026-01-15',
-        expiryDate: '2027-01-15',
-        daysLeft: 115,
-        risk: 'safe',
-        status: 'active',
-        statusLabel: 'Active Safe · 115d',
-        badgeClass: 'badge-active'
-      },
-      {
-        ref: 'BG-2026-035',
-        type: 'Performance Guarantee (10%)',
-        issuingBank: 'Standard Chartered Bank',
-        projectName: 'Grid Automation & LoRA AI',
-        projectId: 'p4',
-        packageCode: 'PKG-04',
-        amount: '$150,000',
-        issueDate: '2026-06-15',
-        expiryDate: '2027-03-22',
-        daysLeft: 180,
-        risk: 'safe',
-        status: 'active',
-        statusLabel: 'Active Safe · 180d',
-        badgeClass: 'badge-active'
-      },
-      {
-        ref: 'BG-2026-041',
-        type: 'Subcontractor Performance Bond',
-        issuingBank: 'BNP Paribas',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02-SUB',
-        amount: '$180,000',
-        issueDate: '2026-04-01',
-        expiryDate: '2027-04-01',
-        daysLeft: 190,
-        risk: 'safe',
-        status: 'active',
-        statusLabel: 'Active Safe',
-        badgeClass: 'badge-active'
-      },
-      {
-        ref: 'BG-2025-084',
-        type: 'Bid Security Guarantee',
-        issuingBank: 'Deutsche Bank AG',
-        projectName: 'Substation Tender Stage',
-        projectId: 'p2',
-        packageCode: 'PKG-02',
-        amount: '$100,000',
-        issueDate: '2025-08-01',
-        expiryDate: '2026-08-01',
-        daysLeft: 0,
-        risk: 'released',
-        status: 'released',
-        statusLabel: 'Released & Closed',
-        badgeClass: 'badge-archived'
-      }
-    ];
+    return Store.getBankGuarantees();
   },
 
   render() {
@@ -150,7 +21,9 @@ const BankGuaranteesScreen = {
     }
 
     const totalActive = allBGs.filter(b => b.status !== 'released').length;
-    const totalValue = '$2.45M';
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
+    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M'; if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); };
+    const totalValue = fmtAmt(allBGs.filter(b => b.status !== 'released').reduce((s,b) => s + parseAmt(b.amount), 0));
     const criticalCount = allBGs.filter(b => b.risk === 'critical').length;
     const warningCount = allBGs.filter(b => b.risk === 'warning').length;
 
@@ -400,7 +273,22 @@ const BankGuaranteesScreen = {
   },
 
   _saveBG() {
+    const projectId = document.getElementById('new-bg-proj') ? document.getElementById('new-bg-proj').value : 'p1';
+    const bank = document.getElementById('new-bg-bank') ? document.getElementById('new-bg-bank').value : '';
+    const amount = document.getElementById('new-bg-amount') ? document.getElementById('new-bg-amount').value : '';
+    const type = document.getElementById('new-bg-type') ? document.getElementById('new-bg-type').value : '';
+    const expiry = document.getElementById('new-bg-expiry') ? document.getElementById('new-bg-expiry').value : '';
+
+    Store.createBankGuarantee({
+      projectId,
+      issuingBank: bank,
+      amount: amount.startsWith('$') ? amount : `$${amount}`,
+      type,
+      expiryDate: expiry
+    });
+
     Modal.closeAll();
     Toast.show('New Bank Guarantee registered and added to active risk monitor.', 'success', 4000);
+    App.refresh();
   }
 };

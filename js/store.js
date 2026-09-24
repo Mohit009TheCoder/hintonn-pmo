@@ -17,7 +17,7 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','bankGuarantees','dlpRecords','retentionRecords']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
@@ -64,7 +64,7 @@ const Store = {
       this._firestoreInitialized = true;
       console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: project-management-syste-bf69f)');
 
-      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members'];
+      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords'];
 
       syncCollections.forEach(colName => {
         this._db.collection(colName).onSnapshot(snapshot => {
@@ -339,6 +339,114 @@ const Store = {
     this._save(); this._notify();
     this._deleteFromFirestore('members', id);
     return m;
+  },
+
+  // ─── Invoices (Billing) ───
+  getInvoices() { return this._data.invoices || []; },
+  getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
+  createInvoice(d) {
+    const inv = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this._data.invoices.push(inv);
+    this._addActivity('invoice', `Created invoice <strong>${inv.id}</strong> for ${inv.projectName || ''}`);
+    this._save(); this._notify();
+    this._syncToFirestore('invoices', inv.id, inv);
+    return inv;
+  },
+  updateInvoice(id, d) {
+    const inv = this.getInvoice(id); if (!inv) return null;
+    Object.assign(inv, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('invoice', `Updated invoice <strong>${inv.id}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('invoices', inv.id, inv);
+    return inv;
+  },
+  deleteInvoice(id) {
+    const inv = this.getInvoice(id); if (!inv) return;
+    this._data.invoices = this._data.invoices.filter(x => x.id !== id);
+    this._addActivity('invoice', `Deleted invoice <strong>${inv.id}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('invoices', id);
+  },
+
+  // ─── Bank Guarantees ───
+  getBankGuarantees() { return this._data.bankGuarantees || []; },
+  getBankGuarantee(id) { return (this._data.bankGuarantees || []).find(b => b.id === id || b.ref === id); },
+  createBankGuarantee(d) {
+    const bg = { id: d.id || d.ref || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this._data.bankGuarantees.push(bg);
+    this._addActivity('bankGuarantee', `Registered BG <strong>${bg.ref}</strong> — ${bg.projectName || ''}`);
+    this._save(); this._notify();
+    this._syncToFirestore('bankGuarantees', bg.id || bg.ref, bg);
+    return bg;
+  },
+  updateBankGuarantee(id, d) {
+    const bg = this.getBankGuarantee(id); if (!bg) return null;
+    Object.assign(bg, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('bankGuarantee', `Updated BG <strong>${bg.ref}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('bankGuarantees', bg.id || bg.ref, bg);
+    return bg;
+  },
+  deleteBankGuarantee(id) {
+    const bg = this.getBankGuarantee(id); if (!bg) return;
+    this._data.bankGuarantees = this._data.bankGuarantees.filter(x => x.id !== id && x.ref !== id);
+    this._addActivity('bankGuarantee', `Deleted BG <strong>${bg.ref}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('bankGuarantees', bg.id || bg.ref);
+  },
+
+  // ─── DLP Records ───
+  getDlpRecords() { return this._data.dlpRecords || []; },
+  getDlpRecord(id) { return (this._data.dlpRecords || []).find(r => r.id === id); },
+  createDlpRecord(d) {
+    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this._data.dlpRecords.push(r);
+    this._addActivity('dlpRecord', `Created DLP record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('dlpRecords', r.id, r);
+    return r;
+  },
+  updateDlpRecord(id, d) {
+    const r = this.getDlpRecord(id); if (!r) return null;
+    Object.assign(r, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('dlpRecord', `Updated DLP record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('dlpRecords', r.id, r);
+    return r;
+  },
+  deleteDlpRecord(id) {
+    const r = this.getDlpRecord(id); if (!r) return;
+    this._data.dlpRecords = this._data.dlpRecords.filter(x => x.id !== id);
+    this._addActivity('dlpRecord', `Deleted DLP record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('dlpRecords', id);
+  },
+
+  // ─── Retention Records ───
+  getRetentionRecords() { return this._data.retentionRecords || []; },
+  getRetentionRecord(id) { return (this._data.retentionRecords || []).find(r => r.id === id); },
+  createRetentionRecord(d) {
+    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this._data.retentionRecords.push(r);
+    this._addActivity('retentionRecord', `Created retention record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('retentionRecords', r.id, r);
+    return r;
+  },
+  updateRetentionRecord(id, d) {
+    const r = this.getRetentionRecord(id); if (!r) return null;
+    Object.assign(r, d, { updatedAt: new Date().toISOString() });
+    this._addActivity('retentionRecord', `Updated retention record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('retentionRecords', r.id, r);
+    return r;
+  },
+  deleteRetentionRecord(id) {
+    const r = this.getRetentionRecord(id); if (!r) return;
+    this._data.retentionRecords = this._data.retentionRecords.filter(x => x.id !== id);
+    this._addActivity('retentionRecord', `Deleted retention record for <strong>${r.projectName || ''}</strong>`);
+    this._save(); this._notify();
+    this._deleteFromFirestore('retentionRecords', id);
   },
 
   // Milestones
@@ -782,21 +890,9 @@ const Store = {
     const queryMatchesBGs = expandedTerms.has('bg') || expandedTerms.has('bank guarantee') || expandedTerms.has('guarantee') || expandedTerms.has('pbg') || expandedTerms.has('abg') || expandedTerms.has('mbg');
     const queryMatchesBilling = expandedTerms.has('billing') || expandedTerms.has('invoice') || expandedTerms.has('invoices') || expandedTerms.has('bill') || expandedTerms.has('payment');
 
-    const sampleBGs = [
-      { id: 'bg1', ref: 'BG-2026-001 (PBG $580K)', projectName: 'Hintonn AI Core Platform', type: 'Performance Guarantee (10%)', amount: '$580,000', status: 'critical', daysLeft: 24, route: 'bg' },
-      { id: 'bg2', ref: 'BG-2025-091 (DLP BG $140K)', projectName: 'Website & Site Facilities', type: 'Defects Liability (DLP) BG (10%)', amount: '$140,000', status: 'warning', daysLeft: 38, route: 'bg' },
-      { id: 'bg3', ref: 'BG-2026-014 (PBG $340K)', projectName: 'Client Substation Package', type: 'Performance Guarantee (10%)', amount: '$340,000', status: 'warning', daysLeft: 52, route: 'bg' },
-      { id: 'bg4', ref: 'BG-2026-022 (ABG $280K)', projectName: 'Utilities & Plant Balance', type: 'Advance Payment Guarantee (10%)', amount: '$280,000', status: 'healthy', daysLeft: 110, route: 'bg' },
-      { id: 'bg5', ref: 'BG-2025-044 (MBG $190K)', projectName: 'Transmission Line Package', type: 'Maintenance Bond (MBG)', amount: '$190,000', status: 'healthy', daysLeft: 188, route: 'bg' }
-    ];
+    const sampleBGs = [];
 
-    const sampleInvoices = [
-      { id: 'INV-2026-104', projectName: 'Hintonn AI Core Platform', amount: '$410,000', status: 'Pending Client Sign-off', milestone: 'SCADA & Orchestration', route: 'billing' },
-      { id: 'INV-2026-103', projectName: 'Hintonn AI Core Platform', amount: '$310,000', status: 'Under Certification', milestone: 'API Gateway Integration', route: 'billing' },
-      { id: 'INV-2026-108', projectName: 'Client Substation Package', amount: '$410,000', status: 'Pending Client Sign-off', milestone: 'Detailed Engineering Design', route: 'billing' },
-      { id: 'INV-2026-112', projectName: 'Utilities & Plant Balance', amount: '$280,000', status: 'Under Certification', milestone: 'Equipment Procurement', route: 'billing' },
-      { id: 'INV-2026-098', projectName: 'Website & Site Facilities', amount: '$650,000', status: 'Paid & Certified', milestone: 'Final Commissioning & Takeover', route: 'billing' }
-    ];
+    const sampleInvoices = [];
 
     const matchedBGs = sampleBGs.filter(bg => {
       if (queryMatchesBGs) return true;
@@ -837,8 +933,13 @@ const Store = {
     const comments = [];
     const activities = [];
     const notifications = [];
+    const invoices = [];
+    const bankGuarantees = [];
+    const dlpRecords = [];
+    const retentionRecords = [];
 
     return { projects, tasks, members, milestones, issues, comments, notifications, activities,
+      invoices, bankGuarantees, dlpRecords, retentionRecords,
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };

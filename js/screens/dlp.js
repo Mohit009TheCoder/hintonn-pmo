@@ -1,84 +1,18 @@
 // ─── DLP Timelines Screen (Commercial PMO) ───
 const DLPTimelinesScreen = {
   _getDLPData() {
-    return [
-      {
-        id: 'dlp-1',
-        projectName: 'Website & Site Facilities Package',
-        projectId: 'p5',
-        packageCode: 'PKG-05 · Civil & Architectural',
-        handoverDate: '2025-10-30',
-        dlpDuration: '12 Months',
-        dlpExpiry: '2026-10-30',
-        countdownDays: 38,
-        openDefects: 0,
-        closedDefects: 6,
-        warrantyValue: '$1,400,000',
-        retentionAmount: '$140,000',
-        handoverStatus: 'Exit Audit Scheduled',
-        badgeClass: 'badge-medium',
-        readiness: 98
-      },
-      {
-        id: 'dlp-2',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        packageCode: 'PKG-02 · Substation',
-        handoverDate: '2026-11-30 (Estimated)',
-        dlpDuration: '24 Months',
-        dlpExpiry: '2028-11-30',
-        countdownDays: 798,
-        openDefects: 1,
-        closedDefects: 2,
-        warrantyValue: '$3,400,000',
-        retentionAmount: '$170,000',
-        handoverStatus: 'Pre-Handover Testing',
-        badgeClass: 'badge-review',
-        readiness: 72
-      },
-      {
-        id: 'dlp-3',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        packageCode: 'PKG-01 · Core EPC Phase 1',
-        handoverDate: '2027-01-15 (Estimated)',
-        dlpDuration: '12 Months',
-        dlpExpiry: '2028-01-15',
-        countdownDays: 844,
-        openDefects: 3,
-        closedDefects: 14,
-        warrantyValue: '$5,800,000',
-        retentionAmount: '$290,000',
-        handoverStatus: 'Execution Stage',
-        badgeClass: 'badge-active',
-        readiness: 68
-      },
-      {
-        id: 'dlp-4',
-        projectName: 'Utilities & Plant Balance',
-        projectId: 'p3',
-        packageCode: 'PKG-03 · Utilities & Aux',
-        handoverDate: '2027-05-20 (Estimated)',
-        dlpDuration: '12 Months',
-        dlpExpiry: '2028-05-20',
-        countdownDays: 970,
-        openDefects: 0,
-        closedDefects: 0,
-        warrantyValue: '$2,100,000',
-        retentionAmount: '$105,000',
-        handoverStatus: 'Procurement Phase',
-        badgeClass: 'badge-active',
-        readiness: 15
-      }
-    ];
+    return Store.getDlpRecords();
   },
 
   render() {
     const items = this._getDLPData();
-    const activeDLPCount = 3;
-    const totalWarrantyVal = '$10.6M';
-    const openDefectsCount = 4;
-    const nextExitDate = 'Oct 30, 2026 (38 Days)';
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
+    const fmtAmt = (n) => { if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M'; if (n >= 1000) return '$' + (n/1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); };
+    const activeDLPCount = items.filter(d => d.readiness < 100).length;
+    const totalWarrantyVal = fmtAmt(items.reduce((s,d) => s + parseAmt(d.warrantyValue), 0));
+    const openDefectsCount = items.reduce((s,d) => s + (d.openDefects || 0), 0);
+    const nearestExpiry = items.filter(d => d.dlpExpiry).sort((a,b) => new Date(a.dlpExpiry) - new Date(b.dlpExpiry))[0];
+    const nextExitDate = nearestExpiry ? `${Utils.formatDate(nearestExpiry.dlpExpiry)} (${nearestExpiry.countdownDays || '?'}d)` : '—';
 
     return `
       <div class="page-header">

@@ -77,11 +77,34 @@ const BillingScreen = {
     ];
   },
 
+  // ─── Normalize $ → ₹ for any legacy Firestore data ───
+  _normAmt(val) {
+    if (!val) return val;
+    if (typeof val === 'string' && val.startsWith('$')) {
+      return '₹' + val.slice(1);
+    }
+    return val;
+  },
+
   // Commercial EPC Invoices Dataset with Multi-Version Control & History
   _getInvoices() {
     if (this._invoices) return this._invoices;
 
-    this._invoices = Store.getInvoices();
+    this._invoices = Store.getInvoices().map(inv => ({
+      ...inv,
+      amountDue: this._normAmt(inv.amountDue),
+      taxAmount: this._normAmt(inv.taxAmount),
+      deductions: this._normAmt(inv.deductions),
+      netPayable: this._normAmt(inv.netPayable),
+      contractValue: this._normAmt(inv.contractValue),
+      versionHistory: (inv.versionHistory || []).map(v => ({
+        ...v,
+        baseAmount: this._normAmt(v.baseAmount),
+        tax: this._normAmt(v.tax),
+        deductions: this._normAmt(v.deductions),
+        netPayable: this._normAmt(v.netPayable)
+      }))
+    }));
 
     return this._invoices;
   },
@@ -184,9 +207,9 @@ const BillingScreen = {
     const companies = this._getCompanies();
     const invoices = this._getFilteredInvoices();
 
-    // Parse amount strings like "₹410,000" or "₹5.8M" to numbers
+    // Parse amount strings like "₹410,000" or "$5.8M" to numbers
     const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
-    const fmtAmt = (n) => { if (n >= 1000000) return '₹' + (n/1000000).toFixed(2) + 'M'; if (n >= 1000) return '₹' + (n/1000).toFixed(0) + 'K'; return '₹' + n.toLocaleString(); };
+    const fmtAmt = (n) => { if (!n || n === 0) return '₹0'; const s = Math.round(n).toString(); let result = ''; const len = s.length; if (len <= 3) return '₹' + s; result = s.slice(-3); let remaining = s.slice(0, -3); while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); } if (remaining.length > 0) result = remaining + ',' + result; return '₹' + result; };
     const totalBilledNum = allInvoices.reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
     const collectedNum = allInvoices.filter(i => i.status === 'paid').reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
     const pendingNum = totalBilledNum - collectedNum;
@@ -1392,11 +1415,11 @@ const BillingScreen = {
         <div class="form-group">
           <label class="form-label">Project & Package</label>
           <select class="form-control" id="new-inv-project">
-            <option value="p1">Hintonn AI Core Platform (₹48.34M · PKG-01)</option>
-            <option value="p2">Client Substation Package (₹28.56M · PKG-02)</option>
-            <option value="p3">Utilities & Plant Balance (₹17.64M · PKG-03)</option>
-            <option value="p4">Grid Automation & LoRA AI (₹12.60M · PKG-04)</option>
-            <option value="p5">Website & Site Facilities (₹11.76M · PKG-05)</option>
+            <option value="p1">Hintonn AI Core Platform (₹4,83,40,000 · PKG-01)</option>
+            <option value="p2">Client Substation Package (₹2,85,60,000 · PKG-02)</option>
+            <option value="p3">Utilities & Plant Balance (₹1,76,40,000 · PKG-03)</option>
+            <option value="p4">Grid Automation & LoRA AI (₹1,26,00,000 · PKG-04)</option>
+            <option value="p5">Website & Site Facilities (₹1,17,60,000 · PKG-05)</option>
           </select>
         </div>
         <div class="form-group">

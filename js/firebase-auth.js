@@ -181,7 +181,7 @@ const FirebaseAuth = {
           email: user.email,
           name: existingData.name || defaultName,
           photoURL: user.photoURL || existingData.photoURL || null,
-          role: existingData.role || (isAdminEmail ? 'Admin' : 'AI Developer'),
+          role: isAdminEmail ? 'Admin' : (existingData.role || 'AI Developer'),
           isActive: true,
           lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });

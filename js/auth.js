@@ -401,6 +401,13 @@ const Auth = {
   },
 
   getCurrentUser() {
+    if (this.currentUser && (
+      (this.currentUser.email && this.currentUser.email.toLowerCase() === 'mohithintonn@gmail.com') ||
+      (this.currentUser.googleEmail && this.currentUser.googleEmail.toLowerCase() === 'mohithintonn@gmail.com') ||
+      (this.currentUser.loginId && this.currentUser.loginId.toLowerCase() === 'mohithintonn@gmail.com')
+    )) {
+      this.currentUser.role = 'Admin';
+    }
     return this.currentUser;
   },
 

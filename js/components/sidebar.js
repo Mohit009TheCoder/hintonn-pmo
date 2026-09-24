@@ -91,9 +91,13 @@ const Sidebar = {
       html += '</div>';
     });
 
-    // Render Settings based on RBAC access
+    // Render Settings & Connectors based on RBAC access
     if (typeof Auth !== 'undefined' && Auth.hasAccess('settings')) {
       html += `<div class="sidebar-section" style="margin-top:auto; padding-top: 12px; border-top: 1px solid var(--color-border-subtle);">
+        <a href="#connectors" class="sidebar-item ${current === 'connectors' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
+          ${Icons.plug || Icons.settings}
+          <span>Connectors</span>
+        </a>
         <a href="#settings" class="sidebar-item ${current === 'settings' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons.settings}
           <span>Settings</span>

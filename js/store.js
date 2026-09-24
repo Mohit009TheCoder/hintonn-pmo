@@ -662,6 +662,7 @@ const Store = {
       { name: 'Bank Guarantees (BG)', route: 'bg', icon: 'shield', description: 'Bank guarantees & tracking', keywords: ['bg', 'bank guarantee', 'bank guarantees', 'guarantee', 'guarantees', 'pbg', 'abg', 'mbg', 'security'], adminOnly: true },
       { name: 'DLP Timelines', route: 'dlp', icon: 'clock', description: 'Defect liability periods', keywords: ['dlp', 'dlp timelines', 'warranty', 'warranties', 'defect liability', 'liability'], adminOnly: true },
       { name: 'Settings', route: 'settings', icon: 'settings', description: 'Profile & workspace settings', keywords: ['settings', 'setting', 'config', 'configuration', 'profile', 'account', 'preferences'], adminOnly: true },
+      { name: 'Connectors', route: 'connectors', icon: 'plug', description: 'Integrations, webhooks, and data sources', keywords: ['connectors', 'integrations', 'jira', 'slack', 'webhooks', 'data sources', 'api'], adminOnly: true },
       { name: 'Notifications', route: 'notifications', icon: 'bell', description: 'Activity feed and system alerts', keywords: ['notifications', 'notification', 'alert', 'alerts', 'activity', 'activities', 'feed'] }
     ];
 

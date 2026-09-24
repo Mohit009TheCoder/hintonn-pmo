@@ -120,6 +120,7 @@ const Auth = {
 
     // Admin / High Level Modules
     settings: ['ADMIN'],
+    connectors: ['ADMIN'],
     'audit-logs': ['ADMIN'],
     timeline: ['ADMIN'] // assuming timeline is admin restricted as before
   },

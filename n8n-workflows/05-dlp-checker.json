@@ -1,0 +1,461 @@
+{
+  "name": "Hintonn PMO — DLP Checker (Weekly Milestone Notifications)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron-dlp",
+      "name": "Cron — Monday 9am DLP Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/dlpRecords",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-dlp",
+      "name": "Fetch Active DLP Records",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/milestones",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-milestones",
+      "name": "Fetch Milestones",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        480
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/projects",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-projects-dlp",
+      "name": "Fetch Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        480
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage 5.3.3 — DLP Checker: Active DLP records, milestone notifications\nconst now = new Date();\nconst allData = $input.all();\n\n// Parse incoming data\nconst dlpRecords = [];\nconst milestones = [];\nconst projects = [];\n\nfor (const item of allData) {\n  const d = item.json;\n  if (Array.isArray(d)) {\n    d.forEach(doc => {\n      if (doc.handoverDate) dlpRecords.push(doc);\n      else if (doc.projectId && doc.dueDate && doc.status) milestones.push(doc);\n      else if (doc.memberIds !== undefined || doc.taskIds !== undefined) projects.push(doc);\n      else if (doc.name && doc.status) projects.push(doc);\n    });\n  }\n}\n\nconst notifications = [];\n\n// DLP Analysis\ndlpRecords.forEach(dlp => {\n  const expiryDate = new Date(dlp.dlpExpiry);\n  const daysRemaining = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));\n  \n  // Alert if DLP expiring within 90 days\n  if (daysRemaining > 0 && daysRemaining <= 90) {\n    const urgency = daysRemaining <= 30 ? 'critical' : daysRemaining <= 60 ? 'high' : 'warning';\n    notifications.push({\n      json: {\n        type: 'dlp_expiry_warning',\n        urgency: urgency,\n        projectName: dlp.projectName,\n        projectId: dlp.projectId,\n        packageCode: dlp.packageCode,\n        dlpExpiry: dlp.dlpExpiry,\n        daysRemaining: daysRemaining,\n        retentionAmount: dlp.retentionAmount,\n        openDefects: dlp.openDefects,\n        message: `DLP for ${dlp.projectName} (${dlp.packageCode}) expires in ${daysRemaining} days. Retention at stake: ${dlp.retentionAmount}. Open defects: ${dlp.openDefects || 0}.`,\n        timestamp: now.toISOString()\n      }\n    });\n  }\n  \n  // Alert if DLP has expired and not signed off\n  if (daysRemaining <= 0 && dlp.handoverStatus !== 'Completed') {\n    notifications.push({\n      json: {\n        type: 'dlp_expired',\n        urgency: 'critical',\n        projectName: dlp.projectName,\n        projectId: dlp.projectId,\n        packageCode: dlp.packageCode,\n        dlpExpiry: dlp.dlpExpiry,\n        retentionAmount: dlp.retentionAmount,\n        message: `DLP for ${dlp.projectName} (${dlp.packageCode}) has EXPIRED. Retention release pending: ${dlp.retentionAmount}.`,\n        timestamp: now.toISOString()\n      }\n    });\n  }\n  \n  // Alert if open defects near DLP expiry\n  if (dlp.openDefects > 0 && daysRemaining > 0 && daysRemaining <= 60) {\n    notifications.push({\n      json: {\n        type: 'dlp_defect_warning',\n        urgency: 'high',\n        projectName: dlp.projectName,\n        projectId: dlp.projectId,\n        openDefects: dlp.openDefects,\n        closedDefects: dlp.closedDefects,\n        message: `${dlp.projectName}: ${dlp.openDefects} open defect(s) with ${daysRemaining} days until DLP expiry. Resolution required before sign-off.`,\n        timestamp: now.toISOString()\n      }\n    });\n  }\n});\n\n// Milestone Analysis — upcoming due milestones within 14 days\nconst upcomingMilestones = milestones.filter(m => {\n  if (!m.dueDate || m.status === 'completed') return false;\n  const due = new Date(m.dueDate);\n  const daysUntil = Math.ceil((due - now) / (1000 * 60 * 60 * 24));\n  return daysUntil >= 0 && daysUntil <= 14;\n});\n\nupcomingMilestones.forEach(m => {\n  const due = new Date(m.dueDate);\n  const daysUntil = Math.ceil((due - now) / (1000 * 60 * 60 * 24));\n  notifications.push({\n    json: {\n      type: 'milestone_due',\n      urgency: daysUntil <= 3 ? 'critical' : 'warning',\n      milestoneName: m.name,\n      projectId: m.projectId,\n      dueDate: m.dueDate,\n      daysUntil: daysUntil,\n      message: `Milestone '${m.name}' is due in ${daysUntil} day(s) (${m.dueDate}).`,\n      timestamp: now.toISOString()\n    }\n  });\n});\n\nif (notifications.length === 0) {\n  return [{ json: { status: 'no_issues', message: 'No DLP or milestone alerts this week.', timestamp: now.toISOString() } }];\n}\n\nreturn notifications;"
+      },
+      "id": "analyze-dlp-milestones",
+      "name": "Analyze DLP & Milestone Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-notifs",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_issues",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-dlp-alerts",
+      "name": "Has DLP/Milestone Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Write all DLP + milestone notifications to Firestore\nconst alerts = $input.all();\nconst results = [];\nfor (const alert of alerts) {\n  results.push({\n    json: {\n      ...alert.json,\n      read: false,\n      createdAt: new Date().toISOString(),\n      source: 'n8n-dlp-checker'\n    }\n  });\n}\nreturn results;"
+      },
+      "id": "prepare-notifications",
+      "name": "Prepare DLP Notifications",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst collection = 'notifications';\nconst docId = \"dlp-\" + (data.projectId || data.id || \"milestone\") + \"-\" + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nconst clean = { ...data };\ndelete clean._firestoreCollection;\ndelete clean._firestoreDocId;\nfor (const [key, val] of Object.entries(clean)) fields[key] = toFirestoreValue(val);\n\nreturn [{ json: { _firestoreCollection: collection, _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-dlp-notif-for-firestore",
+      "name": "Format DLP Notification for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "write-dlp-notifications",
+      "name": "Write DLP Notifications to Firestore",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        320
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst collection = 'dlpAuditLogs';\nconst docId = \"dlp-audit-\" + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nconst clean = { ...data };\ndelete clean._firestoreCollection;\ndelete clean._firestoreDocId;\nfor (const [key, val] of Object.entries(clean)) fields[key] = toFirestoreValue(val);\n\nreturn [{ json: { _firestoreCollection: collection, _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-dlp-audit-for-firestore",
+      "name": "Format DLP Audit for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "log-dlp-audit",
+      "name": "Log DLP Audit Trail",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        480
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'dlpRecords' } }];"
+      },
+      "id": "parse-dlpRecords-response",
+      "name": "Parse Dlprecords Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'milestones' } }];"
+      },
+      "id": "parse-milestones-response",
+      "name": "Parse Milestones Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'projects' } }];"
+      },
+      "id": "parse-projects-response",
+      "name": "Parse Projects Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Cron — Monday 9am DLP Check": {
+      "main": [
+        [
+          {
+            "node": "Fetch Active DLP Records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Milestones",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active DLP Records": {
+      "main": [
+        [
+          {
+            "node": "Parse Dlprecords Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Milestones": {
+      "main": [
+        [
+          {
+            "node": "Parse Milestones Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Projects": {
+      "main": [
+        [
+          {
+            "node": "Parse Projects Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze DLP & Milestone Status": {
+      "main": [
+        [
+          {
+            "node": "Has DLP/Milestone Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has DLP/Milestone Alerts?": {
+      "main": [
+        [
+          {
+            "node": "Prepare DLP Notifications",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Prepare DLP Notifications": {
+      "main": [
+        [
+          {
+            "node": "Format DLP Notification for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write DLP Notifications to Firestore": {
+      "main": [
+        [
+          {
+            "node": "Format DLP Audit for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format DLP Notification for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Write DLP Notifications to Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format DLP Audit for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Log DLP Audit Trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Dlprecords Response": {
+      "main": [
+        [
+          {
+            "node": "Analyze DLP & Milestone Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Milestones Response": {
+      "main": [
+        [
+          {
+            "node": "Analyze DLP & Milestone Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Projects Response": {
+      "main": [
+        [
+          {
+            "node": "Analyze DLP & Milestone Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "errorWorkflow": "Hintonn PMO — Error Recovery & Health Check"
+  },
+  "tags": [
+    {
+      "name": "Hintonn PMO"
+    },
+    {
+      "name": "Phase 5"
+    },
+    {
+      "name": "DLP Checker"
+    }
+  ]
+}

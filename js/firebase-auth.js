@@ -10,13 +10,13 @@ const FirebaseAuth = {
   init() {
     if (this._initialized) return;
     const firebaseConfig = {
-      apiKey: "AIzaSyBemgBMjkCnIAhFVl5ZVn8F6H7mAn-SzvA",
-      authDomain: "project-management-syste-bf69f.firebaseapp.com",
-      projectId: "project-management-syste-bf69f",
-      storageBucket: "project-management-syste-bf69f.firebasestorage.app",
-      messagingSenderId: "207649582216",
-      appId: "1:207649582216:web:a776cf0599d940e5cfc33d",
-      measurementId: "G-KJ50SFCMWR"
+      apiKey: "AIzaSyBt1yVDlgfYaCMvWjbqrHGL1kpDudjKB5A",
+      authDomain: "hintonn-pmo.firebaseapp.com",
+      projectId: "hintonn-pmo",
+      storageBucket: "hintonn-pmo.firebasestorage.app",
+      messagingSenderId: "516528306945",
+      appId: "1:516528306945:web:9b9a88accbd424115df900",
+      measurementId: "G-KZ4HC6C5VN"
     };
 
     if (!firebase.apps.length) {

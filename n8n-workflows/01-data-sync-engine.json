@@ -1,0 +1,293 @@
+{
+  "name": "Hintonn PMO — Data Sync Engine (Sheets → Firestore)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger-sync",
+      "name": "Cron Trigger — Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.HINTONN_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Project Data",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "sheets-read",
+      "name": "Google Sheets — Read All Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Hintonn Google Sheets"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 4000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage 5.1.3 — Transform + Validate\nconst REQUIRED = {\n  projects: ['id', 'name', 'status'],\n  tasks: ['id', 'projectId', 'title', 'status'],\n  milestones: ['id', 'projectId', 'name'],\n  issues: ['id', 'projectId', 'title', 'status'],\n  bankGuarantees: ['id', 'ref', 'expiryDate', 'amount'],\n  invoices: ['id', 'projectId', 'amount'],\n  dlpRecords: ['id', 'projectId', 'dlpExpiry'],\n  retentionRecords: ['id', 'projectId', 'retentionHeld'],\n  members: ['id', 'name', 'role'],\n  companies: ['id', 'name']\n};\n\nconst rows = $input.all();\nconst valid = [];\nconst errors = [];\n\nfor (const row of rows) {\n  const d = row.json;\n  const col = d._collection || d.collection || '';\n  if (!col || !REQUIRED[col]) {\n    errors.push({ json: { error: 'Unknown collection', row: d, _collection: '_errors' } });\n    continue;\n  }\n  const missing = REQUIRED[col].filter(f => !d[f] && d[f] !== 0);\n  if (missing.length > 0) {\n    errors.push({ json: { error: 'Missing required fields: ' + missing.join(', '), row: d, _collection: '_errors' } });\n    continue;\n  }\n  valid.push({ json: d });\n}\n\nif (valid.length === 0 && errors.length > 0) {\n  return errors;\n}\nreturn [...valid, ...errors];"
+      },
+      "id": "transform-validate",
+      "name": "Transform + Validate Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "leftValue": "={{ $json._collection }}",
+              "rightValue": "_errors",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "split-valid-errors",
+      "name": "Route Valid vs Error Rows",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert plain JSON to Firestore REST API format\nconst data = $input.first().json;\nconst collection = data._collection || data.collection;\nconst docId = data.id;\n\n// Remove internal fields\nconst clean = { ...data };\ndelete clean._collection;\ndelete clean.collection;\n\n// Convert to Firestore fields format\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') {\n    return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  }\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) {\n    return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  }\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) {\n      fields[k] = toFirestoreValue(v);\n    }\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nfor (const [key, val] of Object.entries(clean)) {\n  fields[key] = toFirestoreValue(val);\n}\n\nreturn [{\n  json: {\n    _firestoreCollection: collection,\n    _firestoreDocId: docId,\n    _firestoreBody: { fields },\n    _updateMask: Object.keys(clean).map(k => 'updateMask.fieldPaths=' + k).join('&')\n  }\n}];"
+      },
+      "id": "format-firestore",
+      "name": "Format for Firestore REST API",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "updateMask.fieldPaths",
+              "value": "={{ Object.keys($json._firestoreBody.fields || {}).join('&updateMask.fieldPaths=') }}"
+            }
+          ]
+        }
+      },
+      "id": "firestore-write",
+      "name": "Batch Firestore Write (merge:true)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1380, 220],
+      "notes": "Stage 5.1.4 — PATCH to Firestore REST API with merge semantics via updateMask.",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const errors = $input.all();\nreturn [{ json: { timestamp: new Date().toISOString(), syncStatus: 'partial', errorsCount: errors.length, errors: errors.map(e => e.json).slice(0, 20) } }];"
+      },
+      "id": "log-errors",
+      "name": "Log Validation Errors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare sync audit log for Firestore\nconst data = $input.first().json;\nconst docId = 'sync-' + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nfor (const [key, val] of Object.entries(data)) fields[key] = toFirestoreValue(val);\nfields.timestamp = toFirestoreValue(new Date().toISOString());\n\nreturn [{ json: { _firestoreCollection: 'syncLogs', _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-sync-log",
+      "name": "Format Sync Log for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 420]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "write-sync-log",
+      "name": "Write Sync Audit Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1640, 340],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Cron Trigger — Every 15 min": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Read All Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Read All Rows": {
+      "main": [
+        [
+          {
+            "node": "Transform + Validate Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform + Validate Rows": {
+      "main": [
+        [
+          {
+            "node": "Route Valid vs Error Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Valid vs Error Rows": {
+      "main": [
+        [
+          {
+            "node": "Format for Firestore REST API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Validation Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Firestore REST API": {
+      "main": [
+        [
+          {
+            "node": "Batch Firestore Write (merge:true)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Firestore Write (merge:true)": {
+      "main": [
+        [
+          {
+            "node": "Write Sync Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Validation Errors": {
+      "main": [
+        [
+          {
+            "node": "Format Sync Log for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Sync Log for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Write Sync Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "Hintonn PMO — Error Recovery & Health Check"
+  },
+  "tags": [
+    { "name": "Hintonn PMO" },
+    { "name": "Phase 5" },
+    { "name": "Data Sync" }
+  ]
+}

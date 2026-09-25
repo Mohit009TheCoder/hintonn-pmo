@@ -1,341 +1,140 @@
 // ─── Commercial PMO & EPC Executive Dashboard ───
 const DashboardScreen = {
-  // Commercial Data Model & Calculations
+  // ─── Indian Currency Formatter ───
+  _fmtINR(n) {
+    if (!n || n === 0) return '₹0';
+    const s = Math.round(n).toString();
+    let result = '';
+    const len = s.length;
+    if (len <= 3) return '₹' + s;
+    result = s.slice(-3);
+    let remaining = s.slice(0, -3);
+    while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); }
+    if (remaining.length > 0) result = remaining + ',' + result;
+    return '₹' + result;
+  },
+
+  // Commercial Data Model & Calculations — fully dynamic from Store
   _getCommercialData() {
     const rawProjects = Store.getProjects();
+    const allTasks = Store.getTasks();
+    const allBGs = Store.getBankGuarantees();
+    const allInvoices = Store.getInvoices();
+    const allDLP = Store.getDlpRecords();
+    const allRetention = Store.getRetentionRecords();
     const settings = Store.getSettings();
 
-    // Mapping project IDs to specialized Commercial & EPC metrics
-    const commercialProfiles = {
-      p1: {
-        packageCode: 'PKG-01 · Core EPC Phase 1',
-        commercialStage: 'Execution',
-        stageClass: 'stage-execution',
-        contractValue: 5800000,
-        contractValueFormatted: '₹4.87Cr',
-        contractValueExact: '₹48.72Cr',
-        pendingInvoices: 720000,
-        pendingInvoicesFormatted: '₹6.05Cr',
-        pendingInvoicesExact: '₹6.05Cr',
-        retentionHeld: 290000,
-        retentionHeldFormatted: '₹2.44Cr',
-        retentionHeldExact: '₹2.44Cr',
-        retentionPct: '5%',
-        releaseDueDate: '2027-03-15',
-        releaseDueDateFormatted: 'Mar 15, 2027',
-        releaseStatus: 'On Schedule',
-        releaseStatusBadge: 'badge-active',
-        milestoneCount: 4,
-        bgRef: 'BG-2026-001',
-        bgType: 'Performance Guarantee',
-        bgAmount: '₹4.87Cr',
-        bgExpiryDate: '2026-10-16',
-        bgDaysLeft: 24,
-        bgRisk: 'critical',
-        bgRiskLabel: 'Critical (< 30d)',
-        issuingBank: 'Standard Chartered Bank'
-      },
-      p2: {
-        packageCode: 'PKG-02 · Substation Package',
-        commercialStage: 'Design',
-        stageClass: 'stage-design',
-        contractValue: 3400000,
-        contractValueFormatted: '₹2.86Cr',
-        contractValueExact: '₹28.56Cr',
-        pendingInvoices: 410000,
-        pendingInvoicesFormatted: '₹3.44Cr',
-        pendingInvoicesExact: '₹3.44Cr',
-        retentionHeld: 170000,
-        retentionHeldFormatted: '₹1.43Cr',
-        retentionHeldExact: '₹1.43Cr',
-        retentionPct: '5%',
-        releaseDueDate: '2026-11-30',
-        releaseDueDateFormatted: 'Nov 30, 2026',
-        releaseStatus: 'Under Review',
-        releaseStatusBadge: 'badge-review',
-        milestoneCount: 3,
-        bgRef: 'BG-2026-014',
-        bgType: 'Performance Guarantee',
-        bgAmount: '₹2.86Cr',
-        bgExpiryDate: '2026-11-13',
-        bgDaysLeft: 52,
-        bgRisk: 'warning',
-        bgRiskLabel: 'Warning (52d)',
-        issuingBank: 'Barclays Corporate'
-      },
-      p3: {
-        packageCode: 'PKG-03 · Utilities & Balance of Plant',
-        commercialStage: 'Execution',
-        stageClass: 'stage-execution',
-        contractValue: 2100000,
-        contractValueFormatted: '₹1.76Cr',
-        contractValueExact: '₹17.64Cr',
-        pendingInvoices: 280000,
-        pendingInvoicesFormatted: '₹2.35Cr',
-        pendingInvoicesExact: '₹2.35Cr',
-        retentionHeld: 105000,
-        retentionHeldFormatted: '₹88.20L',
-        retentionHeldExact: '₹88.20L',
-        retentionPct: '5%',
-        releaseDueDate: '2027-05-20',
-        releaseDueDateFormatted: 'May 20, 2027',
-        releaseStatus: 'On Schedule',
-        releaseStatusBadge: 'badge-active',
-        milestoneCount: 2,
-        bgRef: 'BG-2026-022',
-        bgType: 'Advance Payment Guarantee',
-        bgAmount: '₹1.76Cr',
-        bgExpiryDate: '2027-01-20',
-        bgDaysLeft: 120,
-        bgRisk: 'safe',
-        bgRiskLabel: 'Safe (120d)',
-        issuingBank: 'Citibank N.A.'
-      },
-      p4: {
-        packageCode: 'PKG-04 · SCADA & Grid Automation',
-        commercialStage: 'Execution',
-        stageClass: 'stage-execution',
-        contractValue: 1500000,
-        contractValueFormatted: '₹1.26Cr',
-        contractValueExact: '₹12.60Cr',
-        pendingInvoices: 190000,
-        pendingInvoicesFormatted: '₹1.60Cr',
-        pendingInvoicesExact: '₹1.60Cr',
-        retentionHeld: 75000,
-        retentionHeldFormatted: '₹63.00L',
-        retentionHeldExact: '₹63.00L',
-        retentionPct: '5%',
-        releaseDueDate: '2027-08-15',
-        releaseDueDateFormatted: 'Aug 15, 2027',
-        releaseStatus: 'On Schedule',
-        releaseStatusBadge: 'badge-active',
-        milestoneCount: 2,
-        bgRef: 'BG-2026-035',
-        bgType: 'Performance Guarantee',
-        bgAmount: '₹1.26Cr',
-        bgExpiryDate: '2027-03-22',
-        bgDaysLeft: 180,
-        bgRisk: 'safe',
-        bgRiskLabel: 'Safe (180d)',
-        issuingBank: 'Standard Chartered Bank'
-      },
-      p5: {
-        packageCode: 'PKG-05 · Civil & Site Facilities',
-        commercialStage: 'DLP & Handover',
-        stageClass: 'stage-dlp',
-        contractValue: 1400000,
-        contractValueFormatted: '₹1.18Cr',
-        contractValueExact: '₹11.76Cr',
-        pendingInvoices: 0,
-        pendingInvoicesFormatted: '₹0',
-        pendingInvoicesExact: '₹0 (Certified)',
-        retentionHeld: 140000,
-        retentionHeldFormatted: '₹1.18Cr',
-        retentionHeldExact: '₹1.18Cr',
-        retentionPct: '10%',
-        releaseDueDate: '2026-10-30',
-        releaseDueDateFormatted: 'Oct 30, 2026',
-        releaseStatus: 'Release Initiated',
-        releaseStatusBadge: 'badge-in-progress',
-        milestoneCount: 2,
-        bgRef: 'BG-2025-091',
-        bgType: 'Defects Liability (DLP) BG',
-        bgAmount: '₹1.18Cr',
-        bgExpiryDate: '2026-10-30',
-        bgDaysLeft: 38,
-        bgRisk: 'warning',
-        bgRiskLabel: 'DLP Exit (38d)',
-        issuingBank: 'HSBC Commercial'
-      }
-    };
+    // Parse dollar/rupee strings to numbers
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
 
+    // Build project data dynamically from Store
     const projects = rawProjects.map(p => {
-      const comm = commercialProfiles[p.id] || {
-        packageCode: 'PKG-GEN · General Works',
-        commercialStage: 'Execution',
-        stageClass: 'stage-execution',
-        contractValue: 1000000,
-        contractValueFormatted: '₹8,400,000',
-        contractValueExact: '₹8.40Cr',
-        pendingInvoices: 100000,
-        pendingInvoicesFormatted: '₹84.00L',
-        pendingInvoicesExact: '₹84.00L',
-        retentionHeld: 50000,
-        retentionHeldFormatted: '₹42.00L',
-        retentionHeldExact: '₹42.00L',
-        retentionPct: '5%',
-        releaseDueDate: '2027-01-01',
-        releaseDueDateFormatted: 'Jan 1, 2027',
-        releaseStatus: 'On Schedule',
-        releaseStatusBadge: 'badge-active',
-        milestoneCount: Store.getMilestones(p.id).length || 2,
-        bgRef: 'BG-2026-GEN',
-        bgType: 'Performance Guarantee',
-        bgAmount: '₹84.00L',
-        bgExpiryDate: '2027-06-30',
-        bgDaysLeft: 180,
-        bgRisk: 'safe',
-        bgRiskLabel: 'Safe',
-        issuingBank: 'Standard Chartered'
+      const projTasks = allTasks.filter(t => t.projectId === p.id);
+      const doneTasks = projTasks.filter(t => t.status === 'done');
+      const progress = projTasks.length > 0 ? Math.round((doneTasks.length / projTasks.length) * 100) : (p.progress || 0);
+      const projMilestones = Store.getMilestones(p.id);
+      const stage = p.status === 'completed' ? 'dlp' : p.status === 'active' ? 'execution' : 'planning';
+      const stageLabels = { execution: 'Execution', dlp: 'DLP & Handover', planning: 'Planning' };
+
+      // Find matching BG for this project
+      const projBG = allBGs.find(b => b.projectId === p.id || (b.projectName && b.projectName.includes(p.name)));
+      const bgDaysLeft = projBG ? (projBG.daysLeft || 0) : 0;
+      const bgRisk = bgDaysLeft < 30 ? 'critical' : bgDaysLeft < 60 ? 'warning' : 'safe';
+
+      // Find matching retention
+      const projRetention = allRetention.find(r => r.projectId === p.id);
+
+      return {
+        ...p,
+        commercial: {
+          packageCode: `PKG-${String(rawProjects.indexOf(p)+1).padStart(2,'0')}`,
+          commercialStage: stageLabels[stage] || 'Planning',
+          stageClass: `stage-${stage}`,
+          contractValue: parseAmt(p.description) || 0,
+          contractValueFormatted: this._fmtINR(parseAmt(p.description)),
+          pendingInvoices: allInvoices.filter(i => i.projectId === p.id && i.status !== 'paid').reduce((s,i) => s + parseAmt(i.amountDue), 0),
+          pendingInvoicesFormatted: this._fmtINR(allInvoices.filter(i => i.projectId === p.id && i.status !== 'paid').reduce((s,i) => s + parseAmt(i.amountDue), 0)),
+          retentionHeld: projRetention ? parseAmt(projRetention.retentionHeld) : 0,
+          retentionHeldFormatted: projRetention ? this._fmtINR(parseAmt(projRetention.retentionHeld)) : '₹0',
+          retentionPct: projRetention ? projRetention.retentionPct : '5%',
+          releaseDueDate: projRetention ? projRetention.releaseDueDate : '',
+          releaseStatus: projRetention ? projRetention.statusLabel || 'On Schedule' : 'No Data',
+          milestoneCount: projMilestones.length,
+          bgRef: projBG ? projBG.ref : '',
+          bgType: projBG ? projBG.type : '',
+          bgAmount: projBG ? this._fmtINR(parseAmt(projBG.amount)) : '',
+          bgExpiryDate: projBG ? projBG.expiryDate : '',
+          bgDaysLeft: bgDaysLeft,
+          bgRisk: bgRisk,
+          bgRiskLabel: bgDaysLeft > 0 ? `${bgRisk.charAt(0).toUpperCase()+bgRisk.slice(1)} (${bgDaysLeft}d)` : 'No BG',
+          progress
+        }
       };
-      return { ...p, commercial: comm };
     });
 
-    // Aggregate summary figures
-    const totalPortfolioValue = '₹11.93Cr';
-    const activeCount = projects.filter(p => p.status === 'active' || p.status === 'planning' || p.status === 'completed').length;
-    const totalPendingValue = '₹1.51Cr';
-    const totalContractValue = '₹11.93Cr';
-    const totalActiveBGs = 12;
-    const bgsExpiring30Days = 2;
-    const retentionBalanceHeld = '₹3.78Cr';
-    const projectsInDLP = 3;
+    // Compute aggregate figures dynamically
+    const activeCount = projects.filter(p => p.status === 'active' || p.status === 'planning').length;
+    const totalPortfolioValueNum = projects.reduce((s,p) => s + (p.commercial.contractValue || 0), 0);
+    const totalPendingValueNum = allInvoices.filter(i => i.status !== 'paid').reduce((s,i) => s + parseAmt(i.amountDue), 0);
+    const totalContractValueNum = totalPortfolioValueNum;
+    const totalActiveBGs = allBGs.filter(b => b.status !== 'released').length;
+    const bgsExpiring30Days = allBGs.filter(b => b.daysLeft > 0 && b.daysLeft <= 30).length;
+    const retentionBalanceHeldNum = allRetention.reduce((s,r) => s + parseAmt(r.retentionHeld), 0);
+    const projectsInDLP = projects.filter(p => p.status === 'completed').length;
 
-    // BG & DLP Timeline Monitor List (Precision Executive Format)
-    const bgTimeline = [
-      {
-        bgId: 'BG-2026-001',
-        type: 'Performance Guarantee',
-        projectName: 'Hintonn AI Core Platform',
-        projectId: 'p1',
-        amount: '₹4.87Cr',
-        expiryDate: 'Oct 16, 2026',
-        daysLeft: 24,
-        riskBadgeClass: 'badge-high',
-        riskText: 'Critical · 24d',
-        bank: 'Standard Chartered'
-      },
-      {
-        bgId: 'BG-2025-091',
-        type: 'Defects Liability (DLP)',
-        projectName: 'Website & Site Facilities Package',
-        projectId: 'p5',
-        amount: '₹1.18Cr',
-        expiryDate: 'Oct 30, 2026',
-        daysLeft: 38,
-        riskBadgeClass: 'badge-medium',
-        riskText: 'DLP Exit · 38d',
-        bank: 'HSBC Commercial'
-      },
-      {
-        bgId: 'BG-2026-014',
-        type: 'Performance Guarantee',
-        projectName: 'Client Substation Package',
-        projectId: 'p2',
-        amount: '₹2.86Cr',
-        expiryDate: 'Nov 13, 2026',
-        daysLeft: 52,
-        riskBadgeClass: 'badge-medium',
-        riskText: 'Warning · 52d',
-        bank: 'Barclays Corporate'
-      },
-      {
-        bgId: 'BG-2026-022',
-        type: 'Advance Payment BG',
-        projectName: 'Facility Balance & Utilities',
-        projectId: 'p3',
-        amount: '₹1.76Cr',
-        expiryDate: 'Jan 20, 2027',
-        daysLeft: 120,
-        riskBadgeClass: 'badge-active',
-        riskText: 'Safe · 120d',
-        bank: 'Citibank N.A.'
-      }
+    const totalPortfolioValue = this._fmtINR(totalPortfolioValueNum);
+    const totalPendingValue = this._fmtINR(totalPendingValueNum);
+    const totalContractValue = this._fmtINR(totalContractValueNum);
+    const retentionBalanceHeld = this._fmtINR(retentionBalanceHeldNum);
+
+    // BG Timeline — from Store
+    const bgTimeline = allBGs.filter(b => b.status !== 'released').map(b => ({
+      bgId: b.ref,
+      type: b.type,
+      projectName: b.projectName,
+      projectId: b.projectId,
+      amount: this._fmtINR(parseAmt(b.amount)),
+      expiryDate: b.expiryDate,
+      daysLeft: b.daysLeft,
+      riskBadgeClass: b.risk === 'critical' ? 'badge-high' : b.risk === 'warning' ? 'badge-medium' : 'badge-active',
+      riskText: `${b.statusLabel || b.risk} · ${b.daysLeft}d`,
+      bank: b.issuingBank
+    }));
+
+    // Activity feed — from Store
+    const storeActivities = Store.getActivities(6);
+    const pmoActivities = storeActivities.length > 0 ? storeActivities.map(a => ({
+      type: a.type,
+      icon: Icons[a.type] || Icons.activity,
+      html: a.html,
+      time: Utils.timeAgo(a.createdAt),
+      tag: 'System'
+    })) : [
+      { type: 'info', icon: Icons.info, html: 'No activity yet. Create projects, tasks, and invoices to see activity here.', time: '', tag: 'Info' }
     ];
 
-    // Real-Time PMO Automated Activity Logs in Core Theme
-    const pmoActivities = [
-      {
-        type: 'shield',
-        icon: Icons.shield,
-        html: '<strong>BG extension request sent</strong> for Project Alpha (Substation Package - <code>BG-2026-001</code>)',
-        time: '12m ago',
-        tag: 'Automated'
-      },
-      {
-        type: 'fileText',
-        icon: Icons.fileText,
-        html: '<strong>Automated sync:</strong> Invoice #104 status updated (<strong>$410,000</strong> pending client certification)',
-        time: '45m ago',
-        tag: 'ERP Sync'
-      },
-      {
-        type: 'target',
-        icon: Icons.target,
-        html: '<strong>DLP sign-off notice issued</strong> for Website & Site Facilities (38 days to exit audit)',
-        time: '2h ago',
-        tag: 'DLP Audit'
-      },
-      {
-        type: 'checkSquare',
-        icon: Icons.checkSquare,
-        html: '<strong>Milestone certified:</strong> 68% EPC Execution stage completion for <strong>Hintonn AI Core Platform</strong>',
-        time: '4h ago',
-        tag: 'Milestone'
-      },
-      {
-        type: 'shield',
-        icon: Icons.shield,
-        html: '<strong>Bank Guarantee BG-2026-035 verified:</strong> Active standing with Standard Chartered Bank',
-        time: '1d ago',
-        tag: 'Bank Sync'
-      },
-      {
-        type: 'dollarSign',
-        icon: Icons.dollarSign,
-        html: '<strong>Retention release draft prepared:</strong> $140,000 tranche queued for Project PKG-05',
-        time: '2d ago',
-        tag: 'Retention'
-      }
-    ];
-
-    // Dynamic Portfolio Health Score Calculation: (((OnTrack * 1.0) + (DLP * 0.9) + (AtRisk * 0.5)) / TotalProjects) * 100
-    let onTrackCount = 0;
-    let atRiskCount = 0;
-    let dlpCount = 0;
-
+    // Portfolio Health Score
+    let onTrackCount = 0, atRiskCount = 0, dlpCount = 0;
     projects.forEach(p => {
-      if (p.commercial.commercialStage === 'DLP & Handover' || p.status === 'completed' || p.id === 'p5') {
-        dlpCount++;
-      } else if (p.id === 'p2' || p.status === 'blocked' || p.status === 'delayed') {
-        atRiskCount++;
-      } else {
-        onTrackCount++;
-      }
+      if (p.status === 'completed') dlpCount++;
+      else if (p.status === 'active') onTrackCount++;
+      else atRiskCount++;
     });
 
     const totalProjects = projects.length || 1;
     const rawHealthScore = (((onTrackCount * 1.0) + (dlpCount * 0.9) + (atRiskCount * 0.5)) / totalProjects) * 100;
     const healthScore = rawHealthScore.toFixed(1);
     const healthStatusLabel = rawHealthScore >= 80 ? 'Optimal' : rawHealthScore >= 70 ? 'Stable' : 'Attention Needed';
-
     const onTrackPct = ((onTrackCount / totalProjects) * 100).toFixed(1);
     const atRiskPct = ((atRiskCount / totalProjects) * 100).toFixed(1);
     const dlpPct = ((dlpCount / totalProjects) * 100).toFixed(1);
 
     return {
-      projects,
-      totalPortfolioValue,
-      activeCount,
-      totalPendingValue,
-      totalContractValue,
-      totalActiveBGs,
-      bgsExpiring30Days,
-      retentionBalanceHeld,
-      projectsInDLP,
-      bgTimeline,
-      pmoActivities,
-      settings,
-      onTrackCount,
-      atRiskCount,
-      dlpCount,
-      totalProjects,
-      rawHealthScore,
-      healthScore,
-      healthStatusLabel,
-      onTrackPct,
-      atRiskPct,
-      dlpPct
+      projects, totalPortfolioValue, activeCount, totalPendingValue, totalContractValue,
+      totalActiveBGs, bgsExpiring30Days, retentionBalanceHeld, projectsInDLP,
+      bgTimeline, pmoActivities, settings,
+      onTrackCount, atRiskCount, dlpCount, totalProjects, rawHealthScore,
+      healthScore, healthStatusLabel, onTrackPct, atRiskPct, dlpPct
     };
   },
 
@@ -437,7 +236,7 @@ const DashboardScreen = {
           <div class="kpi-value">${data.totalActiveBGs} Active BGs</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
             <span class="badge badge-high" style="font-size:10px;padding:2px 7px;margin-right:4px;font-weight:600">Action Needed</span>
-            12 Active BGs | 2 Expiring &lt; 30 Days
+            ${data.totalActiveBGs} Active BGs | ${data.bgsExpiring30Days} Expiring &lt; 30 Days
           </div>
         </div>
 
@@ -493,8 +292,8 @@ const DashboardScreen = {
           <div class="section-card-body" style="padding:12px 16px">
             <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
               <div>
-                <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);line-height:1.2">12 Active Guarantees</div>
-                <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px">Next expiry in 24 days</div>
+                <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);line-height:1.2">${data.totalActiveBGs} Active Guarantees</div>
+                <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px">${data.bgsExpiring30Days > 0 ? `Next expiry in ${Math.min(...data.bgTimeline.filter(b=>b.daysLeft>0).map(b=>b.daysLeft))} days` : 'No upcoming expiries'}</div>
               </div>
               <button class="btn btn-outline btn-xs" onclick="DashboardScreen.openBatchRenewal()">
                 Renew All Due
@@ -1059,41 +858,56 @@ const DashboardScreen = {
   },
 
   openBatchRenewal() {
+    const expiringBGs = Store.getBankGuarantees().filter(b => b.daysLeft > 0 && b.daysLeft <= 60);
+    const count = expiringBGs.length;
+    const bgList = expiringBGs.map(b => b.ref).join(', ') || 'none';
     Modal.confirm(
       'Batch BG Renewal Request',
-      'Are you sure you want to trigger automated renewal notices for all 2 Bank Guarantees expiring within 60 days (BG-2026-001 and BG-2025-091)?',
+      `Are you sure you want to trigger automated renewal notices for ${count} Bank Guarantee${count!==1?'s':''} expiring within 60 days (${bgList})?`,
       () => {
-        Toast.show('Batch renewal requests submitted for 2 active Bank Guarantees.', 'success', 4000);
+        Toast.show(`Batch renewal requests submitted for ${count} active Bank Guarantee${count!==1?'s':''}.`, 'success', 4000);
       },
       { confirmText: 'Dispatched Renewals' }
     );
   },
 
   openCommercialAudit() {
+    const allBGs = Store.getBankGuarantees();
+    const allInvoices = Store.getInvoices();
+    const allRetention = Store.getRetentionRecords();
+    const allProjects = Store.getProjects();
+    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
+    const fmtINR = this._fmtINR;
+    const expiringBGs = allBGs.filter(b => b.daysLeft > 0 && b.daysLeft <= 60);
+    const pendingInvoices = allInvoices.filter(i => i.status !== 'paid');
+    const pendingTotal = pendingInvoices.reduce((s,i) => s + parseAmt(i.amountDue), 0);
+    const retentionTotal = allRetention.reduce((s,r) => s + parseAmt(r.retentionHeld), 0);
+    const portfolioTotal = allProjects.reduce((s,p) => s + parseAmt(p.description), 0);
+
     const auditHtml = `
       <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;line-height:1.5;color:var(--color-text-secondary)">
         <div style="display:flex;align-items:center;gap:10px;padding:12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:var(--radius-md)">
           <div style="color:#15803D">${Icons.check}</div>
-          <div style="color:#15803D;font-weight:600">EPC Commercial Portfolio Health: 94.2% Optimized</div>
+          <div style="color:#15803D;font-weight:600">EPC Portfolio: ${allProjects.length} project(s) · ${expiringBGs.length} BG(s) expiring soon</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
             <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase">Total Portfolio Value</div>
-            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">$14,200,000</div>
-            <div style="font-size:11.5px;color:var(--color-text-muted)">5 Active EPC Packages</div>
+            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">${fmtINR(portfolioTotal)}</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted)">${allProjects.length} Active EPC Package(s)</div>
           </div>
           <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
             <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase">Pending Invoices</div>
-            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">$1,800,000</div>
-            <div style="font-size:11.5px;color:var(--color-text-muted)">12.7% of Portfolio under billing</div>
+            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">${fmtINR(pendingTotal)}</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted)">${pendingInvoices.length} invoice(s) pending</div>
           </div>
         </div>
         <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
           <div style="font-size:12px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px">AI PMO Recommendations:</div>
           <ul style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
-            <li>Dispatch BG renewal for <strong>BG-2026-001 ($580K)</strong> before Oct 01 to prevent bank forfeiture grace period.</li>
-            <li>Initiate final DLP exit inspection on <strong>Website & Facilities</strong> to release $140K retention tranche.</li>
-            <li>Follow up on Invoice #104 ($410K) milestone certification with client PM.</li>
+            ${expiringBGs.length > 0 ? expiringBGs.map(b => `<li>Dispatch BG renewal for <strong>${b.ref} (${fmtINR(parseAmt(b.amount))})</strong> — ${b.daysLeft} days to expiry.</li>`).join('') : '<li>No urgent BG renewals needed.</li>'}
+            ${pendingInvoices.length > 0 ? `<li>Follow up on ${pendingInvoices.length} pending invoice(s) totaling ${fmtINR(pendingTotal)}.</li>` : '<li>No pending invoices.</li>'}
+            ${allRetention.length > 0 ? `<li>Track ${allRetention.length} retention release(s) worth ${fmtINR(retentionTotal)}.</li>` : '<li>No retention records.</li>'}
           </ul>
         </div>
       </div>

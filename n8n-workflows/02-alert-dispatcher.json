@@ -1,0 +1,382 @@
+{
+  "name": "Hintonn PMO — Alert Dispatcher (BG Expiry Monitor)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-bg-monitor",
+      "name": "Cron — Daily 9am BG Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/bankGuarantees",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-bgs",
+      "name": "Query BG Guarantees from Firestore",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "notes": "Stage 5.2.1 — Query bankGuarantees where expiry <= now + 30 days.",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage 5.2.2 — Threshold logic: 30/15/7 day checks; classify risk level\nconst now = new Date();\nconst bgs = $input.all();\nconst alerts = [];\n\nfor (const bg of bgs) {\n  const d = bg.json;\n  if (d.status === 'released') continue;\n  const expiry = new Date(d.expiryDate);\n  const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));\n  if (daysLeft <= 0 || daysLeft > 90) continue;\n\n  let riskLevel = 'safe';\n  let urgency = 0;\n  let notifyChannel = 'firestore';\n  if (daysLeft <= 7) { riskLevel = 'critical'; urgency = 3; notifyChannel = 'email+push+firestore'; }\n  else if (daysLeft <= 15) { riskLevel = 'high'; urgency = 2; notifyChannel = 'email+firestore'; }\n  else if (daysLeft <= 30) { riskLevel = 'warning'; urgency = 1; notifyChannel = 'firestore'; }\n\n  alerts.push({\n    json: {\n      bgId: d.id || d.ref,\n      ref: d.ref,\n      projectName: d.projectName,\n      projectId: d.projectId,\n      amount: d.amount,\n      type: d.type,\n      issuingBank: d.issuingBank,\n      expiryDate: d.expiryDate,\n      daysLeft: daysLeft,\n      riskLevel: riskLevel,\n      urgency: urgency,\n      notifyChannel: notifyChannel,\n      alertTimestamp: now.toISOString(),\n      message: `${d.ref} (${d.projectName}) expires in ${daysLeft} days. Risk: ${riskLevel.toUpperCase()}. Amount: ${d.amount}. Issuing bank: ${d.issuingBank}.`\n    }\n  });\n}\n\nif (alerts.length === 0) {\n  return [{ json: { status: 'no_alerts', message: 'No BG expiries within 90-day horizon.', timestamp: now.toISOString() } }];\n}\n\nreturn alerts;"
+      },
+      "id": "threshold-logic",
+      "name": "Threshold Logic — 30/15/7 Day Risk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-alerts",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_alerts",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-has-alerts",
+      "name": "Has Active Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-email",
+              "leftValue": "={{ $json.notifyChannel }}",
+              "rightValue": "email",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "needs-email",
+      "name": "Needs Email Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ALERT_FROM_EMAIL || 'pmo@hintonn.com' }}",
+        "toEmail": "={{ $env.ALERT_TO_EMAIL || 'mohit@hintonn.com' }}",
+        "subject": "=⚠️ BG Expiry Alert: {{ $json.ref }} — {{ $json.daysLeft }} days left",
+        "text": "=Bank Guarantee {{ $json.ref }} for project '{{ $json.projectName }}' expires in {{ $json.daysLeft }} days.\n\nRisk Level: {{ $json.riskLevel | uppercase }}\nAmount: {{ $json.amount }}\nType: {{ $json.type }}\nIssuing Bank: {{ $json.issuingBank }}\nExpiry Date: {{ $json.expiryDate }}\n\nAction Required: Initiate BG renewal or extension request.\n\n— Hintonn PMO Automation"
+      },
+      "id": "send-email",
+      "name": "Send Email Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1340,
+        180
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "Hintonn SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst collection = 'notifications';\nconst docId = \"bg-alert-\" + (data.bgId || data.id || 'unknown') + \"-\" + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nconst clean = { ...data };\ndelete clean._firestoreCollection;\ndelete clean._firestoreDocId;\nfor (const [key, val] of Object.entries(clean)) fields[key] = toFirestoreValue(val);\n\nreturn [{ json: { _firestoreCollection: collection, _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-notif-for-firestore",
+      "name": "Format Notification for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "firestore-notification",
+      "name": "Write Firestore Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        440
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst collection = 'bgAlerts';\nconst docId = \"alert-\" + (data.bgId || data.id || 'unknown') + \"-\" + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nconst clean = { ...data };\ndelete clean._firestoreCollection;\ndelete clean._firestoreDocId;\nfor (const [key, val] of Object.entries(clean)) fields[key] = toFirestoreValue(val);\n\nreturn [{ json: { _firestoreCollection: collection, _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-alert-for-firestore",
+      "name": "Format Alert for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "firestore-alert-log",
+      "name": "Log Alert to Firestore",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        440
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'bankGuarantees' } }];"
+      },
+      "id": "parse-bgs-response",
+      "name": "Parse BG Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Cron — Daily 9am BG Check": {
+      "main": [
+        [
+          {
+            "node": "Query BG Guarantees from Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query BG Guarantees from Firestore": {
+      "main": [
+        [
+          {
+            "node": "Parse BG Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Threshold Logic — 30/15/7 Day Risk": {
+      "main": [
+        [
+          {
+            "node": "Has Active Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Active Alerts?": {
+      "main": [
+        [
+          {
+            "node": "Needs Email Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Needs Email Alert?": {
+      "main": [
+        [
+          {
+            "node": "Send Email Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send Email Alert": {
+      "main": [
+        [
+          {
+            "node": "Format Notification for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Firestore Notification": {
+      "main": [
+        [
+          {
+            "node": "Format Alert for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Notification for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Write Firestore Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Log Alert to Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse BG Response": {
+      "main": [
+        [
+          {
+            "node": "Threshold Logic — 30/15/7 Day Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "errorWorkflow": "Hintonn PMO — Error Recovery & Health Check"
+  },
+  "tags": [
+    {
+      "name": "Hintonn PMO"
+    },
+    {
+      "name": "Phase 5"
+    },
+    {
+      "name": "Alert Dispatcher"
+    }
+  ]
+}

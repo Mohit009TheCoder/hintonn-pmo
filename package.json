@@ -1,0 +1,24 @@
+{
+  "name": "hintonn-pmo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "firebase-seed.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mohit009TheCoder/hintonn-pmo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Mohit009TheCoder/hintonn-pmo/issues"
+  },
+  "homepage": "https://github.com/Mohit009TheCoder/hintonn-pmo#readme",
+  "dependencies": {
+    "firebase-admin": "^14.5.0"
+  }
+}

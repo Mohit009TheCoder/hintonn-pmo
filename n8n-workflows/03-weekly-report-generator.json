@@ -1,0 +1,462 @@
+{
+  "name": "Hintonn PMO — Weekly Report Generator (Mon 8am PDF)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cron-weekly-report",
+      "name": "Cron — Monday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage 5.3.1 — Aggregate portfolio scores\n// Read all data from Firestore collections\nconst now = new Date();\nconst weekStart = new Date(now);\nweekStart.setDate(now.getDate() - 7);\n\n// Build aggregation payload for downstream nodes\nreturn [{\n  json: {\n    reportWeek: {\n      start: weekStart.toISOString().split('T')[0],\n      end: now.toISOString().split('T')[0]\n    },\n    collections: ['projects', 'tasks', 'issues', 'milestones', 'bankGuarantees', 'invoices', 'dlpRecords', 'retentionRecords', 'members', 'companies'],\n    generatedAt: now.toISOString(),\n    reportTitle: 'Hintonn PMO — Weekly Executive Report'\n  }\n}];"
+      },
+      "id": "aggregate-scores",
+      "name": "Aggregate Portfolio Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/projects",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-projects",
+      "name": "Fetch All Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        180
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/tasks",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-tasks",
+      "name": "Fetch All Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        340
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/bankGuarantees",
+        "authentication": "oAuth2",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "fetch-bgs",
+      "name": "Fetch BG Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        500
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the HTML report template with all aggregated data\nconst projects = $input.all().filter(i => i.json._collection === 'projects' || i.json.name);\nconst now = new Date();\nconst weekEnd = now.toISOString().split('T')[0];\nconst weekStart = new Date(now.getTime() - 7*86400000).toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    html: `<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{font-family:Inter,system-ui,sans-serif;color:#0F172A;padding:40px;max-width:900px;margin:0 auto}h1{font-size:28px;color:#2563EB;border-bottom:3px solid #2563EB;padding-bottom:12px}h2{font-size:20px;color:#1E293B;margin-top:32px;border-bottom:1px solid #E2E8F0;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#F8FAFC;text-align:left;padding:10px 12px;border:1px solid #E2E8F0;font-size:13px;color:#475569}td{padding:10px 12px;border:1px solid #E2E8F0;font-size:13px}.kpi{display:inline-block;padding:16px 24px;margin:8px;border-radius:12px;background:#F8FAFC;border:1px solid #E2E8F0;text-align:center}.kpi .value{font-size:32px;font-weight:800;color:#2563EB}.kpi .label{font-size:12px;color:#64748B;margin-top:4px}.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}.badge-high{background:#FEE2E2;color:#DC2626}.badge-medium{background:#FEF3C7;color:#D97706}.badge-active{background:#DBEAFE;color:#2563EB}.badge-completed{background:#D1FAE5;color:#059669}footer{margin-top:40px;padding-top:16px;border-top:1px solid #E2E8F0;font-size:11px;color:#94A3B8}</style></head><body><h1>📊 Hintonn PMO — Weekly Executive Report</h1><p style=\"color:#64748B\">Report Period: ${weekStart} → ${weekEnd} | Generated: ${now.toISOString()}</p><h2>Portfolio Health Score</h2><p style=\"font-size:16px\">Recalculated automatically every 6 hours. See full breakdown below.</p><h2>Project Status Summary</h2><table><thead><tr><th>Project</th><th>Status</th><th>Progress</th><th>Priority</th></tr></thead><tbody><tr><td colspan=\"4\" style=\"text-align:center;color:#94A3B8\">Data populated by Firestore query</td></tr></tbody></table><h2>Bank Guarantee Risk Summary</h2><p>Active BGs, expiries within 30/60/90 days, and renewal status.</p><h2>Task Completion Metrics</h2><p>Completed this week, overdue items, velocity trends.</p><h2>DLP & Retention Status</h2><p>Active DLP packages, retention held, upcoming release dates.</p><footer>Generated by Hintonn PMO n8n Automation Engine | Confidential — Internal Use Only</footer></body></html>`,\n    reportWeek: `${weekStart} to ${weekEnd}`,\n    generatedAt: now.toISOString()\n  }\n}];"
+      },
+      "id": "build-html-template",
+      "name": "Build HTML Report Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "html": "={{ $json.html }}",
+        "options": {
+          "paperWidth": 8.27,
+          "paperHeight": 11.69,
+          "marginTop": 0.5,
+          "marginRight": 0.5,
+          "marginBottom": 0.5,
+          "marginLeft": 0.5
+        }
+      },
+      "id": "puppeteer-pdf",
+      "name": "Generate PDF via Puppeteer",
+      "type": "n8n-nodes-base.puppeteer",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ],
+      "notes": "Stage 5.3.1 — HTML template to PDF via Puppeteer headless Chrome. NOTE: Requires 'n8n-nodes-puppeteer' community package installed and a Chromium/Chrome browser available on the n8n server. For Docker deployments, use the n8n-puppeteer image or install chromium in the container.",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://firebasestorage.googleapis.com/v0/b/{{ $env.FIREBASE_STORAGE_BUCKET || 'project-management-syste-bf69f.appspot.com' }}/o?uploadType=media&name=reports%2Fweekly%2Fweekly-report-{{ Date.now() }}.pdf",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "contentType": "application/pdf",
+        "body": "={{ $json.data }}",
+        "options": {
+          "timeout": 60000,
+          "fullResponse": true
+        }
+      },
+      "id": "storage-upload",
+      "name": "Upload PDF to Firebase Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "notes": "Uses Firebase Storage REST API (v0). Requires OAuth2 scope: https://www.googleapis.com/auth/devstorage.read_write"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.ALERT_FROM_EMAIL || 'pmo@hintonn.com' }}",
+        "toEmail": "={{ $env.ALERT_TO_EMAIL || 'mohit@hintonn.com' }}",
+        "subject": "=📊 Hintonn PMO Weekly Report — {{ $json.reportWeek }}",
+        "text": "=Your weekly Hintonn PMO executive report has been generated.\n\nReport Period: {{ $json.reportWeek }}\nGenerated: {{ $json.generatedAt }}\n\nThe full PDF report is available in Firebase Storage under reports/weekly/.\n\n— Hintonn PMO Automation",
+        "options": {
+          "attachments": []
+        }
+      },
+      "id": "email-report",
+      "name": "Email Report to Stakeholders",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1560,
+        300
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "SMTP_CREDENTIAL_ID",
+          "name": "Hintonn SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst collection = 'reportLogs';\nconst docId = \"weekly-\" + Date.now();\n\nfunction toFirestoreValue(val) {\n  if (val === null || val === undefined) return { nullValue: null };\n  if (typeof val === 'string') return { stringValue: val };\n  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };\n  if (typeof val === 'boolean') return { booleanValue: val };\n  if (Array.isArray(val)) return { arrayValue: { values: val.map(v => toFirestoreValue(v)) } };\n  if (typeof val === 'object') {\n    const fields = {};\n    for (const [k, v] of Object.entries(val)) fields[k] = toFirestoreValue(v);\n    return { mapValue: { fields } };\n  }\n  return { stringValue: String(val) };\n}\n\nconst fields = {};\nconst clean = { ...data };\ndelete clean._firestoreCollection;\ndelete clean._firestoreDocId;\nfor (const [key, val] of Object.entries(clean)) fields[key] = toFirestoreValue(val);\n\nreturn [{ json: { _firestoreCollection: collection, _firestoreDocId: docId, _firestoreBody: { fields } } }];"
+      },
+      "id": "format-report-for-firestore",
+      "name": "Format Report for Firestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://firestore.googleapis.com/v1/projects/hintonn-pmo/databases/(default)/documents/{{ $json._firestoreCollection }}/{{ $json._firestoreDocId }}",
+        "authentication": "oAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._firestoreBody) }}",
+        "options": {
+          "timeout": 30000,
+          "fullResponse": true
+        }
+      },
+      "id": "log-report",
+      "name": "Log Report Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        460
+      ],
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "GOOGLE_OAUTH2_CREDENTIAL_ID",
+          "name": "Hintonn Google OAuth2"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'projects' } }];"
+      },
+      "id": "parse-projects-response",
+      "name": "Parse Projects Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'tasks' } }];"
+      },
+      "id": "parse-tasks-response",
+      "name": "Parse Tasks Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Firestore REST API response to plain JSON\nconst response = $input.first().json;\nconst documents = response.documents || [];\nconst results = [];\n\nfunction fromFirestoreValue(val) {\n  if (!val) return null;\n  if (val.nullValue !== undefined) return null;\n  if (val.stringValue !== undefined) return val.stringValue;\n  if (val.integerValue !== undefined) return parseInt(val.integerValue, 10);\n  if (val.doubleValue !== undefined) return val.doubleValue;\n  if (val.booleanValue !== undefined) return val.booleanValue;\n  if (val.arrayValue !== undefined) return (val.arrayValue.values || []).map(v => fromFirestoreValue(v));\n  if (val.mapValue !== undefined) {\n    const obj = {};\n    for (const [k, v] of Object.entries(val.mapValue.fields || {})) obj[k] = fromFirestoreValue(v);\n    return obj;\n  }\n  if (val.timestampValue !== undefined) return val.timestampValue;\n  return null;\n}\n\nfor (const doc of documents) {\n  const fields = doc.fields || {};\n  const parsed = {};\n  for (const [key, val] of Object.entries(fields)) {\n    parsed[key] = fromFirestoreValue(val);\n  }\n  const docName = doc.name || '';\n  parsed.id = docName.split('/').pop();\n  parsed._firestoreDocPath = docName;\n  results.push({ json: parsed });\n}\n\nreturn results.length > 0 ? results : [{ json: { _empty: true, _collection: 'bankGuarantees' } }];"
+      },
+      "id": "parse-bankGuarantees-response",
+      "name": "Parse BankGuarantees Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Cron — Monday 8am": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Portfolio Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Portfolio Scores": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Projects",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch All Tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch BG Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Projects": {
+      "main": [
+        [
+          {
+            "node": "Parse Projects Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Tasks": {
+      "main": [
+        [
+          {
+            "node": "Parse Tasks Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch BG Data": {
+      "main": [
+        [
+          {
+            "node": "Parse BankGuarantees Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Report Template": {
+      "main": [
+        [
+          {
+            "node": "Generate PDF via Puppeteer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PDF via Puppeteer": {
+      "main": [
+        [
+          {
+            "node": "Upload PDF to Firebase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to Firebase Storage": {
+      "main": [
+        [
+          {
+            "node": "Email Report to Stakeholders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Report to Stakeholders": {
+      "main": [
+        [
+          {
+            "node": "Format Report for Firestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report for Firestore": {
+      "main": [
+        [
+          {
+            "node": "Log Report Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Projects Response": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Report Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Tasks Response": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Report Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse BankGuarantees Response": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Report Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "errorWorkflow": "Hintonn PMO — Error Recovery & Health Check"
+  },
+  "tags": [
+    {
+      "name": "Hintonn PMO"
+    },
+    {
+      "name": "Phase 5"
+    },
+    {
+      "name": "Weekly Report"
+    }
+  ]
+}

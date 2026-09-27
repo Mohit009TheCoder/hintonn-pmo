@@ -201,7 +201,7 @@ const App = {
 
             <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-pill);font-size:12px;color:var(--color-text-muted);margin-bottom:28px;">
               <span>Role Level:</span>
-              <span style="font-weight:600;color:var(--color-primary-700);">AI Developer</span>
+              <span style="font-weight:600;color:var(--color-primary-700);">${typeof Auth !== 'undefined' && Auth.getCurrentUser() ? Auth.getCurrentUser().role : 'AI Developer'}</span>
             </div>
 
             <div>

@@ -147,6 +147,24 @@ const Auth = {
     return allowedRoles.includes(userRoleCode);
   },
 
+  // ─── Force Admin role for known admin emails/IDs ───
+  _enforceAdminRole(user) {
+    if (!user) return user;
+    const adminEmails = ['mohithintonn@gmail.com'];
+    const adminIds = ['mohit', 'm3'];
+    const isAdmin =
+      (user.email && adminEmails.includes(user.email.toLowerCase())) ||
+      (user.googleEmail && adminEmails.includes(user.googleEmail.toLowerCase())) ||
+      (user.id && adminIds.includes(user.id.toLowerCase())) ||
+      (user.memberId && adminIds.includes(user.memberId.toLowerCase())) ||
+      (user.loginId && adminEmails.includes(user.loginId.toLowerCase()));
+    if (isAdmin) {
+      user.role = 'Admin';
+      user.title = user.title || 'Executive PMO & Lead';
+    }
+    return user;
+  },
+
   init() {
     try {
       const saved = localStorage.getItem('hintonn-current-user');
@@ -165,10 +183,13 @@ const Auth = {
         }
 
         if (match) {
+          this._enforceAdminRole(match);
           this.currentUser = match;
           if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
             Store._data.settings.currentUser = match.memberId || 'm1';
           }
+          // Re-save with enforced role
+          try { localStorage.setItem('hintonn-current-user', JSON.stringify(match)); } catch (e) {}
         } else {
           this.currentUser = null;
           localStorage.removeItem('hintonn-current-user');
@@ -194,6 +215,7 @@ const Auth = {
 
     // Match Password with strict case sensitivity
     if (user && user.password === rawPass) {
+      this._enforceAdminRole(user);
       this.currentUser = user;
       try {
         localStorage.setItem('hintonn-current-user', JSON.stringify(user));
@@ -263,6 +285,7 @@ const Auth = {
     }
 
     if (user) {
+      this._enforceAdminRole(user);
       this.currentUser = user;
       try {
         localStorage.setItem('hintonn-current-user', JSON.stringify(user));
@@ -334,6 +357,7 @@ const Auth = {
       }
     }
 
+    this._enforceAdminRole(newUser);
     this.currentUser = newUser;
     try {
       localStorage.setItem('hintonn-current-user', JSON.stringify(newUser));
@@ -402,13 +426,7 @@ const Auth = {
   },
 
   getCurrentUser() {
-    if (this.currentUser && (
-      (this.currentUser.email && this.currentUser.email.toLowerCase() === 'mohithintonn@gmail.com') ||
-      (this.currentUser.googleEmail && this.currentUser.googleEmail.toLowerCase() === 'mohithintonn@gmail.com') ||
-      (this.currentUser.loginId && this.currentUser.loginId.toLowerCase() === 'mohithintonn@gmail.com')
-    )) {
-      this.currentUser.role = 'Admin';
-    }
+    this._enforceAdminRole(this.currentUser);
     return this.currentUser;
   },
 

@@ -1,4 +1,11 @@
 {
+  "hosting": {
+    "public": ".",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "functions/**", "scratch/**", "_backups/**", "firebase-seed.js", "service-account.json", "package*.json", "hintonn design (1).md"],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "functions": [
     {
       "source": "functions",

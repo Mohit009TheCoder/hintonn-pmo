@@ -79,109 +79,120 @@ const Store = {
           console.log('⚡ [Hintonn Cloud Sync] Anonymous auth for Firestore access');
           startSync();
         }).catch(err => {
-          // If anonymous auth is disabled, still try — listeners will warn but won't block the app
           console.warn('[Hintonn Cloud Sync] Anonymous auth failed:', err.code, err.message);
           // Retry later in case Firebase Auth state changes (e.g. after Google login)
           setTimeout(() => this._initFirestoreSync(), 5000);
         });
+
+        // Also listen for auth state changes (e.g. Google login) to trigger sync
+        auth.onAuthStateChanged(user => {
+          if (user && !this._firestoreInitialized) {
+            console.log('⚡ [Hintonn Cloud Sync] Auth state changed, initializing sync for:', user.email || user.uid);
+            startSync();
+          }
+        });
         return;
       }
-
-      // Phase 6: Added 'notifications' for Cloud Function push + 'audit_logs' for admin audit trail
-      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
-
-      syncCollections.forEach(colName => {
-        this._db.collection(colName).onSnapshot(snapshot => {
-          if (!snapshot) return;
-
-          // If collection is completely empty on remote, seed initial data to Cloud Firestore
-          if (snapshot.empty) {
-            const localList = this._data[colName] || [];
-            if (localList.length > 0) {
-              console.log(`⚡ [Hintonn Cloud Sync] Seeding remote Firestore collection '${colName}' (${localList.length} items)...`);
-              localList.forEach(item => {
-                if (item && item.id) {
-                  this._db.collection(colName).doc(String(item.id)).set(item).catch(() => {});
-                }
-              });
-            }
-            return;
-          }
-
-          // Ingest remote changes from Firestore
-          const remoteItems = [];
-          snapshot.forEach(doc => {
-            const d = doc.data();
-            if (d) remoteItems.push(d);
-          });
-
-          if (remoteItems.length > 0) {
-            if (colName === 'members') {
-              const coreMembers = [
-                { id: 'm1', name: 'Ayush Desai', role: 'AI Developer', color: '#2563EB', email: 'ayush@hintonn.com', initials: 'AD' },
-                { id: 'm2', name: 'Preet Bhavsar', role: 'AI Developer', color: '#7C3AED', email: 'preet@hintonn.com', initials: 'PB' },
-                { id: 'm3', name: 'Mohit Jain', role: 'Admin', color: '#4F46E5', email: 'mohit@hintonn.com', initials: 'MJ' },
-                { id: 'm4', name: 'Hirvi Sanghavi', role: 'AI Developer', color: '#1D4ED8', email: 'hirvi@hintonn.com', initials: 'HS' }
-              ];
-              coreMembers.forEach(core => {
-                const remote = remoteItems.find(r => r.id === core.id);
-                if (!remote) {
-                  this._db.collection('members').doc(core.id).set(core).catch(()=>{});
-                  remoteItems.push(core);
-                } else if (remote.role !== core.role) {
-                  this._db.collection('members').doc(core.id).set({ role: core.role }, { merge: true }).catch(()=>{});
-                  remote.role = core.role;
-                }
-              });
-            } else if (colName === 'tasks') {
-              remoteItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-            } else if (colName === 'activities' || colName === 'comments') {
-              remoteItems.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-            }
-
-            this._data[colName] = remoteItems;
-
-            // Normalize array fields that may be missing on remote Firestore docs
-            if (colName === 'projects') {
-              remoteItems.forEach(p => {
-                if (!Array.isArray(p.memberIds)) p.memberIds = [];
-                if (!Array.isArray(p.taskIds)) p.taskIds = [];
-                if (!Array.isArray(p.milestoneIds)) p.milestoneIds = [];
-                if (!Array.isArray(p.issueIds)) p.issueIds = [];
-                if (!Array.isArray(p.tags)) p.tags = [];
-                if (p.progress == null) p.progress = 0;
-              });
-            }
-
-            if (colName === 'tasks' || colName === 'projects') {
-              this._data.projects.forEach(p => this._recalcProgress(p.id));
-            }
-
-            this._save();
-            this._notify();
-          }
-        }, err => {
-          console.warn(`[Hintonn Cloud Sync] Realtime listener notice for '${colName}':`, err.message || err);
-        });
-      });
-
-      // Settings synchronization
-      this._db.collection('settings').doc('workspace_settings').onSnapshot(doc => {
-        if (doc && doc.exists) {
-          const remoteSettings = doc.data();
-          if (remoteSettings) {
-            this._data.settings = Object.assign({}, this._data.settings, remoteSettings);
-            this._save();
-            this._notify();
-          }
-        } else if (this._data.settings) {
-          this._db.collection('settings').doc('workspace_settings').set(this._data.settings).catch(() => {});
-        }
-      }, () => {});
 
     } catch (err) {
       console.warn('[Hintonn Cloud Sync] Unable to initialize Firestore listeners:', err);
     }
+  },
+
+  _startFirestoreListeners() {
+    if (!this._db) return;
+
+    // Phase 6: Added 'notifications' for Cloud Function push + 'audit_logs' for admin audit trail
+    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
+
+    syncCollections.forEach(colName => {
+      this._db.collection(colName).onSnapshot(snapshot => {
+        if (!snapshot) return;
+
+        // If collection is completely empty on remote, seed initial data to Cloud Firestore
+        if (snapshot.empty) {
+          const localList = this._data[colName] || [];
+          if (localList.length > 0) {
+            console.log(`⚡ [Hintonn Cloud Sync] Seeding remote Firestore collection '${colName}' (${localList.length} items)...`);
+            localList.forEach(item => {
+              if (item && item.id) {
+                this._db.collection(colName).doc(String(item.id)).set(item).catch(() => {});
+              }
+            });
+          }
+          return;
+        }
+
+        // Ingest remote changes from Firestore
+        const remoteItems = [];
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          if (d) remoteItems.push(d);
+        });
+
+        if (remoteItems.length > 0) {
+          if (colName === 'members') {
+            const coreMembers = [
+              { id: 'm1', name: 'Ayush Desai', role: 'AI Developer', color: '#2563EB', email: 'ayush@hintonn.com', initials: 'AD' },
+              { id: 'm2', name: 'Preet Bhavsar', role: 'AI Developer', color: '#7C3AED', email: 'preet@hintonn.com', initials: 'PB' },
+              { id: 'm3', name: 'Mohit Jain', role: 'Admin', color: '#4F46E5', email: 'mohit@hintonn.com', initials: 'MJ' },
+              { id: 'm4', name: 'Hirvi Sanghavi', role: 'AI Developer', color: '#1D4ED8', email: 'hirvi@hintonn.com', initials: 'HS' }
+            ];
+            coreMembers.forEach(core => {
+              const remote = remoteItems.find(r => r.id === core.id);
+              if (!remote) {
+                this._db.collection('members').doc(core.id).set(core).catch(()=>{});
+                remoteItems.push(core);
+              } else if (remote.role !== core.role) {
+                this._db.collection('members').doc(core.id).set({ role: core.role }, { merge: true }).catch(()=>{});
+                remote.role = core.role;
+              }
+            });
+          } else if (colName === 'tasks') {
+            remoteItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+          } else if (colName === 'activities' || colName === 'comments') {
+            remoteItems.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          }
+
+          this._data[colName] = remoteItems;
+
+          // Normalize array fields that may be missing on remote Firestore docs
+          if (colName === 'projects') {
+            remoteItems.forEach(p => {
+              if (!Array.isArray(p.memberIds)) p.memberIds = [];
+              if (!Array.isArray(p.taskIds)) p.taskIds = [];
+              if (!Array.isArray(p.milestoneIds)) p.milestoneIds = [];
+              if (!Array.isArray(p.issueIds)) p.issueIds = [];
+              if (!Array.isArray(p.tags)) p.tags = [];
+              if (p.progress == null) p.progress = 0;
+            });
+          }
+
+          if (colName === 'tasks' || colName === 'projects') {
+            this._data.projects.forEach(p => this._recalcProgress(p.id));
+          }
+
+          this._save();
+          this._notify();
+        }
+      }, err => {
+        console.warn(`[Hintonn Cloud Sync] Realtime listener notice for '${colName}':`, err.message || err);
+      });
+    });
+
+    // Settings synchronization
+    this._db.collection('settings').doc('workspace_settings').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const remoteSettings = doc.data();
+        if (remoteSettings) {
+          this._data.settings = Object.assign({}, this._data.settings, remoteSettings);
+          this._save();
+          this._notify();
+        }
+      } else if (this._data.settings) {
+        this._db.collection('settings').doc('workspace_settings').set(this._data.settings).catch(() => {});
+      }
+    }, () => {});
   },
 
   _syncToFirestore(collection, id, data) {

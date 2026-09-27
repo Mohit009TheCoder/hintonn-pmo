@@ -122,7 +122,10 @@ const FirebaseAuth = {
   async _saveOrUpdateUserSession(user, providerType) {
     if (!user) return;
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
-    const isAdminEmail = user.email && user.email.toLowerCase() === 'mohithintonn@gmail.com';
+    const emailLower = (user.email || '').toLowerCase();
+    const isAdminEmail = emailLower === 'mohithintonn@gmail.com';
+    const isAdminName = defaultName.toLowerCase().includes('mohit') && defaultName.toLowerCase().includes('jain');
+    const isAdmin = isAdminEmail || isAdminName;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
 
     // 1. Immediately sync session to localStorage so UI and route guards recognize user
@@ -133,7 +136,7 @@ const FirebaseAuth = {
       email: user.email || '',
       googleEmail: user.email || '',
       name: defaultName,
-      role: isAdminEmail ? 'Admin' : 'AI Developer',
+      role: isAdmin ? 'Admin' : 'AI Developer',
       avatar: initials,
       initials: initials,
       color: '#2563EB',
@@ -168,7 +171,7 @@ const FirebaseAuth = {
           name: defaultName,
           email: user.email,
           photoURL: user.photoURL || null,
-          role: isAdminEmail ? 'Admin' : 'AI Developer',
+          role: isAdmin ? 'Admin' : 'AI Developer',
           isActive: true,
           provider: providerType || 'password',
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -181,7 +184,7 @@ const FirebaseAuth = {
           email: user.email,
           name: existingData.name || defaultName,
           photoURL: user.photoURL || existingData.photoURL || null,
-          role: isAdminEmail ? 'Admin' : (existingData.role || 'AI Developer'),
+          role: isAdmin ? 'Admin' : (existingData.role || 'AI Developer'),
           isActive: true,
           lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -196,15 +199,16 @@ const FirebaseAuth = {
   async _createUserDocument(user, providerType, extra) {
     try {
       const userRef = this._db.collection('users').doc(user.uid);
-      const name = (extra && extra.name) || user.displayName || user.email.split('@')[0];
-      const isAdminEmail = user.email && user.email.toLowerCase() === 'mohithintonn@gmail.com';
+      const name = (extra && extra.name) || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+      const emailLower = (user.email || '').toLowerCase();
+      const isAdmin = emailLower === 'mohithintonn@gmail.com' || (name.toLowerCase().includes('mohit') && name.toLowerCase().includes('jain'));
 
       await userRef.set({
         uid: user.uid,
         name: name,
         email: user.email,
         photoURL: user.photoURL || null,
-        role: isAdminEmail ? 'Admin' : 'developer',
+        role: isAdmin ? 'Admin' : 'AI Developer',
         isActive: true,
         provider: providerType || 'password',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),

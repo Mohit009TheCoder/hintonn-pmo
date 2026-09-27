@@ -272,3 +272,19 @@ FirebaseAuth.handleRedirectResult().then(user => {
 }).catch(err => {
   console.error('Redirect handling error:', err);
 });
+
+// ── Phase 6: Register Service Worker + Init FCM ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      console.log('[SW] Registered:', registration.scope);
+      // Init FCM after service worker is ready
+      if (typeof FCM !== 'undefined') {
+        registration.ready.then(() => FCM.init());
+      }
+    } catch (err) {
+      console.warn('[SW] Registration failed:', err);
+    }
+  });
+}

@@ -1,0 +1,14 @@
+{
+  "name": "hintonn-pmo-functions",
+  "version": "1.0.0",
+  "description": "Hintonn PMO Cloud Functions",
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^14.0.0",
+    "firebase-functions": "^6.3.0"
+  }
+}

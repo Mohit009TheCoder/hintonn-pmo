@@ -15,6 +15,7 @@ const SettingsScreen = {
         <div class="settings-nav">
           <button class="settings-nav-item ${this._tab==='workspace'?'active':''}" onclick="SettingsScreen._tab='workspace';SettingsScreen.refresh()">Workspace</button>
           <button class="settings-nav-item ${this._tab==='profile'?'active':''}" onclick="SettingsScreen._tab='profile';SettingsScreen.refresh()">Profile</button>
+          <button class="settings-nav-item ${this._tab==='notifications'?'active':''}" onclick="SettingsScreen._tab='notifications';SettingsScreen.refresh()">Notifications</button>
           <button class="settings-nav-item ${this._tab==='data'?'active':''}" onclick="SettingsScreen._tab='data';SettingsScreen.refresh()">Data</button>
         </div>
         <div class="settings-section" id="settings-content">${this._renderTab(settings)}</div>
@@ -25,6 +26,7 @@ const SettingsScreen = {
     switch(this._tab) {
       case 'workspace': return this._renderWorkspace(settings);
       case 'profile': return this._renderProfile(settings);
+      case 'notifications': return this._renderNotifications(settings);
       case 'data': return this._renderData(settings);
       default: return '';
     }
@@ -85,6 +87,85 @@ const SettingsScreen = {
         <div><div class="settings-row-label">Reset All Data</div><div class="settings-row-desc">Clear all data and load sample projects</div></div>
         <button class="btn btn-danger btn-sm" onclick="SettingsScreen.resetData()">Reset</button>
       </div>`;
+  },
+
+  _renderNotifications(s) {
+    const prefs = Store.getNotificationPrefs();
+    const pushSupported = typeof FCM !== 'undefined' && FCM.isSupported();
+    const permission = typeof FCM !== 'undefined' ? FCM.getPermissionStatus() : 'unavailable';
+    const pushStatusText = permission === 'granted' ? 'Enabled' : permission === 'denied' ? 'Blocked by browser' : 'Not enabled';
+    const pushStatusColor = permission === 'granted' ? 'var(--color-success)' : permission === 'denied' ? 'var(--color-danger)' : 'var(--color-text-muted)';
+
+    return `
+      <h3>Notifications & Push</h3>
+      <div class="desc">Configure push notifications and choose which alerts you want to receive.</div>
+
+      <div class="settings-row" style="margin-top:16px">
+        <div>
+          <div class="settings-row-label">Push Notifications</div>
+          <div class="settings-row-desc">Receive real-time browser push notifications · <span style="color:${pushStatusColor}">${pushStatusText}</span></div>
+        </div>
+        ${pushSupported ? `<label class="toggle-switch">
+          <input type="checkbox" id="push-toggle" ${prefs.pushEnabled && permission === 'granted' ? 'checked' : ''} onchange="SettingsScreen._togglePush(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>` : '<span style="font-size:13px;color:var(--color-text-muted)">Not supported</span>'}
+      </div>
+
+      <div style="margin-top:28px;margin-bottom:16px">
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:4px">Notification Preferences</h4>
+        <div style="font-size:13px;color:var(--color-text-muted)">Choose which notifications you receive in-app and via push.</div>
+      </div>
+
+      <div class="settings-row">
+        <div><div class="settings-row-label">Bank Guarantee Expiry Alerts</div><div class="settings-row-desc">Alerts when BG expiry dates are approaching</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-bgExpiryAlerts" ${prefs.bgExpiryAlerts ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Invoice Notifications</div><div class="settings-row-desc">Alerts for invoice status changes and payment updates</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-invoiceNotifications" ${prefs.invoiceNotifications ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">DLP Alerts</div><div class="settings-row-desc">Defect liability period reminders and inspection alerts</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-dlpAlerts" ${prefs.dlpAlerts ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Health Score Alerts</div><div class="settings-row-desc">Project health score changes and risk warnings</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-healthScoreAlerts" ${prefs.healthScoreAlerts ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Task Updates</div><div class="settings-row-desc">Notifications for task creation, assignment, and status changes</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-taskUpdates" ${prefs.taskUpdates ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Milestone Updates</div><div class="settings-row-desc">Alerts for milestone completions and deadline reminders</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="pref-milestoneUpdates" ${prefs.milestoneUpdates ? 'checked' : ''}><span class="toggle-slider"></span></label>
+      </div>
+
+      <div style="margin-top:24px"><button class="btn btn-primary" onclick="SettingsScreen.saveNotificationPrefs()">Save Preferences</button></div>`;
+  },
+
+  async _togglePush(enabled) {
+    if (enabled) {
+      const success = await FCM.enablePush();
+      if (!success) {
+        document.getElementById('push-toggle').checked = false;
+      }
+    } else {
+      await FCM.disablePush();
+    }
+  },
+
+  saveNotificationPrefs() {
+    const prefs = {
+      bgExpiryAlerts: document.getElementById('pref-bgExpiryAlerts')?.checked ?? true,
+      invoiceNotifications: document.getElementById('pref-invoiceNotifications')?.checked ?? true,
+      dlpAlerts: document.getElementById('pref-dlpAlerts')?.checked ?? true,
+      healthScoreAlerts: document.getElementById('pref-healthScoreAlerts')?.checked ?? true,
+      taskUpdates: document.getElementById('pref-taskUpdates')?.checked ?? true,
+      milestoneUpdates: document.getElementById('pref-milestoneUpdates')?.checked ?? true
+    };
+    Store.saveNotificationPrefs(prefs);
+    Toast.show('Notification preferences saved', 'success');
   },
 
   saveWorkspace() {

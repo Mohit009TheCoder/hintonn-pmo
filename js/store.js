@@ -64,7 +64,8 @@ const Store = {
       this._firestoreInitialized = true;
       console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: hintonn-pmo)');
 
-      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies'];
+      // Phase 6: Added 'notifications' for Cloud Function push + 'audit_logs' for admin audit trail
+      const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
 
       syncCollections.forEach(colName => {
         this._db.collection(colName).onSnapshot(snapshot => {
@@ -654,6 +655,49 @@ const Store = {
     Object.assign(this._data.settings, d);
     this._save(); this._notify();
     this._syncToFirestore('settings', 'workspace_settings', this._data.settings);
+  },
+
+  // ─── Notification Preferences & Public API ───
+  getNotificationPrefs() {
+    if (!this._data.settings.notificationPrefs) {
+      this._data.settings.notificationPrefs = {
+        pushEnabled: false,
+        bgExpiryAlerts: true,
+        invoiceNotifications: true,
+        dlpAlerts: true,
+        healthScoreAlerts: true,
+        taskUpdates: true,
+        milestoneUpdates: true
+      };
+    }
+    return this._data.settings.notificationPrefs;
+  },
+
+  saveNotificationPrefs(prefs) {
+    this._data.settings.notificationPrefs = { ...this.getNotificationPrefs(), ...prefs };
+    this._save();
+    this._notify();
+    this._syncToFirestore('settings', 'workspace_settings', this._data.settings);
+  },
+
+  addNotification(notification) {
+    const n = {
+      id: this._genId(),
+      type: notification.type || 'system',
+      text: notification.text || '',
+      read: notification.read || false,
+      createdAt: new Date().toISOString()
+    };
+    this._data.notifications.unshift(n);
+    if (this._data.notifications.length > 100) {
+      this._data.notifications = this._data.notifications.slice(0, 100);
+    }
+    this._save();
+    this._notify();
+    if (this._db) {
+      this._syncToFirestore('notifications', n.id, n);
+    }
+    return n;
   },
 
   // Stats

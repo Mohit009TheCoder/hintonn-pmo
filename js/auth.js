@@ -167,6 +167,13 @@ const Auth = {
 
   init() {
     try {
+      // Version-based cache bust: clear stale localStorage on code update
+      const AUTH_VERSION = 'v2-admin-fix';
+      if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
+        localStorage.removeItem('hintonn-current-user');
+        localStorage.setItem('hintonn-auth-version', AUTH_VERSION);
+      }
+
       const saved = localStorage.getItem('hintonn-current-user');
       if (saved) {
         const parsed = JSON.parse(saved);

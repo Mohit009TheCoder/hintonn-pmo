@@ -61,8 +61,31 @@ const Store = {
 
     try {
       this._db = firebase.firestore();
-      this._firestoreInitialized = true;
-      console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: hintonn-pmo)');
+
+      // Ensure Firebase Auth has a user (anonymous if no real user) so Firestore rules pass
+      const auth = firebase.auth();
+      const startSync = () => {
+        this._firestoreInitialized = true;
+        console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: hintonn-pmo)');
+        this._startFirestoreListeners();
+      };
+
+      if (auth.currentUser) {
+        // Already authenticated (Google login or redirect result)
+        startSync();
+      } else {
+        // Sign in anonymously so Firestore rules (request.auth != null) are satisfied
+        auth.signInAnonymously().then(() => {
+          console.log('⚡ [Hintonn Cloud Sync] Anonymous auth for Firestore access');
+          startSync();
+        }).catch(err => {
+          // If anonymous auth is disabled, still try — listeners will warn but won't block the app
+          console.warn('[Hintonn Cloud Sync] Anonymous auth failed:', err.code, err.message);
+          // Retry later in case Firebase Auth state changes (e.g. after Google login)
+          setTimeout(() => this._initFirestoreSync(), 5000);
+        });
+        return;
+      }
 
       // Phase 6: Added 'notifications' for Cloud Function push + 'audit_logs' for admin audit trail
       const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];

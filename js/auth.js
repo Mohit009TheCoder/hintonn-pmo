@@ -30,7 +30,7 @@ const Auth = {
       id: 'mohit',
       memberId: 'm3',
       loginId: 'Mohit',
-      password: 'mohit@123',
+      password: 'Mohit@123',
       name: 'Mohit Jain',
       role: 'Admin',
       email: 'mohit@hintonn.com',
@@ -150,7 +150,7 @@ const Auth = {
   // ─── Force Admin role for known admin emails/IDs ───
   _enforceAdminRole(user) {
     if (!user) return user;
-    const adminEmails = ['mohithintonn@gmail.com'];
+    const adminEmails = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
     const adminIds = ['mohit', 'm3'];
     const isAdmin =
       (user.email && adminEmails.includes(user.email.toLowerCase())) ||

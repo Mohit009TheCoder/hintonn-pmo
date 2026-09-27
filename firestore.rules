@@ -6,7 +6,7 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.lower() == 'mohithintonn@gmail.com';
+        && request.auth.token.email.lower() in ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
     }
 
     // ── Helper: is the signed-in user the owner of doc {userId}? ──

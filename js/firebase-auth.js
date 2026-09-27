@@ -123,7 +123,7 @@ const FirebaseAuth = {
     if (!user) return;
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
     const emailLower = (user.email || '').toLowerCase();
-    const isAdminEmail = emailLower === 'mohithintonn@gmail.com';
+    const isAdminEmail = emailLower === 'mohithintonn@gmail.com' || emailLower === 'mohitsjain12104@gmail.com';
     const isAdminName = defaultName.toLowerCase().includes('mohit') && defaultName.toLowerCase().includes('jain');
     const isAdmin = isAdminEmail || isAdminName;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
@@ -201,7 +201,7 @@ const FirebaseAuth = {
       const userRef = this._db.collection('users').doc(user.uid);
       const name = (extra && extra.name) || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
       const emailLower = (user.email || '').toLowerCase();
-      const isAdmin = emailLower === 'mohithintonn@gmail.com' || (name.toLowerCase().includes('mohit') && name.toLowerCase().includes('jain'));
+      const isAdmin = emailLower === 'mohithintonn@gmail.com' || emailLower === 'mohitsjain12104@gmail.com' || (name.toLowerCase().includes('mohit') && name.toLowerCase().includes('jain'));
 
       await userRef.set({
         uid: user.uid,

@@ -53,6 +53,8 @@ const SettingsScreen = {
   _renderProfile(s) {
     const members = Store.getMembers();
     const current = Store.getMember(s.currentUser);
+    const authUser = (typeof Auth !== 'undefined' && Auth.getCurrentUser()) || null;
+    const displayEmail = (authUser && (authUser.googleEmail || authUser.email)) || (current && (current.googleEmail || current.email)) || '';
     return `
       <h3>Profile</h3>
       <div class="desc">Select your profile from the team.</div>
@@ -64,7 +66,7 @@ const SettingsScreen = {
       </div>
       ${current ? `<div style="display:flex;align-items:center;gap:16px;padding:20px;background:var(--color-bg-soft);border-radius:var(--radius-lg)">
         <div class="avatar avatar-xl" style="background:${current.color}">${current.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-        <div><div style="font-size:18px;font-weight:600">${current.name}</div><div style="font-size:14px;color:var(--color-text-muted)">${current.role}</div><div style="font-size:13px;color:var(--color-text-disabled);margin-top:2px">${current.email}</div></div>
+        <div><div style="font-size:18px;font-weight:600">${current.name}</div><div style="font-size:14px;color:var(--color-text-muted)">${authUser ? authUser.role : current.role}</div><div style="font-size:13px;color:var(--color-text-disabled);margin-top:2px">${displayEmail}</div></div>
       </div>` : ''}
       <div style="margin-top:24px"><button class="btn btn-primary" onclick="SettingsScreen.saveProfile()">Save Profile</button></div>`;
   },

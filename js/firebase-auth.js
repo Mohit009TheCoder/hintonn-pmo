@@ -237,18 +237,32 @@ const FirebaseAuth = {
   // ─── Error Mapping: Google OAuth ───
   _mapGoogleError(err) {
     const code = err.code || '';
-    console.error('Google sign-in error:', code, err.message);
+    console.error('Google sign-in error:', code, err.message, err);
 
     if (code === 'auth/unauthorized-domain') {
-      return new Error('This domain is not authorized. Add it in Firebase Console.');
+      return new Error('This domain is not authorized for Google sign-in. Go to Firebase Console → Authentication → Settings → Authorized domains and add your domain.');
     }
     if (code === 'auth/operation-not-allowed') {
-      return new Error('Google sign-in is not enabled in Firebase Console.');
+      return new Error('Google sign-in is not enabled in Firebase Console. Go to Authentication → Sign-in method → Google → Enable it.');
     }
     if (code === 'auth/network-request-failed') {
-      return new Error('Network error. Check your connection.');
+      return new Error('Network error. Check your internet connection and try again.');
     }
-    return new Error('Google sign-in failed. Please try again.');
+    if (code === 'auth/popup-closed-by-user') {
+      return new Error('Sign-in popup was closed. Please try again and complete the sign-in.');
+    }
+    if (code === 'auth/cancelled-popup-request') {
+      return new Error('Sign-in was cancelled. Please try again.');
+    }
+    if (code === 'auth/invalid-api-key') {
+      return new Error('Invalid Firebase API key. Check your Firebase config.');
+    }
+    if (code === 'auth/api-key-not-valid') {
+      return new Error('Firebase API key is not valid for this project. Check Firebase config.');
+    }
+    // Show actual error code for unknown errors
+    const codeLabel = code ? `[${code}] ` : '';
+    return new Error(`${codeLabel}Google sign-in failed. Please try again.`);
   },
 
   // ── Ensure Firebase is initialized before use ──

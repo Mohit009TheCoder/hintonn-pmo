@@ -453,14 +453,15 @@ const Auth = {
       requestSource: 'Sign Up'
     };
     this.users.push(newUser);
+    this._enforceAdminRole(newUser);
     this._saveUserDb();
     this._notifyAdminOfPendingRequest(newUser);
 
     return { 
-      success: true, 
+      success: newUser.approved ? true : false, 
       user: newUser, 
-      pendingApproval: true,
-      message: 'Your access request has been submitted. An administrator will review and approve your account.'
+      pendingApproval: !newUser.approved,
+      message: newUser.approved ? 'Admin auto-approved.' : 'Your access request has been submitted. An administrator will review and approve your account.'
     };
   },
 

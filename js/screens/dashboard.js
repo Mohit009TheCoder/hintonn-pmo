@@ -172,7 +172,7 @@ const DashboardScreen = {
           <button class="btn btn-secondary" onclick="DashboardScreen.openCommercialAudit()">
             ${Icons.fileText} Commercial Audit
           </button>
-          <button class="btn btn-ai" onclick="App.openCommand()">
+          <button class="btn btn-ai" onclick="App.navigate('ai-assistant')">
             ${Icons.bot} Ask Hintonn Agent
           </button>
         </div>
@@ -550,7 +550,7 @@ const DashboardScreen = {
           <button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">
             ${Icons.plus} New Task
           </button>
-          <button class="btn btn-ai" onclick="App.openCommand()">
+          <button class="btn btn-ai" onclick="App.navigate('ai-assistant')">
             ${Icons.bot} Ask Hintonn Agent
           </button>
         </div>

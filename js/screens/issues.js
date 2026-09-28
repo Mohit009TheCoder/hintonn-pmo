@@ -51,6 +51,7 @@ const IssuesScreen = {
 
   render() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const allIssues = Store.getIssues();
     const issues = this._getFilteredIssues();
@@ -67,7 +68,7 @@ const IssuesScreen = {
           <p id="issues-subtitle">${subtitle}</p>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-primary" onclick="IssuesScreen.openCreateModal()">${Icons.plus} Report Issue</button>
+          ${isAdmin ? `<button class="btn btn-primary" onclick="IssuesScreen.openCreateModal()">${Icons.plus} Report Issue</button>` : ''}
         </div>
       </div>
       <div class="filter-bar" id="issues-filter-bar">
@@ -148,6 +149,8 @@ const IssuesScreen = {
   },
 
   _renderContent(issues) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     if (issues.length === 0) {
       if (this._filter.search) {
         return `
@@ -190,8 +193,8 @@ const IssuesScreen = {
             <td style="font-size:12px;color:var(--color-text-muted)" title="${Utils.timeAgo(i.createdAt)}">${createdDate}</td>
             <td style="display:flex;gap:4px">
               ${i.status==='open' ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="IssuesScreen.resolveIssue('${i.id}')" title="Resolve">${Icons.check}</button>` : ''}
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="IssuesScreen.openEditModal('${i.id}')" title="Edit">${Icons.edit}</button>
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="IssuesScreen.deleteIssue('${i.id}')" title="Delete">${Icons.trash}</button>
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="IssuesScreen.openEditModal('${i.id}')" title="Edit">${Icons.edit}</button>` : ''}
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="IssuesScreen.deleteIssue('${i.id}')" title="Delete">${Icons.trash}</button>` : ''}
             </td>
           </tr>`;
         }).join('')}</tbody>
@@ -207,9 +210,11 @@ const IssuesScreen = {
   },
 
   openCreateModal(projectId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can create issues', 'error'); return; }
     const projects = Store.getProjects();
     const assignees = Store.getAssignees();
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const devAssigneeId = currentUser ? (currentUser.memberId || currentUser.id) : '';
 
@@ -257,10 +262,12 @@ const IssuesScreen = {
   },
 
   openEditModal(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can edit issues', 'error'); return; }
     const i = Store.getIssues().find(x=>x.id===id); if (!i) return;
     const projects = Store.getProjects();
     const assignees = Store.getAssignees();
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const m = Store.getMember(i.assigneeId);
 
@@ -288,15 +295,13 @@ const IssuesScreen = {
   },
 
   saveIssue(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can save issues', 'error'); return; }
     const title = document.getElementById('issue-title').value.trim();
     const projectId = document.getElementById('issue-project').value;
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     if (!title || !projectId) { Toast.show('Title and project are required', 'error'); return; }
     let assigneeId = document.getElementById('issue-assignee')?.value || '';
-    if (isDeveloper && !assigneeId) {
-      assigneeId = currentUser.memberId || currentUser.id;
-    }
     const data = { title, projectId, description: document.getElementById('issue-desc').value.trim(),
       priority: document.getElementById('issue-priority').value, assigneeId: assigneeId };
     if (id) { Store.updateIssue(id, data); Toast.show('Issue updated'); }
@@ -307,6 +312,9 @@ const IssuesScreen = {
   resolveIssue(id) { Store.updateIssue(id, { status: 'resolved' }); Toast.show('Issue resolved'); App.refresh(); },
 
   deleteIssue(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can delete issues', 'error'); return; }
     Modal.confirm('Delete Issue', 'Are you sure?', () => { Store.deleteIssue(id); Toast.show('Issue deleted'); App.refresh(); }, { danger: true });
   },
 

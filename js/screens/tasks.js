@@ -77,7 +77,7 @@ const TasksScreen = {
             <button id="tasks-view-board-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('kanban')" style="${this._view==='kanban'?'background:var(--color-surface-subtle)':''}">Board</button>
             <button id="tasks-view-list-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('list')" style="${this._view==='list'?'background:var(--color-surface-subtle)':''}">List</button>
           </div>
-          <button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>
+          ${isAdmin ? `<button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>` : ''}
         </div>
       </div>
 
@@ -203,8 +203,8 @@ const TasksScreen = {
         <div class="empty-state">
           <div class="empty-state-icon">${Icons.checkSquare}</div>
           <h3>No tasks found</h3>
-          <p>${this._filter.project || this._filter.priority || this._filter.status || (isAdmin && this._filter.assignee) ? 'Try adjusting your filters.' : 'Create your first task to get started.'}</p>
-          <button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>
+          <p>${this._filter.project || this._filter.priority || this._filter.status || (isAdmin && this._filter.assignee) ? 'Try adjusting your filters.' : (isAdmin ? 'Create your first task to get started.' : 'No tasks are assigned to you yet.')}</p>
+          ${isAdmin ? `<button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>` : ''}
         </div>
       `;
     }
@@ -308,10 +308,13 @@ const TasksScreen = {
   },
 
   openCreateModal(projectId, defaultDueDate) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (!currentUser || currentUser.role !== 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Only administrators can create tasks.', 'error');
+      return;
+    }
     const projects = Store.getProjects();
     const assignees = Store.getAssignees();
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isAdmin = currentUser && currentUser.role === 'Admin';
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const devAssigneeId = currentUser ? (currentUser.memberId || currentUser.id) : '';
 
@@ -478,7 +481,7 @@ const TasksScreen = {
       </div>`;
 
     const footer = `
-      <button class="btn btn-danger btn-sm" onclick="TasksScreen.deleteTask('${taskId}')" style="margin-right:auto">Delete</button>
+      ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TasksScreen.deleteTask('${taskId}')" style="margin-right:auto">Delete</button>` : ''}
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
       <button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save</button>`;
     Modal.open('Edit Task', body, footer, { large: true });
@@ -495,6 +498,11 @@ const TasksScreen = {
   },
 
   deleteTask(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (!currentUser || currentUser.role !== 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Only administrators can delete tasks.', 'error');
+      return;
+    }
     Modal.confirm('Delete Task', 'Are you sure you want to delete this task?',
       () => { Store.deleteTask(id); Toast.show('Task deleted'); Modal.closeAll(); App.refresh(); }, { danger: true });
   }

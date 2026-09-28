@@ -75,6 +75,9 @@ const MilestonesScreen = {
   },
 
   _renderContent(milestones) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+
     if (milestones.length === 0) {
       if (this._filter.search) {
         return `
@@ -91,7 +94,7 @@ const MilestonesScreen = {
           <div class="empty-state-icon">${Icons.flag}</div>
           <h3>No milestones yet</h3>
           <p>Create milestones to track major project deliverables.</p>
-          <button class="btn btn-primary" onclick="MilestonesScreen.openCreateModal()">${Icons.plus} New Milestone</button>
+          ${isAdmin ? `<button class="btn btn-primary" onclick="MilestonesScreen.openCreateModal()">${Icons.plus} New Milestone</button>` : ''}
         </div>
       `;
     }
@@ -110,9 +113,9 @@ const MilestonesScreen = {
                 <div class="milestone-date">${proj ? proj.name + ' · ' : ''}${m.dueDate ? (isOverdue ? 'Overdue: ' : 'Due ') + Utils.formatDate(m.dueDate) : 'No due date'}</div>
               </div>
               <span class="badge badge-${status==='completed'?'completed':status==='pending'?'paused':'planning'}">${Utils.humanize(m.status)}</span>
-              ${m.status !== 'completed' ? `<button class="btn btn-ghost btn-sm" onclick="MilestonesScreen.completeMilestone('${m.id}')">Complete</button>` : ''}
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.openEditModal('${m.id}')">${Icons.edit}</button>
-              <button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.deleteMilestone('${m.id}')">${Icons.trash}</button>
+              ${isAdmin && m.status !== 'completed' ? `<button class="btn btn-ghost btn-sm" onclick="MilestonesScreen.completeMilestone('${m.id}')">Complete</button>` : ''}
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.openEditModal('${m.id}')">${Icons.edit}</button>` : ''}
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.deleteMilestone('${m.id}')">${Icons.trash}</button>` : ''}
             </div>
           `;
         }).join('')}
@@ -123,6 +126,7 @@ const MilestonesScreen = {
   render() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
 
     const allMilestones = Store.getMilestones();
     const milestones = this._getFilteredMilestones();
@@ -139,7 +143,7 @@ const MilestonesScreen = {
           <p id="milestones-subtitle">${subtitle}</p>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-primary" onclick="MilestonesScreen.openCreateModal()">${Icons.plus} New Milestone</button>
+          ${isAdmin ? `<button class="btn btn-primary" onclick="MilestonesScreen.openCreateModal()">${Icons.plus} New Milestone</button>` : ''}
         </div>
       </div>
 
@@ -161,6 +165,8 @@ const MilestonesScreen = {
 
   openCreateModal(projectId) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can create milestones', 'error'); return; }
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
@@ -203,6 +209,9 @@ const MilestonesScreen = {
   },
 
   openEditModal(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can edit milestones', 'error'); return; }
     const m = Store.getMilestones().find(x=>x.id===id); if (!m) return;
     const projects = Store.getProjects();
     const body = `
@@ -216,6 +225,9 @@ const MilestonesScreen = {
   },
 
   saveMilestone(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can save milestones', 'error'); return; }
     const name = document.getElementById('ms-name').value.trim();
     const projectId = document.getElementById('ms-project').value;
     if (!name || !projectId) { Toast.show('Name and project are required', 'error'); return; }
@@ -225,7 +237,7 @@ const MilestonesScreen = {
     Modal.closeAll(); App.refresh();
   },
 
-  completeMilestone(id) { Store.updateMilestone(id, { status: 'completed' }); Toast.show('Milestone completed!'); App.refresh(); },
-  deleteMilestone(id) { Modal.confirm('Delete Milestone', 'Are you sure?', () => { Store.deleteMilestone(id); Toast.show('Milestone deleted'); App.refresh(); }, { danger: true }); },
+  completeMilestone(id) { const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null; if (!(currentUser && currentUser.role === 'Admin')) { Toast.show('Only admins can complete milestones', 'error'); return; } Store.updateMilestone(id, { status: 'completed' }); Toast.show('Milestone completed!'); App.refresh(); },
+  deleteMilestone(id) { const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null; if (!(currentUser && currentUser.role === 'Admin')) { Toast.show('Only admins can delete milestones', 'error'); return; } Modal.confirm('Delete Milestone', 'Are you sure?', () => { Store.deleteMilestone(id); Toast.show('Milestone deleted'); App.refresh(); }, { danger: true }); },
   refresh() { document.getElementById('page-content').innerHTML = this.render(); }
 };

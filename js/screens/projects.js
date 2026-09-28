@@ -48,6 +48,7 @@ const ProjectsScreen = {
   render() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     const allProjects = Store.getProjects();
     const projects = this._getFilteredProjects();
 
@@ -61,11 +62,11 @@ const ProjectsScreen = {
           <h1>Projects</h1>
           <p id="projects-subtitle">${subtitle}</p>
         </div>
-        <div class="page-header-actions">
+        ${isAdmin ? `<div class="page-header-actions">
           <button class="btn btn-primary" onclick="ProjectsScreen.openCreateModal()">
             ${Icons.plus} New Project
           </button>
-        </div>
+        </div>` : ''}
       </div>
 
       <div class="filter-bar" id="projects-filter-bar">
@@ -184,12 +185,14 @@ const ProjectsScreen = {
           </div>
         `;
       }
+      const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+      const isAdmin = currentUser && currentUser.role === 'Admin';
       return `
         <div class="empty-state">
           <div class="empty-state-icon">${Icons.folder}</div>
           <h3>No projects found</h3>
           <p>${this._filter.status || this._filter.type ? 'Try adjusting your filters.' : 'Create your first project to get started.'}</p>
-          ${!this._filter.status && !this._filter.type ? '<button class="btn btn-primary" onclick="ProjectsScreen.openCreateModal()">'+Icons.plus+' New Project</button>' : ''}
+          ${!this._filter.status && !this._filter.type && isAdmin ? '<button class="btn btn-primary" onclick="ProjectsScreen.openCreateModal()">'+Icons.plus+' New Project</button>' : ''}
         </div>`;
     }
     return this._view === 'grid' ? this._renderGrid(projects) : this._renderList(projects);
@@ -252,6 +255,10 @@ const ProjectsScreen = {
   },
 
   openCreateModal(project) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can create or edit projects', 'error'); return; }
+
     const isEdit = !!project;
     const members = Store.getMembers();
     const body = `
@@ -322,6 +329,10 @@ const ProjectsScreen = {
   },
 
   saveProject(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can create or edit projects', 'error'); return; }
+
     const name = document.getElementById('project-name').value.trim();
     const errorEl = document.getElementById('project-name-error');
     if (!name) { errorEl.textContent = 'Project name is required'; document.getElementById('project-name').classList.add('error'); return; }
@@ -338,6 +349,10 @@ const ProjectsScreen = {
   },
 
   deleteProject(id) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) { Toast.show('Only admins can delete projects', 'error'); return; }
+
     const p = Store.getProject(id);
     Modal.confirm('Delete Project', `Are you sure you want to delete <strong>${p.name}</strong>? This will also delete all associated tasks, issues, and milestones. This cannot be undone.`,
       () => { Store.deleteProject(id); Toast.show('Project deleted'); App.navigate('projects'); }, { danger: true });

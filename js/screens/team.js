@@ -534,10 +534,50 @@ const TeamScreen = {
     const teamMembers = Store.getMembers();
     const tasks = Store.getTasks();
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isAdmin = !currentUser || currentUser.role === 'Admin' || (typeof Store !== 'undefined' && Store._data?.settings?.currentUser === 'm1') || (currentUser && currentUser.id === 'ayush');
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+
+    // For non-admin: find my project IDs (projects where I have tasks)
+    let myProjectIds = new Set();
+    if (!isAdmin && currentUser) {
+      const userMemberId = currentUser.memberId || '';
+      const myTasks = tasks.filter(t =>
+        t.assigneeId === currentUser.id ||
+        (userMemberId && t.assigneeId === userMemberId)
+      );
+      myProjectIds = new Set(myTasks.map(t => t.projectId).filter(Boolean));
+    }
 
     // Filter out admin members
-    const developersList = teamMembers.filter(member => member.role !== 'Admin');
+    let developersList = teamMembers.filter(member => member.role !== 'Admin');
+
+    // Non-admin: only show members who share at least one project
+    if (!isAdmin && currentUser && myProjectIds.size > 0) {
+      developersList = developersList.filter(member => {
+        // Include self
+        if (member.id === currentUser.memberId || member.id === currentUser.id) return true;
+        // Check if this member has tasks in my projects
+        return tasks.some(t =>
+          myProjectIds.has(t.projectId) &&
+          (t.assigneeId === member.id || t.assigneeId === member.name?.split(' ')[0]?.toLowerCase())
+        );
+      });
+      // Always include self even if no shared projects
+      const selfInList = developersList.some(m =>
+        m.id === currentUser.memberId || m.id === currentUser.id
+      );
+      if (!selfInList) {
+        const selfMember = teamMembers.find(m =>
+          m.id === currentUser.memberId || m.id === currentUser.id
+        );
+        if (selfMember) developersList.unshift(selfMember);
+      }
+    } else if (!isAdmin && currentUser) {
+      // No projects assigned — only show self
+      const selfMember = teamMembers.find(m =>
+        m.id === currentUser.memberId || m.id === currentUser.id
+      );
+      developersList = selfMember ? [selfMember] : [];
+    }
 
     // Overall team stats
     const totalActiveTasks = developersList.reduce((sum, m) => sum + this._getMemberTasks(m).filter(t => t.status !== 'done').length, 0);

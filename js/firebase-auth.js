@@ -232,9 +232,9 @@ const FirebaseAuth = {
     const localUser = {
       id: user.uid,
       memberId: 'm_' + user.uid.slice(0, 6),
-      loginId: (user.email ? user.email.split('@')[0] : defaultName),
-      email: user.email || '',
-      googleEmail: user.email || '',
+      loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
+      email: fallbackEmail || '',
+      googleEmail: fallbackEmail || '',
       name: defaultName,
       role: isAdmin ? 'Admin' : 'AI Developer',
       avatar: initials,
@@ -264,14 +264,14 @@ const FirebaseAuth = {
       const doc = await userRef.get();
       if (!doc.exists) {
         await userRef.set({
-          uid: user.uid, name: defaultName, email: user.email, photoURL: user.photoURL || null,
+          uid: user.uid, name: defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
           role: isAdmin ? 'Admin' : 'AI Developer', isActive: true, provider: providerType || 'password',
           createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         });
       } else {
         const existingData = doc.data() || {};
         await userRef.set({
-          email: user.email, name: existingData.name || defaultName,
+          email: fallbackEmail, name: existingData.name || defaultName,
           photoURL: existingData.photoURL || user.photoURL || null,
           role: isAdmin ? 'Admin' : (existingData.role || 'AI Developer'),
           isActive: true, lastLogin: firebase.firestore.FieldValue.serverTimestamp()
@@ -286,15 +286,19 @@ const FirebaseAuth = {
   async _createUserDocument(user, providerType, extra) {
     try {
       const userRef = this._db.collection('users').doc(user.uid);
-      const name = (extra && extra.name) || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
-      const emailLower = (user.email || '').toLowerCase();
+      let fallbackEmail = user.email;
+      if (!fallbackEmail && user.providerData && user.providerData.length > 0) {
+        fallbackEmail = user.providerData[0].email;
+      }
+      const name = (extra && extra.name) || user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
+      const emailLower = (fallbackEmail || '').toLowerCase();
       const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
       const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
       const isAdmin = ADMIN_EMAILS.includes(emailLower);
       const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
 
       await userRef.set({
-        uid: user.uid, name: name, email: user.email, photoURL: user.photoURL || null,
+        uid: user.uid, name: name, email: fallbackEmail, photoURL: user.photoURL || null,
         role: isAdmin ? 'Admin' : 'AI Developer', isActive: isPreApproved, isRejected: false, provider: providerType || 'password',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: firebase.firestore.FieldValue.serverTimestamp()
       });

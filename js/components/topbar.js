@@ -9,7 +9,7 @@ const Topbar = {
     const labels = {
       dashboard: 'Dashboard', projects: 'Projects', tasks: 'Tasks', calendar: 'Calendar',
       timeline: 'Timeline & Gantt', milestones: 'Milestones', issues: 'Issues', team: 'Team',
-      reports: 'Reports & Analytics', 'ai-assistant': 'AI Assistant', settings: 'Settings',
+      reports: 'Reports & Analytics', 'ai-assistant': 'AI Assistant', connectors: 'Connectors', settings: 'Settings',
       notifications: 'Notifications', 'project-detail': 'Project Details',
       billing: 'Billing & Invoices', invoices: 'Billing & Invoices',
       retention: 'Retention Summary', bg: 'Bank Guarantees (BG)',

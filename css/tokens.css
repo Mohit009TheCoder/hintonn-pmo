@@ -1,135 +1,139 @@
 :root {
   /* ==========================================================================
-     Hintonn AI Design System Tokens
+     Hintonn AI Design System — Apple Precision & Liquid Glass Design Tokens
      ========================================================================== */
 
-  /* Surface & Background */
+  /* Surface & Background (Apple Crisp Neutrals & Frosted Glass) */
   --color-bg: #FFFFFF;
-  --color-bg-page: #F8FAFC;
-  --color-bg-soft: #F8FAFC;
-  --color-bg-subtle: #F1F5F9;
+  --color-bg-page: #F5F5F7;
+  --color-bg-soft: #F5F5F7;
+  --color-bg-subtle: #EBEBED;
   --color-surface: #FFFFFF;
-  --color-surface-soft: #F1F5F9;
-  --color-surface-subtle: #F1F5F9;
-  --color-surface-hover: #F8FAFC;
-  --color-surface-active: #EFF6FF;
+  --color-surface-glass: rgba(255, 255, 255, 0.82);
+  --color-surface-soft: #F5F5F7;
+  --color-surface-subtle: #EBEBED;
+  --color-surface-hover: #F0F0F2;
+  --color-surface-active: #E8F2FF;
 
-  /* Typography Colors (High Contrast Enterprise Standards) */
-  --color-text-primary: #111827;
-  --color-text-secondary: #4B5563;
-  --color-text-muted: #6B7280;
-  --color-text-disabled: #9CA3AF;
+  /* Typography Colors (Apple High-Legibility Optics) */
+  --color-text-primary: #1D1D1F;
+  --color-text-secondary: #515154;
+  --color-text-muted: #86868B;
+  --color-text-disabled: #A1A1A6;
   --color-text-inverse: #FFFFFF;
 
-  /* Borders */
-  --color-border: #E5E7EB;
-  --color-border-subtle: #F3F4F6;
-  --color-border-strong: #D1D5DB;
+  /* Borders (Subtle hairline Apple precision) */
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-subtle: rgba(0, 0, 0, 0.04);
+  --color-border-strong: rgba(0, 0, 0, 0.14);
+  --color-border-glass: rgba(255, 255, 255, 0.65);
   --color-border-ai: #E9D5FF;
   --color-border-brand: #BFDBFE;
 
-  /* Primary Product Blue */
-  --blue-50: #EFF6FF;
-  --blue-100: #DBEAFE;
+  /* Apple Signature Blue */
+  --blue-50: #F0F6FF;
+  --blue-100: #E0EDFF;
   --blue-200: #BFDBFE;
   --blue-300: #93C5FD;
   --blue-400: #60A5FA;
-  --blue-500: #3B82F6;
-  --blue-600: #2563EB;
-  --blue-700: #1D4ED8;
-  --blue-800: #1E40AF;
+  --blue-500: #0071E3;
+  --blue-600: #0062C4;
+  --blue-700: #0051A3;
+  --blue-800: #003F80;
 
-  --color-primary: #2563EB;
-  --color-primary-hover: #1D4ED8;
-  --color-primary-soft: #DBEAFE;
-  --color-primary-50: #EFF6FF;
-  --color-primary-100: #DBEAFE;
+  --color-primary: #0071E3;
+  --color-primary-hover: #0077ED;
+  --color-primary-active: #005BB5;
+  --color-primary-soft: #EBF4FE;
+  --color-primary-50: #F0F6FF;
+  --color-primary-100: #E0EDFF;
   --color-primary-200: #BFDBFE;
   --color-primary-300: #93C5FD;
   --color-primary-400: #60A5FA;
-  --color-primary-500: #3B82F6;
-  --color-primary-600: #2563EB;
-  --color-primary-700: #1D4ED8;
-  --color-primary-800: #1E40AF;
+  --color-primary-500: #0071E3;
+  --color-primary-600: #0062C4;
+  --color-primary-700: #0051A3;
+  --color-primary-800: #003F80;
 
-  /* AI Violet Scale */
+  /* AI Intelligence Spectrum */
   --violet-50: #FAF5FF;
   --violet-100: #F3E8FF;
   --violet-200: #E9D5FF;
   --violet-300: #D8B4FE;
   --violet-400: #C084FC;
-  --violet-500: #A855F7;
-  --violet-600: #9333EA;
-  --violet-700: #7E22CE;
-  --violet-800: #6B21A8;
+  --violet-500: #9333EA;
+  --violet-600: #7E22CE;
+  --violet-700: #6B21A8;
+  --violet-800: #581C87;
 
-  --color-ai: #9333EA;
-  --color-ai-hover: #7E22CE;
-  --color-ai-soft: #F3E8FF;
+  --color-ai: #862AEB;
+  --color-ai-hover: #731BD4;
+  --color-ai-soft: #F6EFFE;
   --color-ai-50: #FAF5FF;
   --color-ai-100: #F3E8FF;
   --color-ai-200: #E9D5FF;
   --color-ai-300: #D8B4FE;
   --color-ai-400: #C084FC;
-  --color-ai-500: #A855F7;
-  --color-ai-600: #9333EA;
-  --color-ai-700: #7E22CE;
-  --color-ai-800: #6B21A8;
+  --color-ai-500: #862AEB;
+  --color-ai-600: #731BD4;
+  --color-ai-700: #6012B5;
+  --color-ai-800: #4D0A96;
 
-  /* Hintonn Signature Gradients */
-  --gradient-primary: linear-gradient(135deg, #1683FF 0%, #2563EB 48%, #9333EA 100%);
-  --gradient-brand: linear-gradient(135deg, #0088FF 0%, #3867FF 45%, #8B2CF5 100%);
-  --gradient-ai-subtle: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(147, 51, 234, 0.08) 100%);
-  --gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
-  --gradient-shimmer: linear-gradient(90deg, rgba(226, 232, 240, 0.6) 0%, rgba(219, 234, 254, 0.8) 50%, rgba(226, 232, 240, 0.6) 100%);
+  /* Signature Apple & Liquid Gradients */
+  --gradient-primary: linear-gradient(135deg, #0071E3 0%, #0077ED 40%, #862AEB 100%);
+  --gradient-brand: linear-gradient(135deg, #0088FF 0%, #0071E3 45%, #8B2CF5 100%);
+  --gradient-ai-subtle: linear-gradient(135deg, rgba(0, 113, 227, 0.05) 0%, rgba(134, 42, 235, 0.07) 100%);
+  --gradient-surface: linear-gradient(180deg, #FFFFFF 0%, #FBFBFD 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.65) 100%);
+  --gradient-shimmer: linear-gradient(90deg, rgba(240, 240, 243, 0.6) 0%, rgba(224, 237, 255, 0.8) 50%, rgba(240, 240, 243, 0.6) 100%);
 
-  /* Neutrals */
+  /* Apple Neutrals */
   --neutral-0: #FFFFFF;
   --neutral-25: #FCFCFD;
-  --neutral-50: #F8FAFC;
-  --neutral-100: #F1F5F9;
-  --neutral-150: #EEF2F7;
-  --neutral-200: #E2E8F0;
-  --neutral-300: #CBD5E1;
-  --neutral-400: #94A3B8;
-  --neutral-500: #64748B;
-  --neutral-600: #475569;
-  --neutral-700: #334155;
-  --neutral-800: #1E293B;
-  --neutral-900: #0F172A;
+  --neutral-50: #F5F5F7;
+  --neutral-100: #EBEBED;
+  --neutral-150: #E2E2E6;
+  --neutral-200: #D2D2D7;
+  --neutral-300: #B0B0B8;
+  --neutral-400: #86868B;
+  --neutral-500: #6E6E73;
+  --neutral-600: #515154;
+  --neutral-700: #3A3A3C;
+  --neutral-800: #2C2C2E;
+  --neutral-900: #1D1D1F;
 
-  /* Status & State Colors (Theme-consistent Blue / Violet / Slate) */
-  --color-success: #2563EB;
-  --color-success-soft: #EFF6FF;
-  --color-success-50: #EFF6FF;
-  --color-success-100: #DBEAFE;
-  --color-success-500: #2563EB;
-  --color-success-600: #1D4ED8;
-  --color-success-700: #1E40AF;
+  /* Status Colors */
+  --color-success: #34C759;
+  --color-success-soft: #E8F8ED;
+  --color-success-50: #E8F8ED;
+  --color-success-100: #C7F1D4;
+  --color-success-500: #34C759;
+  --color-success-600: #2DB14E;
+  --color-success-700: #248A3D;
 
-  --color-warning: #7C3AED;
-  --color-warning-soft: #FAF5FF;
-  --color-warning-50: #FAF5FF;
-  --color-warning-100: #F3E8FF;
-  --color-warning-500: #7C3AED;
-  --color-warning-600: #6D28D9;
-  --color-warning-700: #5B21B6;
+  --color-warning: #FF9500;
+  --color-warning-soft: #FFF4E5;
+  --color-warning-50: #FFF4E5;
+  --color-warning-100: #FFE6BE;
+  --color-warning-500: #FF9500;
+  --color-warning-600: #E08300;
+  --color-warning-700: #B86B00;
 
-  --color-error: #9333EA;
-  --color-error-soft: #FAF5FF;
-  --color-error-50: #FAF5FF;
-  --color-error-100: #F3E8FF;
-  --color-error-500: #9333EA;
-  --color-error-600: #7E22CE;
-  --color-error-700: #6B21A8;
+  --color-error: #FF3B30;
+  --color-error-soft: #FFEBEA;
+  --color-error-50: #FFEBEA;
+  --color-error-100: #FFCFCB;
+  --color-error-500: #FF3B30;
+  --color-error-600: #E02E24;
+  --color-error-700: #B8221A;
 
-  --color-info: #2563EB;
-  --color-info-soft: #DBEAFE;
+  --color-info: #0071E3;
+  --color-info-soft: #EBF4FE;
 
-  /* Typography */
-  --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Apple Font Stacks */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", system-ui, -system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Manrope", "Inter", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-family: var(--font-ui);
 
   /* Spacing */
@@ -146,23 +150,25 @@
   --space-20: 80px;
   --space-24: 96px;
 
-  /* Radii */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 24px;
-  --radius-pill: 999px;
+  /* Radii (Apple Continuous Corner / Squircle Curve Ratios) */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-pill: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
-  --shadow-xl: 0 20px 48px rgba(15, 23, 42, 0.10);
-  --shadow-ai-glow: 0 0 24px rgba(147, 51, 234, 0.15);
-  --shadow-focus-blue: 0 0 0 3px #DBEAFE;
-  --shadow-focus-ai: 0 0 0 3px #E9D5FF;
+  /* Ambient Apple Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 1px rgba(0, 0, 0, 0.015);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 36px -4px rgba(0, 0, 0, 0.07), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
+  --shadow-xl: 0 24px 60px -8px rgba(0, 0, 0, 0.12), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 14px 34px -4px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-ai-glow: 0 0 28px rgba(134, 42, 235, 0.14), 0 4px 12px rgba(0, 113, 227, 0.08);
+  --shadow-focus-blue: 0 0 0 4px rgba(0, 113, 227, 0.18);
+  --shadow-focus-ai: 0 0 0 4px rgba(134, 42, 235, 0.18);
 
   /* Layout dimensions */
   --sidebar-width: 260px;
@@ -173,15 +179,15 @@
   --bottom-nav-height: 60px;
   --touch-target-min: 44px;
 
-  /* Safe Area Insets for iOS & Modern Mobile Viewports */
+  /* Safe Area Insets */
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
 
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-standard: 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-comfortable: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Apple Liquid Spring Transitions */
+  --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-standard: 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-comfortable: 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 500ms cubic-bezier(0.16, 1, 0.3, 1);
 }

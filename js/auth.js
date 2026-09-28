@@ -111,6 +111,7 @@ const Auth = {
     issues: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
     milestones: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
     'ai-assistant': ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    connectors: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
     notifications: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
 
     // Commercial / Financial Modules

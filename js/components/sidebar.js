@@ -5,8 +5,11 @@ const Sidebar = {
       { id: 'dashboard', icon: 'home', label: 'Dashboard' },
       { id: 'projects', icon: 'folder', label: 'Projects' },
       { id: 'tasks', icon: 'checkSquare', label: 'Tasks' },
+      { id: 'issues', icon: 'alertCircle', label: 'Issues', badge: () => Store.getIssues().filter(i => i.status === 'open').length },
+      { id: 'milestones', icon: 'flag', label: 'Milestones' },
       { id: 'calendar', icon: 'calendar', label: 'Calendar' },
       { id: 'timeline', icon: 'timeline', label: 'Timeline' },
+      { id: 'team', icon: 'users', label: 'Team' },
     ]},
     { section: 'COMMERCIAL', isCommercial: true, items: [
       { id: 'billing', icon: 'fileText', label: 'Billing & Invoices', badge: () => 4 },
@@ -14,16 +17,12 @@ const Sidebar = {
       { id: 'bg', icon: 'shield', label: 'Bank Guarantees (BG)', badge: () => 2 },
       { id: 'dlp', icon: 'clock', label: 'DLP Timelines' },
     ]},
-    { section: 'Intelligence', isAi: true, items: [
-      { id: 'milestones', icon: 'flag', label: 'Milestones' },
-      { id: 'issues', icon: 'alertCircle', label: 'Issues', badge: () => Store.getIssues().filter(i => i.status === 'open').length },
-      { id: 'team', icon: 'users', label: 'Team' },
+    { section: 'AI & Intelligence', isAi: true, items: [
+      { id: 'ai-assistant', icon: 'assistant', label: 'AI Assistant' },
+      { id: 'connectors', icon: 'connectors', label: 'Connectors' },
     ]},
     { section: 'Insights', items: [
       { id: 'reports', icon: 'barChart', label: 'Reports & Analytics' },
-    ]},
-    { section: 'AI', isAi: true, items: [
-      { id: 'ai-assistant', icon: 'assistant', label: 'AI Assistant' },
     ]},
   ],
 

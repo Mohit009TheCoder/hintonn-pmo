@@ -79,6 +79,9 @@ const Command = {
         <div class="command-item" onclick="Command.close();App.navigate('ai-assistant')">
           ${Icons.assistant}<span class="command-item-text">Open AI Assistant</span><span class="command-item-hint">Copilot</span>
         </div>
+        <div class="command-item" onclick="Command.close();App.navigate('connectors')">
+          ${Icons.connectors}<span class="command-item-text">Go to Connectors</span><span class="command-item-hint">Integrations & Sources</span>
+        </div>
         <div class="command-group-label">Actions</div>
         <div class="command-item" onclick="Command.close();TasksScreen.openCreateModal()">
           ${Icons.plus}<span class="command-item-text">Create new task</span>

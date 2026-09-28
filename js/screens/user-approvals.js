@@ -344,32 +344,37 @@ const UserApprovalsScreen = {
           ${u.requestDate ? `<div style="font-size:11px;color:var(--color-text-disabled);margin-top:1px;">Requested ${Utils.timeAgo(u.requestDate)} via ${u.requestSource || 'pre-configured'}</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--radius-pill);background:${statusBg};color:${statusColor};">
-            ${statusIcon} ${statusText}
-          </span>
           ${!isCore ? `
             <div style="display:flex;gap:4px;">
               ${!u.approved ? `
-                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Approve" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Approve" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
                   Approve
                 </button>
               ` : `
-                <button type="button" disabled style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:default;display:inline-flex;align-items:center;gap:4px;opacity:0.8;">
+                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Mark as Approved" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
                   Approved
                 </button>
               `}
               ${!u.rejected ? `
-                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Reject" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Reject" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
                   Reject
                 </button>
-              ` : ''}
-              <button type="button" onclick="UserApprovalsScreen.removeUser('${u.id}','${u.name.replace(/'/g, "\\'")}')" title="Remove user" style="padding:6px 8px;border-radius:var(--radius-sm);border:1px solid #E5E7EB;background:var(--color-surface);color:var(--color-text-muted);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;">
+              ` : `
+                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Mark as Rejected" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+                  Rejected
+                </button>
+              `}
+              <button type="button" onclick="UserApprovalsScreen.removeUser('${u.id}','${u.name.replace(/'/g, "\\'")}')" title="Remove user" style="padding:6px 8px;border-radius:var(--radius-sm);border:1px solid #E5E7EB;background:var(--color-surface);color:var(--color-text-muted);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;transition:background 0.2s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='var(--color-surface)'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             </div>
-          ` : ''}
+          ` : `
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--radius-pill);background:${statusBg};color:${statusColor};">
+              ${statusIcon} ${statusText}
+            </span>
+          `}
         </div>
       </div>
     `;

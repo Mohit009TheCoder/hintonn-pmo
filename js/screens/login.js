@@ -155,13 +155,6 @@ const LoginScreen = {
               oninput="LoginScreen.clearError()"
             />
           </div>
-              autocomplete="username" 
-              required 
-              style="height:42px;font-size:14px;width:100%;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;box-sizing:border-box;"
-              oninput="LoginScreen.clearError()"
-            />
-          </div>
-
           <div class="form-group" style="text-align:left;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
               <label for="login-password" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin:0;">Password</label>

@@ -177,7 +177,7 @@ const Auth = {
   },
 
   // ─── Direct ID / Password Login (Unchanged, direct login) ───
-  login(loginIdOrEmail, password) {
+  async login(loginIdOrEmail, password) {
     const raw = (loginIdOrEmail || '').trim().toLowerCase();
     const rawPass = password || '';
 
@@ -197,9 +197,16 @@ const Auth = {
 
     this._enforceAdminRole(user);
 
-    // ── Block unapproved users from logging in ──
+    // ── If locally unapproved, check Firestore for real-time approval status ──
     if (user.approved === false) {
-      return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: user };
+      const firestoreApproved = await this._checkApprovalInFirestore(user.email || user.googleEmail);
+      if (firestoreApproved) {
+        // Admin approved on another device — sync locally
+        user.approved = true;
+        this._saveUserDb();
+      } else {
+        return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: user };
+      }
     }
 
     this.currentUser = user;
@@ -213,6 +220,22 @@ const Auth = {
     }
 
     return { success: true, user };
+  },
+
+  // ─── Check Firestore for real-time approval status ───
+  async _checkApprovalInFirestore(email) {
+    if (!email || typeof firebase === 'undefined' || !firebase.firestore) return false;
+    try {
+      const snap = await firebase.firestore().collection('users').where('email', '==', email.toLowerCase()).get();
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        const data = doc.data();
+        return data.isActive === true;
+      }
+    } catch (e) {
+      console.warn('[Auth] Firestore approval check failed:', e.message || e);
+    }
+    return false;
   },
 
   // ─── Google Login Approval Request Store ───

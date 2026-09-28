@@ -426,7 +426,7 @@ const LoginScreen = {
   },
 
   // ─── Handlers ───
-  handleLogin() {
+  async handleLogin() {
     const idEl = document.getElementById('login-id');
     const passEl = document.getElementById('login-password');
     const loginId = idEl ? idEl.value.trim() : '';
@@ -443,7 +443,14 @@ const LoginScreen = {
       return;
     }
 
-    const res = Auth.login(loginId, password);
+    // Show loading state
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = 'Signing in...'; }
+
+    const res = await Auth.login(loginId, password);
+    
+    if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Sign In'; }
+
     if (res.success) {
       this.clearError();
       if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.user.name}!`, 'success');

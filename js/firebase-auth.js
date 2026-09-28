@@ -44,6 +44,7 @@ const FirebaseAuth = {
           if (existingUser) {
             existingUser.approved = data.isActive === true;
             existingUser.rejected = data.isRejected === true;
+            existingUser.revoked = data.isRevoked === true;
             existingUser.role = data.role || existingUser.role;
           } else {
             // If not in Auth.users but in Firestore (e.g. pending Google request)
@@ -64,6 +65,7 @@ const FirebaseAuth = {
               photoURL: data.photoURL || null,
               approved: data.isActive === true,
               rejected: data.isRejected === true,
+              revoked: data.isRevoked === true,
               requestDate: data.createdAt ? new Date(data.createdAt.toMillis ? data.createdAt.toMillis() : Date.now()).toISOString() : new Date().toISOString(),
               requestSource: data.requestSource || (data.provider === 'google' ? 'Google OAuth' : 'Sign Up')
             };

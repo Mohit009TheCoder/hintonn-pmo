@@ -491,6 +491,8 @@ const LoginScreen = {
         if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.user.name || res.user.email}!`, 'success');
         window.location.hash = '#dashboard';
         if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
+      } else if (res.revoked) {
+        this.showError('Your access has been revoked by an administrator. Please contact admin to regain access.');
       } else {
         this.showGoogleApprovalRequired(res.user);
       }

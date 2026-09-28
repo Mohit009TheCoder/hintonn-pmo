@@ -3,7 +3,21 @@
 // Admin = mohithintonn@gmail.com ONLY.
 const Auth = {
   // Pre-configured User Database (existing users are pre-approved)
-  users: [],
+  users: [
+    {
+      id: 'mohit',
+      memberId: 'm3',
+      loginId: 'Mohit',
+      password: 'Mohit@123',
+      name: 'Mohit Jain',
+      role: 'Admin',
+      email: 'mohithintonn@gmail.com',
+      googleEmail: 'mohithintonn@gmail.com',
+      initials: 'MJ',
+      color: '#4F46E5',
+      approved: true
+    }
+  ],
 
   currentUser: null,
 

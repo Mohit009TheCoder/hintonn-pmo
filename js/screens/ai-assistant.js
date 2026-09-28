@@ -120,7 +120,6 @@ const AIAssistantScreen = {
           <button class="ai-prompt-chip" onclick="AIAssistantScreen.sendPrompt('Show blocked tasks & issues')">Show blocked tasks & issues</button>
           <button class="ai-prompt-chip" onclick="AIAssistantScreen.sendPrompt('Summarize today\\'s activity')">Summarize today's activity</button>
           <button class="ai-prompt-chip" onclick="AIAssistantScreen.sendPrompt('Show project progress')">Show project progress</button>
-          <button class="ai-prompt-chip" onclick="TasksScreen.openCreateModal()">+ Create a task</button>
         </div>
       </div>
 

@@ -200,6 +200,8 @@ const ProjectsScreen = {
 
   _renderGrid(projects) {
     const colors = ['progress-blue', 'progress-purple', 'progress-green', 'progress-gradient'];
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     return `<div class="project-grid projects-grid">${projects.map((p, i) => {
       const tasks = Store.getTasks(p.id);
       const doneTasks = tasks.filter(t => t.status === 'done').length;
@@ -210,7 +212,17 @@ const ProjectsScreen = {
             <div class="project-card-type">${p.type}</div>
             <div class="project-card-name">${p.name}</div>
           </div>
-          <span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span>
+            ${isAdmin ? `
+              <button type="button" onclick="event.stopPropagation();ProjectsScreen.openCreateModal(Store.getProject('${p.id}'))" title="Edit project" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 150ms;flex-shrink:0;" onmouseover="this.style.background='var(--color-primary-50)';this.style.color='var(--color-primary)';this.style.borderColor='var(--color-primary-200)'" onmouseout="this.style.background='var(--color-surface)';this.style.color='var(--color-text-muted)';this.style.borderColor='var(--color-border)'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button type="button" onclick="event.stopPropagation();ProjectsScreen.deleteProject('${p.id}')" title="Delete project" style="width:28px;height:28px;border-radius:6px;border:1px solid #FECACA;background:#FEF2F2;color:#DC2626;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 150ms;flex-shrink:0;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            ` : ''}
+          </div>
         </div>
         <div class="project-card-desc">${p.description}</div>
         <div class="project-card-progress">
@@ -233,8 +245,10 @@ const ProjectsScreen = {
   },
 
   _renderList(projects) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     return `<div class="section-card"><div class="section-card-body no-pad"><div class="table-wrap"><table class="table">
-      <thead><tr><th>Project</th><th>Type</th><th>Status</th><th>Progress</th><th>Team</th><th>Due</th></tr></thead>
+      <thead><tr><th>Project</th><th>Type</th><th>Status</th><th>Progress</th><th>Team</th><th>Due</th>${isAdmin ? '<th></th>' : ''}</tr></thead>
       <tbody>${projects.map(p => {
         const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
         return `<tr style="cursor:pointer" onclick="App.navigate('project-detail','${p.id}')">
@@ -244,6 +258,10 @@ const ProjectsScreen = {
           <td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar progress-blue" style="width:80px"><div class="progress-bar-fill" style="width:${p.progress}%"></div></div><span style="font-size:12px;font-weight:600">${p.progress}%</span></div></td>
           <td><div class="project-card-avatars">${members.slice(0,3).map(m => `<div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`).join('')}</div></td>
           <td style="font-size:12px;color:var(--color-text-muted)">${p.endDate ? Utils.formatDate(p.endDate) : '—'}</td>
+          ${isAdmin ? `<td style="display:flex;gap:4px" onclick="event.stopPropagation()">
+            <button type="button" onclick="ProjectsScreen.openCreateModal(Store.getProject('${p.id}'))" title="Edit" style="padding:4px 8px;border-radius:4px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;font-size:11px;font-weight:600;">Edit</button>
+            <button type="button" onclick="ProjectsScreen.deleteProject('${p.id}')" title="Delete" style="padding:4px 8px;border-radius:4px;border:1px solid #FECACA;background:#FEF2F2;color:#DC2626;cursor:pointer;font-size:11px;font-weight:600;">Delete</button>
+          </td>` : ''}
         </tr>`;
       }).join('')}</tbody>
     </table></div></div></div>`;

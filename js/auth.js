@@ -127,7 +127,16 @@ const Auth = {
         if (savedUsers) {
           try {
             const parsed = JSON.parse(savedUsers);
-            parsed.forEach(u => { if (u.approved === undefined) u.approved = true; });
+            parsed.forEach(u => {
+              if (u.approved === undefined) u.approved = true;
+              // Force admin emails to always be approved
+              const uEmail = (u.email || '').toLowerCase();
+              const uGEmail = (u.googleEmail || '').toLowerCase();
+              if (this._ADMIN_EMAILS.includes(uEmail) || this._ADMIN_EMAILS.includes(uGEmail)) {
+                u.approved = true;
+                u.role = 'Admin';
+              }
+            });
             localStorage.setItem('hintonn-users-db', JSON.stringify(parsed));
           } catch(e) {}
         }
@@ -143,6 +152,8 @@ const Auth = {
             if (exists) {
               if (saved.approved !== undefined) exists.approved = saved.approved;
               if (saved.password && saved.password !== exists.password) exists.password = saved.password;
+              // Force admin emails to always be approved
+              this._enforceAdminRole(exists);
             } else {
               this.users.push(saved);
             }

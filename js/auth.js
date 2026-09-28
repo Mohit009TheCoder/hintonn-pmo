@@ -121,7 +121,7 @@ const Auth = {
 
   init() {
     try {
-      const AUTH_VERSION = 'v5-email-and-google';
+      const AUTH_VERSION = 'v6-admin-fix';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
         const savedUsers = localStorage.getItem('hintonn-users-db');
         if (savedUsers) {

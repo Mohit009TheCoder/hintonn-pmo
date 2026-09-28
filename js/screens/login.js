@@ -476,14 +476,12 @@ const LoginScreen = {
       }
       if (!res) return;
 
-      if (res.approved && res.user) {
-        if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.user.name || res.user.email}!`, 'success');
+      if (res.approved) {
+        if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.name || res.email}!`, 'success');
         window.location.hash = '#dashboard';
         if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
-      } else if (res.pending && res.user) {
-        this.showGoogleApprovalRequired(res.user);
-      } else if (res.user) {
-        this.showGoogleApprovalRequired(res.user);
+      } else {
+        this.showGoogleApprovalRequired(res);
       }
     } catch (err) {
       console.warn('Google sign-in notice:', err);

@@ -177,6 +177,11 @@ const Auth = {
 
     this._enforceAdminRole(user);
 
+    // ── BLOCK revoked users from logging in ──
+    if (user.revoked === true) {
+      return { success: false, error: 'Your access has been revoked by an administrator. Please contact admin to regain access.' };
+    }
+
     // ── If locally unapproved, check Firestore for real-time approval status ──
     if (user.approved === false) {
       const firestoreApproved = await this._checkApprovalInFirestore(user.email || user.googleEmail);
@@ -290,13 +295,13 @@ const Auth = {
     };
   },
 
-  _syncApprovalToFirebase(email, isApproved, isRejected = false) {
+  _syncApprovalToFirebase(email, isApproved, isRejected = false, isRevoked = false) {
     if (typeof firebase !== 'undefined' && firebase.firestore && email) {
       try {
         firebase.firestore().collection('users').where('email', '==', email).get().then(snap => {
           if (!snap.empty) {
             snap.docs.forEach(doc => {
-              doc.ref.set({ isActive: isApproved, isRejected: isRejected }, { merge: true }).catch(()=>{});
+              doc.ref.set({ isActive: isApproved, isRejected: isRejected, isRevoked: isRevoked }, { merge: true }).catch(()=>{});
             });
           }
         }).catch(()=>{});
@@ -381,6 +386,8 @@ const Auth = {
     user.revokedBy = (this.currentUser && this.currentUser.name) || 'Mohit Jain (Admin)';
     this._saveUserDb();
 
+    this._syncApprovalToFirebase(user.email, false, false, true);
+
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({ 
         type: 'user-approval', 
@@ -397,7 +404,7 @@ const Auth = {
         status: 'revoked',
         revokedAt: user.revokedAt,
         revokedBy: user.revokedBy
-      },
+      }, 
       user 
     };
   },
@@ -662,6 +669,8 @@ const Auth = {
     user.revokedAt = new Date().toISOString();
     user.revokedBy = (this.currentUser && this.currentUser.name) || 'Mohit Jain (Admin)';
     this._saveUserDb();
+
+    this._syncApprovalToFirebase(user.email, false, false, true);
 
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({ 

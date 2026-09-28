@@ -1,15 +1,12 @@
-// ─── Authentication Screen Component (Sign In, Sign Up, Forgot Password, Reset Password) ───
+// ─── Authentication Screen — Google OAuth + Email/Password (No Mobile/Phone) ───
 const LoginScreen = {
   _currentView: 'signin', // 'signin' | 'signup' | 'forgot' | 'reset'
-  _resetEmail: '',
   _errorMessage: '',
 
-  // Set the active authentication view
   setView(view) {
     this._currentView = view || 'signin';
     this._errorMessage = '';
     
-    // Update hash without triggering reload loop
     const targetHash = view === 'signup' ? '#signup' : 
                        view === 'forgot' ? '#forgot-password' : 
                        view === 'reset' ? '#reset-password' : '#login';
@@ -31,17 +28,13 @@ const LoginScreen = {
     }
   },
 
-  // Toggle Password Field Visibility
   togglePasswordVisibility(inputId, btnEl) {
     const input = document.getElementById(inputId);
     if (!input) return;
     const isPassword = input.type === 'password';
     input.type = isPassword ? 'text' : 'password';
-
     if (btnEl) {
       btnEl.innerHTML = isPassword ? this._getEyeOffIcon() : this._getEyeIcon();
-      if (btnEl.setAttribute) btnEl.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-      btnEl.title = isPassword ? 'Hide password' : 'Show password';
     }
   },
 
@@ -62,15 +55,6 @@ const LoginScreen = {
     </svg>`;
   },
 
-  _getShieldIcon() {
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-  },
-
-  _getClockIcon() {
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-  },
-
-  // Main Screen Renderer
   render(view) {
     if (view) {
       this._currentView = view;
@@ -103,57 +87,52 @@ const LoginScreen = {
           />
         </div>
 
-        <!-- Inline Error Alert Callout Banner -->
+        <!-- Error Alert -->
         <div id="auth-error-alert" style="display:${this._errorMessage ? 'flex' : 'none'};background:${this._errorMessage && this._errorMessage.includes('pending') ? '#FFF7ED' : '#FEF2F2'};border:1px solid ${this._errorMessage && this._errorMessage.includes('pending') ? '#FED7AA' : '#FECACA'};border-radius:8px;padding:10px 14px;color:${this._errorMessage && this._errorMessage.includes('pending') ? '#C2410C' : '#DC2626'};font-size:13px;font-weight:500;margin-bottom:18px;align-items:flex-start;gap:8px;line-height:1.5;">
           <svg style="width:16px;height:16px;flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span id="auth-error-text">${this._errorMessage}</span>
         </div>
 
-        <!-- Dynamic View Router Content -->
         ${this._renderViewBody()}
-
       </div>
     `;
   },
 
   _renderViewBody() {
     switch(this._currentView) {
-      case 'signup':
-        return this._renderSignUpView();
-      case 'forgot':
-        return this._renderForgotPasswordView();
-      case 'reset':
-        return this._renderResetPasswordView();
+      case 'signup': return this._renderSignUpView();
+      case 'forgot': return this._renderForgotPasswordView();
+      case 'reset': return this._renderResetPasswordView();
       case 'signin':
       default:
         return this._renderSignInView();
     }
   },
 
-  // ─── 1. Sign In View ───
+  // ─── 1. Sign In View (Google + Email/Password, NO phone/mobile) ───
   _renderSignInView() {
     return `
       <div>
         <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--color-text-primary);text-align:center;margin:0 0 6px 0;">Sign in to your PMO workspace</h2>
-        <p style="font-size:13px;color:var(--color-text-muted);text-align:center;margin:0 0 20px 0;">Enter your credentials to access the enterprise platform</p>
+        <p style="font-size:13px;color:var(--color-text-muted);text-align:center;margin:0 0 20px 0;">Use your Google account or email credentials</p>
 
-        <!-- Admin Approval Notice -->
+        <!-- Security Notice -->
         <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:18px;display:flex;align-items:flex-start;gap:8px;">
           <svg style="width:16px;height:16px;flex-shrink:0;margin-top:1px;color:#2563EB" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <div style="font-size:12px;color:#1E40AF;line-height:1.5;">
-            <strong>Admin-Only Access</strong> — Only approved users can sign in. New accounts require administrator approval before login is granted.
+            <strong>Admin-Only Access</strong> — Only approved users can sign in. New accounts require administrator approval before login is granted. Phone/mobile login is not supported.
           </div>
         </div>
 
-        <!-- Form -->
+        <!-- Email/Password Form -->
         <form id="login-form" onsubmit="event.preventDefault(); LoginScreen.handleLogin();" style="display:flex;flex-direction:column;gap:14px;">
           <div class="form-group" style="text-align:left;">
-            <label for="login-id" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Login ID or Email</label>
+            <label for="login-id" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Email Address</label>
             <input 
-              type="text" 
+              type="email" 
               id="login-id" 
               class="form-input" 
-              placeholder="Enter your Login ID or Email" 
+              placeholder="Enter your email address" 
               autocomplete="username" 
               required 
               style="height:42px;font-size:14px;width:100%;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;box-sizing:border-box;"
@@ -190,7 +169,7 @@ const LoginScreen = {
             id="login-btn" 
             style="width:100%;height:42px;font-size:14px;font-weight:600;border-radius:8px;background:var(--color-primary, #2563EB);color:#FFFFFF;border:none;cursor:pointer;margin-top:4px;transition:background 0.2s;"
           >
-            Sign In
+            Sign In with Email
           </button>
         </form>
 
@@ -340,8 +319,7 @@ const LoginScreen = {
               class="form-input" 
               placeholder="Enter your registered email address" 
               autocomplete="email" 
-              required 
-              value="${this._resetEmail || ''}"
+              required
               style="height:42px;font-size:14px;width:100%;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;box-sizing:border-box;"
               oninput="LoginScreen.clearError()"
             />
@@ -439,7 +417,14 @@ const LoginScreen = {
     const password = passEl ? passEl.value : '';
 
     if (!loginId || !password) {
-      this.showError('Invalid Login ID or password.');
+      this.showError('Please enter your email and password.');
+      return;
+    }
+
+    // Validate email format only (no phone/mobile numbers)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(loginId)) {
+      this.showError('Please enter a valid email address. Mobile/phone login is not supported.');
       return;
     }
 
@@ -454,7 +439,7 @@ const LoginScreen = {
         App.handleRoute();
       }
     } else {
-      this.showError(res.error || 'Invalid Login ID or password.');
+      this.showError(res.error || 'Invalid email or password.');
     }
   },
 
@@ -469,69 +454,53 @@ const LoginScreen = {
     const pass = passEl ? passEl.value : '';
     const confirm = confirmEl ? confirmEl.value : '';
 
-    // 1. Name validation
     if (!name) {
       this.showError('Please enter your full name.');
-      if (nameEl) nameEl.classList.add('error');
       return;
     }
 
-    // 2. Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
       this.showError('Please enter a valid email address.');
-      if (emailEl) emailEl.classList.add('error');
       return;
     }
 
-    // 3. Password Requirements
     const hasMinLen = pass.length >= 8;
     const hasNum = /[0-9]/.test(pass);
     const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=\\\/\[\]~`]/.test(pass);
 
     if (!hasMinLen || !hasNum || !hasSpecial) {
       this.showError('Password must be at least 8 characters long, including one number and one special character.');
-      if (passEl) passEl.classList.add('error');
       return;
     }
 
-    // 4. Passwords Match validation
     if (pass !== confirm) {
       this.showError('Passwords do not match.');
-      if (confirmEl) confirmEl.classList.add('error');
       return;
     }
 
-    // 5. Submit access request (creates PENDING user)
     const res = Auth.signUp(name, email, pass);
     if (res.success) {
       this.clearError();
       if (typeof Toast !== 'undefined') {
         Toast.show('Access request submitted! Waiting for admin approval.', 'success');
       }
-      // Show the pending approval screen
       this._showPendingApprovalScreen(name, email);
     } else {
       this.showError(res.error || 'Failed to submit access request.');
     }
   },
 
-  // ─── Show Pending Approval Screen after sign-up ───
   _showPendingApprovalScreen(name, email) {
-    const content = document.getElementById('page-content');
-    if (!content) return;
-    
     const wrapper = document.querySelector('.login-wrapper') || document.querySelector('.auth-wrapper');
     if (wrapper) {
       wrapper.innerHTML = `
         <div class="login-card auth-card" style="width:100%;max-width:420px;background:#FFFFFF;border:1px solid var(--color-border, #E2E8F0);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.06);padding:36px 32px;box-sizing:border-box;text-align:center;">
           
-          <!-- Logo -->
           <div style="text-align:center;margin-bottom:18px;">
             <img src="assets/hintonn-official-logo.png" alt="Hintonn AI" style="max-height:44px;width:auto;object-fit:contain;display:block;margin:0 auto;mix-blend-mode:multiply !important;background:transparent !important;" />
           </div>
 
-          <!-- Pending Icon -->
           <div style="width:72px;height:72px;border-radius:50%;background:#FFF7ED;border:2px solid #FDBA74;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" width="32" height="32"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
@@ -542,7 +511,6 @@ const LoginScreen = {
             Thank you, <strong>${name}</strong>. Your request to join Hintonn PMO has been submitted.
           </p>
 
-          <!-- Status Card -->
           <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:16px;margin-bottom:20px;">
             <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -553,13 +521,11 @@ const LoginScreen = {
             </p>
           </div>
 
-          <!-- Details -->
           <div style="font-size:13px;color:var(--color-text-muted);margin-bottom:24px;">
             <div style="margin-bottom:4px;">Account: <strong style="color:var(--color-text-primary);">${email}</strong></div>
             <div>Submitted: <strong style="color:var(--color-text-primary);">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></div>
           </div>
 
-          <!-- Action -->
           <button type="button" class="btn btn-primary" onclick="LoginScreen.setView('signin')" style="width:100%;height:42px;font-size:14px;font-weight:600;border-radius:8px;background:var(--color-primary, #2563EB);color:#FFFFFF;border:none;cursor:pointer;">
             Back to Sign In
           </button>
@@ -575,7 +541,6 @@ const LoginScreen = {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
       this.showError('Please enter a valid email address.');
-      if (emailEl) emailEl.classList.add('error');
       return;
     }
 
@@ -601,13 +566,11 @@ const LoginScreen = {
 
     if (!hasMinLen || !hasNum || !hasSpecial) {
       this.showError('Password must be at least 8 characters long, including one number and one special character.');
-      if (passEl) passEl.classList.add('error');
       return;
     }
 
     if (pass !== confirm) {
       this.showError('Passwords do not match.');
-      if (confirmEl) confirmEl.classList.add('error');
       return;
     }
 
@@ -620,7 +583,7 @@ const LoginScreen = {
     this.setView('signin');
   },
 
-  // ─── Google OAuth via Redirect ───
+  // ─── Google OAuth Handler ───
   async handleGoogleLogin() {
     this.clearError();
     const googleBtn = document.getElementById('google-login-btn');
@@ -642,7 +605,6 @@ const LoginScreen = {
     try {
       const result = await FirebaseAuth.signInGoogle();
       if (result) {
-        // Approved user — proceed to dashboard
         if (typeof Toast !== 'undefined') {
           Toast.show(`Welcome back, ${result.displayName || result.email}!`, 'success');
         }
@@ -651,19 +613,15 @@ const LoginScreen = {
           App.handleRoute();
         }
       } else {
-        // User was blocked — either pending approval or error
-        // Check if there's a pending user from the Google sign-in
         const firebaseUser = FirebaseAuth.getCurrentUser ? FirebaseAuth.getCurrentUser() : null;
         const userEmail = firebaseUser ? firebaseUser.email : '';
         
-        // Look up the pending user
         const pendingUser = userEmail ? Auth.users.find(u => 
           (u.email && u.email.toLowerCase() === userEmail.toLowerCase()) ||
           (u.googleEmail && u.googleEmail.toLowerCase() === userEmail.toLowerCase())
         ) : null;
         
         if (pendingUser && pendingUser.approved === false) {
-          // Show pending approval screen
           this._showPendingApprovalScreen(pendingUser.name, pendingUser.email || userEmail);
         } else {
           this.showError('Your account is pending admin approval. Please wait for an administrator to approve your access.');
@@ -685,7 +643,6 @@ const LoginScreen = {
     const textEl = document.getElementById('auth-error-text');
     if (alertEl && textEl) {
       textEl.textContent = msg;
-      // Style differently for pending approval messages
       if (msg && msg.includes('pending')) {
         alertEl.style.background = '#FFF7ED';
         alertEl.style.borderColor = '#FED7AA';

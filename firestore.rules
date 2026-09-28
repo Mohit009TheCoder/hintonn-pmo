@@ -2,11 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper: is the signed-in user the admin? ──
+    // ── Helper: is the signed-in user the admin? (ONLY mohitsjain12104@gmail.com) ──
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.lower() in ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
+        && request.auth.token.email.lower() == 'mohitsjain12104@gmail.com';
     }
 
     // ── Helper: is the signed-in user the owner of doc {userId}? ──

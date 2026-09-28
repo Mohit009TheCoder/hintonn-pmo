@@ -193,7 +193,18 @@ const FirebaseAuth = {
       }
       
       if (existingUser && existingUser.approved === false && !isPreApproved) {
-        // User exists but not approved — return status for UI
+        // User exists locally but not approved
+        // Ensure they actually exist in Firestore so the admin can see them!
+        try {
+          const userRef = this._db.collection('users').doc(user.uid);
+          const doc = await userRef.get();
+          if (!doc.exists) {
+            await this._createUserDocument(user, providerType, existingUser);
+          }
+        } catch (err) {
+          console.warn('Silent failure ensuring user document:', err);
+        }
+
         console.warn('[Auth] Google login requires approval:', emailLower);
         return { approved: false, pending: true, user: existingUser };
       }

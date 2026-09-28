@@ -313,6 +313,7 @@ const TasksScreen = {
       if (typeof Toast !== 'undefined') Toast.show('Only administrators can create tasks.', 'error');
       return;
     }
+    const isAdmin = true; // Guard passed above — always admin here
     const projects = Store.getProjects();
     const assignees = Store.getAssignees();
     const isDeveloper = currentUser && currentUser.role === 'AI Developer';

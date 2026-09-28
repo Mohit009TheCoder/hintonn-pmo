@@ -117,10 +117,10 @@ const LoginScreen = {
         <form id="login-form" class="login-form" onsubmit="event.preventDefault(); LoginScreen.handleLogin();">
           <div class="login-field-group">
             <div class="login-field-label">
-              <label for="login-id">Email Address</label>
+              <label for="login-id">Login ID or Email</label>
             </div>
             <div class="login-input-wrap">
-              <input type="email" id="login-id" class="login-input" placeholder="e.g. mohithintonn@gmail.com" autocomplete="username" required oninput="LoginScreen.clearError()" />
+              <input type="text" id="login-id" class="login-input" placeholder="e.g. Ayush, Mohit, or ayush@hintonn.com" autocomplete="username" required oninput="LoginScreen.clearError()" />
             </div>
           </div>
 
@@ -138,7 +138,7 @@ const LoginScreen = {
           </div>
 
           <button type="submit" class="login-submit-btn" id="login-btn">
-            Sign In with Email
+            Sign In
           </button>
         </form>
 

@@ -30,6 +30,14 @@ button, a, input, select, textarea, [role="button"] {
   touch-action: manipulation;
 }
 
+/* Hide native browser password reveal icon (Edge/IE) so only custom eye toggle shows */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Prevent iOS Safari 16px auto-zoom */
 @media (max-width: 768px) {
   input[type="text"],

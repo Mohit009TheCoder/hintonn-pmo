@@ -7,11 +7,11 @@ const Store = {
 
   init() {
     // One-time clear of local storage for fresh application
-    if (!localStorage.getItem('hintonn_cleared_v3')) {
+    if (!localStorage.getItem('hintonn_cleared_v4')) {
       localStorage.removeItem('hintonn-pm');
       localStorage.removeItem('hintonn-users-db');
       localStorage.removeItem('hintonn-auth-version');
-      localStorage.setItem('hintonn_cleared_v3', 'true');
+      localStorage.setItem('hintonn_cleared_v4', 'true');
     }
 
     const defaultMembers = [];

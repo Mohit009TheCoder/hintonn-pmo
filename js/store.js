@@ -134,24 +134,7 @@ const Store = {
         });
 
         if (remoteItems.length > 0) {
-          if (colName === 'members') {
-            const coreMembers = [
-              { id: 'm1', name: 'Ayush Desai', role: 'AI Developer', color: '#2563EB', email: 'ayush@hintonn.com', initials: 'AD' },
-              { id: 'm2', name: 'Preet Bhavsar', role: 'AI Developer', color: '#7C3AED', email: 'preet@hintonn.com', initials: 'PB' },
-              { id: 'm3', name: 'Mohit Jain', role: 'Admin', color: '#4F46E5', email: 'mohit@hintonn.com', initials: 'MJ' },
-              { id: 'm4', name: 'Hirvi Sanghavi', role: 'AI Developer', color: '#1D4ED8', email: 'hirvi@hintonn.com', initials: 'HS' }
-            ];
-            coreMembers.forEach(core => {
-              const remote = remoteItems.find(r => r.id === core.id);
-              if (!remote) {
-                this._db.collection('members').doc(core.id).set(core).catch(()=>{});
-                remoteItems.push(core);
-              } else if (remote.role !== core.role) {
-                this._db.collection('members').doc(core.id).set({ role: core.role }, { merge: true }).catch(()=>{});
-                remote.role = core.role;
-              }
-            });
-          } else if (colName === 'tasks') {
+          if (colName === 'tasks') {
             remoteItems.sort((a, b) => (a.order || 0) - (b.order || 0));
           } else if (colName === 'activities' || colName === 'comments') {
             remoteItems.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));

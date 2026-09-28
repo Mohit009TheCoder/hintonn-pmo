@@ -62,6 +62,14 @@ const LoginScreen = {
     </svg>`;
   },
 
+  _getShieldIcon() {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+  },
+
+  _getClockIcon() {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+  },
+
   // Main Screen Renderer
   render(view) {
     if (view) {
@@ -96,8 +104,8 @@ const LoginScreen = {
         </div>
 
         <!-- Inline Error Alert Callout Banner -->
-        <div id="auth-error-alert" style="display:${this._errorMessage ? 'flex' : 'none'};background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;color:#DC2626;font-size:13px;font-weight:500;margin-bottom:18px;align-items:center;gap:8px;">
-          <svg style="width:16px;height:16px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div id="auth-error-alert" style="display:${this._errorMessage ? 'flex' : 'none'};background:${this._errorMessage && this._errorMessage.includes('pending') ? '#FFF7ED' : '#FEF2F2'};border:1px solid ${this._errorMessage && this._errorMessage.includes('pending') ? '#FED7AA' : '#FECACA'};border-radius:8px;padding:10px 14px;color:${this._errorMessage && this._errorMessage.includes('pending') ? '#C2410C' : '#DC2626'};font-size:13px;font-weight:500;margin-bottom:18px;align-items:flex-start;gap:8px;line-height:1.5;">
+          <svg style="width:16px;height:16px;flex-shrink:0;margin-top:1px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span id="auth-error-text">${this._errorMessage}</span>
         </div>
 
@@ -128,6 +136,14 @@ const LoginScreen = {
       <div>
         <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--color-text-primary);text-align:center;margin:0 0 6px 0;">Sign in to your PMO workspace</h2>
         <p style="font-size:13px;color:var(--color-text-muted);text-align:center;margin:0 0 20px 0;">Enter your credentials to access the enterprise platform</p>
+
+        <!-- Admin Approval Notice -->
+        <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:18px;display:flex;align-items:flex-start;gap:8px;">
+          <svg style="width:16px;height:16px;flex-shrink:0;margin-top:1px;color:#2563EB" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div style="font-size:12px;color:#1E40AF;line-height:1.5;">
+            <strong>Admin-Only Access</strong> — Only approved users can sign in. New accounts require administrator approval before login is granted.
+          </div>
+        </div>
 
         <!-- Form -->
         <form id="login-form" onsubmit="event.preventDefault(); LoginScreen.handleLogin();" style="display:flex;flex-direction:column;gap:14px;">
@@ -195,22 +211,33 @@ const LoginScreen = {
         <!-- Footer Link -->
         <div style="text-align:center;font-size:13px;color:var(--color-text-muted);">
           Don't have an account? 
-          <a href="#signup" onclick="event.preventDefault(); LoginScreen.setView('signup');" style="color:var(--color-primary, #2563EB);font-weight:600;text-decoration:none;">Sign Up</a>
+          <a href="#signup" onclick="event.preventDefault(); LoginScreen.setView('signup');" style="color:var(--color-primary, #2563EB);font-weight:600;text-decoration:none;">Request Access</a>
         </div>
       </div>
     `;
   },
 
-  // ─── 2. Sign Up View ───
+  // ─── 2. Sign Up / Request Access View ───
   _renderSignUpView() {
     return `
       <div>
-        <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--color-text-primary);text-align:center;margin:0 0 6px 0;">Create an Account</h2>
-        <p style="font-size:13px;color:var(--color-text-muted);text-align:center;margin:0 0 20px 0;">Sign up as an AI Developer to start collaborating</p>
+        <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--color-text-primary);text-align:center;margin:0 0 6px 0;">Request System Access</h2>
+        <p style="font-size:13px;color:var(--color-text-muted);text-align:center;margin:0 0 6px 0;">Submit your details to request access to Hintonn PMO</p>
+        
+        <!-- Approval Required Notice -->
+        <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 14px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:#FFF7ED;border:1px solid #FDBA74;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#9A3412;margin-bottom:2px;">Admin Approval Required</div>
+            <div style="font-size:12px;color:#C2410C;line-height:1.5;">After submitting, an administrator must approve your account before you can log in. You will see a pending status until approved.</div>
+          </div>
+        </div>
 
         <form id="signup-form" onsubmit="event.preventDefault(); LoginScreen.handleSignUp();" style="display:flex;flex-direction:column;gap:14px;">
           <div class="form-group" style="text-align:left;">
-            <label for="signup-name" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Full Name</label>
+            <label for="signup-name" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Full Name <span style="color:#EF4444">*</span></label>
             <input 
               type="text" 
               id="signup-name" 
@@ -224,7 +251,7 @@ const LoginScreen = {
           </div>
 
           <div class="form-group" style="text-align:left;">
-            <label for="signup-email" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Email Address</label>
+            <label for="signup-email" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Email Address <span style="color:#EF4444">*</span></label>
             <input 
               type="email" 
               id="signup-email" 
@@ -238,7 +265,7 @@ const LoginScreen = {
           </div>
 
           <div class="form-group" style="text-align:left;">
-            <label for="signup-password" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Password</label>
+            <label for="signup-password" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Password <span style="color:#EF4444">*</span></label>
             <div style="position:relative;display:flex;align-items:center;">
               <input 
                 type="password" 
@@ -259,7 +286,7 @@ const LoginScreen = {
           </div>
 
           <div class="form-group" style="text-align:left;">
-            <label for="signup-confirm-password" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Confirm Password</label>
+            <label for="signup-confirm-password" class="form-label" style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;">Confirm Password <span style="color:#EF4444">*</span></label>
             <div style="position:relative;display:flex;align-items:center;">
               <input 
                 type="password" 
@@ -282,9 +309,10 @@ const LoginScreen = {
             type="submit" 
             class="btn btn-primary" 
             id="signup-btn" 
-            style="width:100%;height:42px;font-size:14px;font-weight:600;border-radius:8px;background:var(--color-primary, #2563EB);color:#FFFFFF;border:none;cursor:pointer;margin-top:6px;"
+            style="width:100%;height:42px;font-size:14px;font-weight:600;border-radius:8px;background:var(--color-primary, #2563EB);color:#FFFFFF;border:none;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;"
           >
-            Create Account
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Submit Access Request
           </button>
         </form>
 
@@ -360,8 +388,7 @@ const LoginScreen = {
                 style="height:42px;font-size:14px;width:100%;border-radius:8px;border:1px solid var(--color-border);padding:0 40px 0 12px;box-sizing:border-box;"
                 oninput="LoginScreen.clearError()"
               />
-              <button type="button" onclick="LoginScreen.togglePasswordVisibility('reset-password', this)" title="Show password" aria-label="Show password"
-                      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748B;display:flex;align-items:center;padding:4px;">
+              <button type="button" onclick="LoginScreen.togglePasswordVisibility('reset-password', this)" title="Show password" aria-label="Show password" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748B;display:flex;align-items:center;padding:4px;">
                 ${this._getEyeIcon()}
               </button>
             </div>
@@ -381,8 +408,7 @@ const LoginScreen = {
                 style="height:42px;font-size:14px;width:100%;border-radius:8px;border:1px solid var(--color-border);padding:0 40px 0 12px;box-sizing:border-box;"
                 oninput="LoginScreen.clearError()"
               />
-              <button type="button" onclick="LoginScreen.togglePasswordVisibility('reset-confirm-password', this)" title="Show password" aria-label="Show password"
-                      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748B;display:flex;align-items:center;padding:4px;">
+              <button type="button" onclick="LoginScreen.togglePasswordVisibility('reset-confirm-password', this)" title="Show password" aria-label="Show password" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748B;display:flex;align-items:center;padding:4px;">
                 ${this._getEyeIcon()}
               </button>
             </div>
@@ -458,10 +484,10 @@ const LoginScreen = {
       return;
     }
 
-    // 3. Password Requirements: Min 8 chars, 1 number, 1 special character
+    // 3. Password Requirements
     const hasMinLen = pass.length >= 8;
     const hasNum = /[0-9]/.test(pass);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=\\/\[\]~`]/.test(pass);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=\\\/\[\]~`]/.test(pass);
 
     if (!hasMinLen || !hasNum || !hasSpecial) {
       this.showError('Password must be at least 8 characters long, including one number and one special character.');
@@ -476,19 +502,69 @@ const LoginScreen = {
       return;
     }
 
-    // 5. Create user account
+    // 5. Submit access request (creates PENDING user)
     const res = Auth.signUp(name, email, pass);
     if (res.success) {
       this.clearError();
       if (typeof Toast !== 'undefined') {
-        Toast.show(`Account created! Welcome to Hintonn PMO, ${res.user.name}.`, 'success');
+        Toast.show('Access request submitted! Waiting for admin approval.', 'success');
       }
-      window.location.hash = '#dashboard';
-      if (typeof App !== 'undefined') {
-        App.handleRoute();
-      }
+      // Show the pending approval screen
+      this._showPendingApprovalScreen(name, email);
     } else {
-      this.showError(res.error || 'Failed to create account.');
+      this.showError(res.error || 'Failed to submit access request.');
+    }
+  },
+
+  // ─── Show Pending Approval Screen after sign-up ───
+  _showPendingApprovalScreen(name, email) {
+    const content = document.getElementById('page-content');
+    if (!content) return;
+    
+    const wrapper = document.querySelector('.login-wrapper') || document.querySelector('.auth-wrapper');
+    if (wrapper) {
+      wrapper.innerHTML = `
+        <div class="login-card auth-card" style="width:100%;max-width:420px;background:#FFFFFF;border:1px solid var(--color-border, #E2E8F0);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.06);padding:36px 32px;box-sizing:border-box;text-align:center;">
+          
+          <!-- Logo -->
+          <div style="text-align:center;margin-bottom:18px;">
+            <img src="assets/hintonn-official-logo.png" alt="Hintonn AI" style="max-height:44px;width:auto;object-fit:contain;display:block;margin:0 auto;mix-blend-mode:multiply !important;background:transparent !important;" />
+          </div>
+
+          <!-- Pending Icon -->
+          <div style="width:72px;height:72px;border-radius:50%;background:#FFF7ED;border:2px solid #FDBA74;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" width="32" height="32"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+
+          <h2 style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--color-text-primary);margin:0 0 8px 0;">Access Request Pending</h2>
+          
+          <p style="font-size:14px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 20px 0;">
+            Thank you, <strong>${name}</strong>. Your request to join Hintonn PMO has been submitted.
+          </p>
+
+          <!-- Status Card -->
+          <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:16px;margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span style="font-size:14px;font-weight:700;color:#9A3412;">Awaiting Admin Approval</span>
+            </div>
+            <p style="font-size:12.5px;color:#C2410C;margin:0;line-height:1.5;">
+              An administrator will review your request and grant access. You will be able to sign in once your account is approved.
+            </p>
+          </div>
+
+          <!-- Details -->
+          <div style="font-size:13px;color:var(--color-text-muted);margin-bottom:24px;">
+            <div style="margin-bottom:4px;">Account: <strong style="color:var(--color-text-primary);">${email}</strong></div>
+            <div>Submitted: <strong style="color:var(--color-text-primary);">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></div>
+          </div>
+
+          <!-- Action -->
+          <button type="button" class="btn btn-primary" onclick="LoginScreen.setView('signin')" style="width:100%;height:42px;font-size:14px;font-weight:600;border-radius:8px;background:var(--color-primary, #2563EB);color:#FFFFFF;border:none;cursor:pointer;">
+            Back to Sign In
+          </button>
+        </div>
+      `;
     }
   },
 
@@ -510,7 +586,6 @@ const LoginScreen = {
       Toast.show('Reset link sent to your email!', 'success');
     }
 
-    // Smoothly redirect to Reset Password view
     this.setView('reset');
   },
 
@@ -520,10 +595,9 @@ const LoginScreen = {
     const pass = passEl ? passEl.value : '';
     const confirm = confirmEl ? confirmEl.value : '';
 
-    // Password validation
     const hasMinLen = pass.length >= 8;
     const hasNum = /[0-9]/.test(pass);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=\\/\[\]~`]/.test(pass);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=\\\/\[\]~`]/.test(pass);
 
     if (!hasMinLen || !hasNum || !hasSpecial) {
       this.showError('Password must be at least 8 characters long, including one number and one special character.');
@@ -543,16 +617,14 @@ const LoginScreen = {
       Toast.show('Password updated successfully! Please sign in with your new password.', 'success');
     }
 
-    // Redirect to Sign In
     this.setView('signin');
   },
 
-  // ─── Google OAuth via Redirect (no popup) ───
+  // ─── Google OAuth via Redirect ───
   async handleGoogleLogin() {
     this.clearError();
     const googleBtn = document.getElementById('google-login-btn');
     
-    // Check Firebase is loaded
     if (typeof firebase === 'undefined') {
       this.showError('Firebase SDK not loaded. Check your internet connection and reload.');
       return;
@@ -570,6 +642,19 @@ const LoginScreen = {
     try {
       const user = await FirebaseAuth.signInGoogle();
       if (user) {
+        // Check if user is approved
+        const authUser = Auth.users.find(u => 
+          (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+          (u.googleEmail && user.email && u.googleEmail.toLowerCase() === user.email.toLowerCase())
+        );
+        
+        if (authUser && authUser.approved === false) {
+          // Show pending approval screen
+          Auth.logout();
+          this._showPendingApprovalScreen(authUser.name, authUser.email);
+          return;
+        }
+
         if (typeof Toast !== 'undefined') {
           Toast.show(`Welcome back, ${user.displayName || user.email}!`, 'success');
         }
@@ -578,7 +663,6 @@ const LoginScreen = {
           App.handleRoute();
         }
       }
-      // If user is null, redirect is in progress (page will navigate away)
     } catch (err) {
       console.error('Google sign-in error:', err);
       this.showError(err.message || 'Google authentication failed. Please try again.');
@@ -595,6 +679,16 @@ const LoginScreen = {
     const textEl = document.getElementById('auth-error-text');
     if (alertEl && textEl) {
       textEl.textContent = msg;
+      // Style differently for pending approval messages
+      if (msg && msg.includes('pending')) {
+        alertEl.style.background = '#FFF7ED';
+        alertEl.style.borderColor = '#FED7AA';
+        alertEl.style.color = '#C2410C';
+      } else {
+        alertEl.style.background = '#FEF2F2';
+        alertEl.style.borderColor = '#FECACA';
+        alertEl.style.color = '#DC2626';
+      }
       alertEl.style.display = 'flex';
     }
   },

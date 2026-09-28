@@ -231,34 +231,50 @@ const FirebaseAuth = {
       }
       
       if (!existingUser && !isPreApproved) {
-        const localUser = {
-          id: user.uid,
-          memberId: 'm_' + user.uid.slice(0, 6),
-          loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
-          email: fallbackEmail || '',
-          googleEmail: fallbackEmail || '',
-          name: defaultName,
-          role: 'AI Developer',
-          avatar: initials,
-          initials: initials,
-          color: '#2563EB',
-          title: 'AI Developer',
-          photoURL: user.photoURL || null,
-          approved: false,
-          requestDate: new Date().toISOString(),
-          requestSource: providerType === 'google' ? 'Google OAuth' : 'Sign Up'
-        };
-        Auth.users.push(localUser);
-        Auth._saveUserDb();
-        if (typeof Auth._notifyAdminOfPendingRequest === 'function') {
-          Auth._notifyAdminOfPendingRequest(localUser);
-        }
-        
+        // ── FIX: Check Firestore first for existing approval status ──
+        // Prevents already-approved users from being stuck as "pending"
+        // on new devices / cleared localStorage.
+        let firestoreApproved = false;
         try {
-          await this._createUserDocument(user, providerType, localUser);
+          const checkRef = this._db.collection('users').doc(user.uid);
+          const checkDoc = await checkRef.get();
+          if (checkDoc.exists) {
+            const fData = checkDoc.data();
+            firestoreApproved = fData.isActive === true;
+          }
         } catch (e) {}
 
-        return { approved: false, pending: true, user: localUser };
+        if (!firestoreApproved) {
+          const localUser = {
+            id: user.uid,
+            memberId: 'm_' + user.uid.slice(0, 6),
+            loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
+            email: fallbackEmail || '',
+            googleEmail: fallbackEmail || '',
+            name: defaultName,
+            role: 'AI Developer',
+            avatar: initials,
+            initials: initials,
+            color: '#2563EB',
+            title: 'AI Developer',
+            photoURL: user.photoURL || null,
+            approved: false,
+            requestDate: new Date().toISOString(),
+            requestSource: providerType === 'google' ? 'Google OAuth' : 'Sign Up'
+          };
+          Auth.users.push(localUser);
+          Auth._saveUserDb();
+          if (typeof Auth._notifyAdminOfPendingRequest === 'function') {
+            Auth._notifyAdminOfPendingRequest(localUser);
+          }
+
+          try {
+            await this._createUserDocument(user, providerType, localUser);
+          } catch (e) {}
+
+          return { approved: false, pending: true, user: localUser };
+        }
+        // Firestore says approved → fall through to the approved-user flow below
       }
     }
 

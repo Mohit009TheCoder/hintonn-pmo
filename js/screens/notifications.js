@@ -3,6 +3,15 @@ const NotificationsScreen = {
   _filter: 'all',
 
   render() {
+    // Fetch pending users from Firestore in background (for cross-device visibility)
+    if (typeof Auth !== 'undefined' && Auth.fetchPendingUsersFromFirestore) {
+      Auth.fetchPendingUsersFromFirestore().then(() => {
+        if (typeof App !== 'undefined' && App.currentScreen === 'notifications') {
+          this._refresh();
+        }
+      });
+    }
+
     const notifications = Store.getNotifications();
     const filtered = this._applyFilter(notifications);
     const unreadCount = notifications.filter(n => !n.read).length;

@@ -30,48 +30,66 @@ const FirebaseAuth = {
 
   _listenToUsers() {
     if (!this._db || typeof Auth === 'undefined') return;
-    this._db.collection('users').onSnapshot(snap => {
-      snap.forEach(doc => {
-        const data = doc.data();
-        const emailLower = (data.email || '').toLowerCase();
-        let existingUser = Auth.users.find(u => 
-          (u.email && u.email.toLowerCase() === emailLower) ||
-          (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
-        );
-        if (existingUser) {
-          existingUser.approved = data.isActive === true;
-          existingUser.rejected = data.isRejected === true;
-          existingUser.role = data.role || existingUser.role;
-        } else {
-          // If not in Auth.users but in Firestore (e.g. pending Google request)
-          const name = data.name || 'User';
-          const initials = (name.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
-          const newUser = {
-            id: data.uid || doc.id,
-            memberId: 'm_' + (data.uid || doc.id).slice(0, 6),
-            loginId: data.email ? data.email.split('@')[0] : name,
-            email: data.email || '',
-            googleEmail: data.provider === 'google' ? data.email : '',
-            name: name,
-            role: data.role || 'AI Developer',
-            avatar: initials,
-            initials: initials,
-            color: '#2563EB',
-            title: data.role || 'AI Developer',
-            photoURL: data.photoURL || null,
-            approved: data.isActive === true,
-            rejected: data.isRejected === true,
-            requestDate: data.createdAt ? new Date(data.createdAt.toMillis ? data.createdAt.toMillis() : Date.now()).toISOString() : new Date().toISOString(),
-            requestSource: data.provider === 'google' ? 'Google OAuth' : 'Sign Up'
-          };
-          Auth.users.push(newUser);
+    // Detach previous listener if any
+    if (this._unsubUsers) { try { this._unsubUsers(); } catch(e) {} }
+    try {
+      this._unsubUsers = this._db.collection('users').onSnapshot(snap => {
+        snap.forEach(doc => {
+          const data = doc.data();
+          const emailLower = (data.email || '').toLowerCase();
+          let existingUser = Auth.users.find(u => 
+            (u.email && u.email.toLowerCase() === emailLower) ||
+            (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
+          );
+          if (existingUser) {
+            existingUser.approved = data.isActive === true;
+            existingUser.rejected = data.isRejected === true;
+            existingUser.role = data.role || existingUser.role;
+          } else {
+            // If not in Auth.users but in Firestore (e.g. pending Google request)
+            const name = data.name || 'User';
+            const initials = (name.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+            const newUser = {
+              id: data.uid || doc.id,
+              memberId: 'm_' + (data.uid || doc.id).slice(0, 6),
+              loginId: data.email ? data.email.split('@')[0] : name,
+              email: data.email || '',
+              googleEmail: data.provider === 'google' ? data.email : '',
+              name: name,
+              role: data.role || 'AI Developer',
+              avatar: initials,
+              initials: initials,
+              color: data.color || '#2563EB',
+              title: data.role || 'AI Developer',
+              photoURL: data.photoURL || null,
+              approved: data.isActive === true,
+              rejected: data.isRejected === true,
+              requestDate: data.createdAt ? new Date(data.createdAt.toMillis ? data.createdAt.toMillis() : Date.now()).toISOString() : new Date().toISOString(),
+              requestSource: data.requestSource || (data.provider === 'google' ? 'Google OAuth' : 'Sign Up')
+            };
+            Auth.users.push(newUser);
+          }
+        });
+        Auth._saveUserDb();
+        if (typeof UserApprovalsScreen !== 'undefined' && UserApprovalsScreen.refresh) {
+          UserApprovalsScreen.refresh();
         }
+      }, err => {
+        // Permission denied (e.g. before admin sign-in) — silently retry after auth change
+        console.warn('[FirebaseAuth] Users listener error (will retry on auth change):', err.code || err.message || err);
+        this._usersListenerFailed = true;
       });
-      Auth._saveUserDb();
-      if (typeof UserApprovalsScreen !== 'undefined' && UserApprovalsScreen.refresh) {
-        UserApprovalsScreen.refresh();
-      }
-    });
+    } catch(e) {
+      console.warn('[FirebaseAuth] Could not set up users listener:', e);
+      this._usersListenerFailed = true;
+    }
+  },
+
+  // Called after admin signs in via Google to re-initialize the users listener
+  _reinitUsersListenerAfterAuth() {
+    if (this._usersListenerFailed || !this._unsubUsers) {
+      this._listenToUsers();
+    }
   },
 
   onAuthStateChanged(callback) {
@@ -116,6 +134,8 @@ const FirebaseAuth = {
       const result = await this._auth.signInWithPopup(provider);
       if (result && result.user) {
         const savedUser = await this._saveOrUpdateUserSession(result.user, 'google');
+        // Re-init users listener now that we have proper Firebase Auth
+        this._reinitUsersListenerAfterAuth();
         return savedUser || null;
       }
     } catch (err) {
@@ -134,6 +154,7 @@ const FirebaseAuth = {
       const result = await this._auth.getRedirectResult();
       if (result && result.user) {
         const savedUser = await this._saveOrUpdateUserSession(result.user, 'google');
+        this._reinitUsersListenerAfterAuth();
         return savedUser || null;
       }
     } catch (err) {

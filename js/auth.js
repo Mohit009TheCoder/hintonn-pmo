@@ -197,6 +197,11 @@ const Auth = {
 
     this._enforceAdminRole(user);
 
+    // ── Block unapproved users from logging in ──
+    if (user.approved === false) {
+      return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: user };
+    }
+
     this.currentUser = user;
     try {
       localStorage.setItem('hintonn-current-user', JSON.stringify(user));
@@ -582,6 +587,47 @@ const Auth = {
       requestDate: u.requestDate || '', approvedDate: u.approvedDate || '',
       requestSource: u.requestSource || 'Pre-configured', loginId: u.loginId || ''
     }));
+  },
+
+  // ─── Fetch pending users directly from Firestore (for admin panel) ───
+  async fetchPendingUsersFromFirestore() {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+    try {
+      const snap = await firebase.firestore().collection('users').where('isActive', '==', false).get();
+      snap.forEach(doc => {
+        const data = doc.data();
+        const emailLower = (data.email || '').toLowerCase();
+        const exists = this.users.find(u =>
+          (u.email && u.email.toLowerCase() === emailLower) ||
+          (u.googleEmail && u.googleEmail.toLowerCase() === emailLower) ||
+          (u.id === (data.uid || doc.id))
+        );
+        if (!exists) {
+          const name = data.name || 'User';
+          const initials = (name.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+          this.users.push({
+            id: data.uid || doc.id,
+            memberId: data.memberId || ('m_' + (data.uid || doc.id).slice(0, 6)),
+            loginId: data.email ? data.email.split('@')[0] : name,
+            email: data.email || '',
+            googleEmail: data.email || '',
+            name: name,
+            role: data.role || 'AI Developer',
+            avatar: initials,
+            initials: initials,
+            color: data.color || '#2563EB',
+            title: data.role || 'AI Developer',
+            approved: false,
+            rejected: data.isRejected === true,
+            requestDate: data.requestDate || data.createdAt || new Date().toISOString(),
+            requestSource: data.requestSource || 'Sign Up'
+          });
+        }
+      });
+      this._saveUserDb();
+    } catch (e) {
+      console.warn('[Auth] Could not fetch pending users from Firestore:', e.message || e);
+    }
   },
 
   _notifyAdminOfPendingRequest(user) {

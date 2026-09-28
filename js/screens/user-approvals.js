@@ -137,6 +137,16 @@ const UserApprovalsScreen = {
   },
 
   render() {
+    // Fetch pending users from Firestore in background (for cross-device visibility)
+    if (typeof Auth !== 'undefined' && Auth.fetchPendingUsersFromFirestore) {
+      Auth.fetchPendingUsersFromFirestore().then(() => {
+        // Re-render if we're still on this screen and got new data
+        if (typeof App !== 'undefined' && App.currentScreen === 'user-approvals') {
+          this.refresh();
+        }
+      });
+    }
+
     const allUsers = Auth.getAllUsersWithStatus();
     const pending = allUsers.filter(u => !u.approved && !u.rejected);
     const approved = allUsers.filter(u => u.approved);

@@ -399,6 +399,11 @@ const App = {
     const list = document.getElementById('notification-list');
     if (!list) return;
 
+    // Fetch pending users from Firestore in background
+    if (typeof Auth !== 'undefined' && Auth.fetchPendingUsersFromFirestore) {
+      Auth.fetchPendingUsersFromFirestore().then(() => this.renderNotifications());
+    }
+
     const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = user && user.role === 'Admin';
     let googleHtml = '';
@@ -442,6 +447,46 @@ const App = {
       }
     }
 
+    // Pending standard signup users for admin
+    let signupHtml = '';
+    if (isAdmin && typeof Auth !== 'undefined' && Auth.getAllUsersWithStatus) {
+      const allUsers = Auth.getAllUsersWithStatus();
+      const pendingSignup = allUsers.filter(u => !u.approved && !u.rejected);
+      if (pendingSignup.length > 0) {
+        signupHtml = `
+          <div style="background:#FFFBEB;border-bottom:1px solid #FDE68A;padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.04em;">
+                👤 Sign-Up Requests (${pendingSignup.length})
+              </div>
+              <a href="#user-approvals" onclick="App.closeNotifications();" style="font-size:11.5px;color:#2563EB;font-weight:600;text-decoration:none;">View All</a>
+            </div>
+            ${pendingSignup.map(u => `
+              <div style="background:#FFFFFF;border:1px solid #FDE68A;border-radius:6px;padding:10px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <div style="width:26px;height:26px;border-radius:50%;background:${u.color||'#2563EB'};color:#FFF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${u.initials||'??'}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.name}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.email}</div>
+                  </div>
+                  <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:10px;">Pending</span>
+                </div>
+                <div style="font-size:11.5px;color:var(--color-text-secondary);margin-bottom:8px;">${u.role || 'AI Developer'} · ${u.requestSource || 'Sign Up'}</div>
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                  <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}');App.renderNotifications();" style="padding:4px 10px;background:#059669;color:#FFF;border:none;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                    ✓ Approve
+                  </button>
+                  <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}');App.renderNotifications();" style="padding:4px 8px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;">
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+
     const notifications = Store.getNotifications();
     const standardHtml = notifications.map(n => `
       <div class="notification-item ${n.read?'':'unread'}" onclick="Store.markRead('${n.id}');App.renderNotifications();App.updateNotifDot()">
@@ -452,7 +497,7 @@ const App = {
         </div>
       </div>`).join('') || (!googleHtml ? '<div style="padding:32px;text-align:center;color:var(--color-text-muted);font-size:13px">No notifications</div>' : '');
 
-    list.innerHTML = googleHtml + standardHtml;
+    list.innerHTML = googleHtml + signupHtml + standardHtml;
     this.updateNotifDot();
   },
 
@@ -482,8 +527,11 @@ const App = {
 
     const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = user && user.role === 'Admin';
-    if (isAdmin && typeof Auth !== 'undefined' && Auth.getPendingGoogleRequests) {
-      count += Auth.getPendingGoogleRequests().length;
+    if (isAdmin && typeof Auth !== 'undefined') {
+      if (Auth.getPendingGoogleRequests) count += Auth.getPendingGoogleRequests().length;
+      if (Auth.getAllUsersWithStatus) {
+        count += Auth.getAllUsersWithStatus().filter(u => !u.approved && !u.rejected).length;
+      }
     }
 
     if (dot) {

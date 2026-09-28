@@ -274,19 +274,22 @@ const UserApprovalsScreen = {
         </div>
 
         <div style="display:flex;gap:8px;flex-shrink:0;">
-          ${isPending ? `
-            <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;cursor:pointer;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
-              Accept
-            </button>
-            <button type="button" onclick="UserApprovalsScreen.rejectGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:6px;cursor:pointer;">
-              Reject
-            </button>
-          ` : `
-            <span style="font-size:12px;font-weight:600;color:${statusColor};padding:6px 12px;border-radius:6px;background:${statusBg};">
-              ${isApproved ? '✓ Access Granted' : '✕ Request Rejected'}
-            </span>
-          `}
+            ${!isApproved ? `
+              <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;cursor:pointer;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+                Accept
+              </button>
+            ` : ''}
+            ${!isRejected ? `
+              <button type="button" onclick="UserApprovalsScreen.rejectGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:6px;cursor:pointer;">
+                Reject
+              </button>
+            ` : ''}
+            ${isApproved ? `
+              <span style="font-size:12px;font-weight:600;color:${statusColor};padding:6px 12px;border-radius:6px;background:${statusBg};">
+                ✓ Access Granted
+              </span>
+            ` : ''}
         </div>
       </div>
     `;
@@ -346,12 +349,17 @@ const UserApprovalsScreen = {
           </span>
           ${!isCore ? `
             <div style="display:flex;gap:4px;">
-              ${!u.approved && !u.rejected ? `
+              ${!u.approved ? `
                 <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Approve" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
                   Approve
                 </button>
-              ` : ''}
+              ` : `
+                <button type="button" disabled style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:default;display:inline-flex;align-items:center;gap:4px;opacity:0.8;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approved
+                </button>
+              `}
               ${!u.rejected ? `
                 <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Reject" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                   Reject

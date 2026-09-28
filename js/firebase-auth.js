@@ -25,6 +25,52 @@ const FirebaseAuth = {
     this._auth = firebase.auth();
     this._db = firebase.firestore();
     this._initialized = true;
+    this._listenToUsers();
+  },
+
+  _listenToUsers() {
+    if (!this._db || typeof Auth === 'undefined') return;
+    this._db.collection('users').onSnapshot(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        const emailLower = (data.email || '').toLowerCase();
+        let existingUser = Auth.users.find(u => 
+          (u.email && u.email.toLowerCase() === emailLower) ||
+          (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
+        );
+        if (existingUser) {
+          existingUser.approved = data.isActive;
+          existingUser.role = data.role || existingUser.role;
+        } else {
+          // If not in Auth.users but in Firestore (e.g. pending Google request)
+          const name = data.name || 'User';
+          const initials = (name.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+          const newUser = {
+            id: data.uid || doc.id,
+            memberId: 'm_' + (data.uid || doc.id).slice(0, 6),
+            loginId: data.email ? data.email.split('@')[0] : name,
+            email: data.email || '',
+            googleEmail: data.provider === 'google' ? data.email : '',
+            name: name,
+            role: data.role || 'AI Developer',
+            avatar: initials,
+            initials: initials,
+            color: '#2563EB',
+            title: data.role || 'AI Developer',
+            photoURL: data.photoURL || null,
+            approved: data.isActive === true,
+            rejected: data.isRejected === true,
+            requestDate: data.createdAt ? new Date(data.createdAt.toMillis ? data.createdAt.toMillis() : Date.now()).toISOString() : new Date().toISOString(),
+            requestSource: data.provider === 'google' ? 'Google OAuth' : 'Sign Up'
+          };
+          Auth.users.push(newUser);
+        }
+      });
+      Auth._saveUserDb();
+      if (typeof UserApprovalsScreen !== 'undefined' && UserApprovalsScreen.refresh) {
+        UserApprovalsScreen.refresh();
+      }
+    });
   },
 
   onAuthStateChanged(callback) {
@@ -116,12 +162,18 @@ const FirebaseAuth = {
   // ─── Firestore: Save / Update User Session ───
   async _saveOrUpdateUserSession(user, providerType) {
     if (!user) return null;
-    const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
-    const emailLower = (user.email || '').toLowerCase();
+    let fallbackEmail = user.email;
+    if (!fallbackEmail && user.providerData && user.providerData.length > 0) {
+      fallbackEmail = user.providerData[0].email;
+    }
+    const defaultName = user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
+    const emailLower = (fallbackEmail || '').toLowerCase();
 
     // ─── Admin check — only mohithintonn@gmail.com ───
     const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
+    const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
     const isAdmin = ADMIN_EMAILS.includes(emailLower);
+    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
 
     // ─── ADMIN APPROVAL GATE ───
@@ -135,21 +187,23 @@ const FirebaseAuth = {
       if (isAdmin && existingUser) {
         existingUser.approved = true;
         existingUser.role = 'Admin';
+      } else if (isPreApproved && existingUser) {
+        existingUser.approved = true;
       }
       
-      if (existingUser && existingUser.approved === false && !isAdmin) {
+      if (existingUser && existingUser.approved === false && !isPreApproved) {
         // User exists but not approved — return status for UI
         console.warn('[Auth] Google login requires approval:', emailLower);
         return { approved: false, pending: true, user: existingUser };
       }
       
-      if (!existingUser && !isAdmin) {
+      if (!existingUser && !isPreApproved) {
         const localUser = {
           id: user.uid,
           memberId: 'm_' + user.uid.slice(0, 6),
-          loginId: (user.email ? user.email.split('@')[0] : defaultName),
-          email: user.email || '',
-          googleEmail: user.email || '',
+          loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
+          email: fallbackEmail || '',
+          googleEmail: fallbackEmail || '',
           name: defaultName,
           role: 'AI Developer',
           avatar: initials,
@@ -166,6 +220,11 @@ const FirebaseAuth = {
         if (typeof Auth._notifyAdminOfPendingRequest === 'function') {
           Auth._notifyAdminOfPendingRequest(localUser);
         }
+        
+        try {
+          await this._createUserDocument(user, providerType, localUser);
+        } catch (e) {}
+
         return { approved: false, pending: true, user: localUser };
       }
     }
@@ -230,11 +289,13 @@ const FirebaseAuth = {
       const name = (extra && extra.name) || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
       const emailLower = (user.email || '').toLowerCase();
       const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
+      const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
       const isAdmin = ADMIN_EMAILS.includes(emailLower);
+      const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
 
       await userRef.set({
         uid: user.uid, name: name, email: user.email, photoURL: user.photoURL || null,
-        role: isAdmin ? 'Admin' : 'AI Developer', isActive: true, provider: providerType || 'password',
+        role: isAdmin ? 'Admin' : 'AI Developer', isActive: isPreApproved, isRejected: false, provider: providerType || 'password',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (err) {

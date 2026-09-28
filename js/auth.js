@@ -71,18 +71,24 @@ const Auth = {
     if (!user) return user;
     const emailLower = (user.email || '').toLowerCase();
     const googleEmailLower = (user.googleEmail || '').toLowerCase();
+    
     const isAdmin = this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower);
+    const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
+    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || PRE_APPROVED_EMAILS.includes(googleEmailLower);
+
     if (isAdmin) {
       user.role = 'Admin';
       user.approved = true;
       user.title = user.title || 'Executive PMO & Lead';
+    } else if (isPreApproved) {
+      user.approved = true;
     }
     return user;
   },
 
   init() {
     try {
-      const AUTH_VERSION = 'v6-admin-fix';
+      const AUTH_VERSION = 'v7-preapproved-fix';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
         const savedUsers = localStorage.getItem('hintonn-users-db');
         if (savedUsers) {
@@ -93,9 +99,15 @@ const Auth = {
               // Force admin emails to always be approved
               const uEmail = (u.email || '').toLowerCase();
               const uGEmail = (u.googleEmail || '').toLowerCase();
-              if (this._ADMIN_EMAILS.includes(uEmail) || this._ADMIN_EMAILS.includes(uGEmail)) {
+              const isAdmin = this._ADMIN_EMAILS.includes(uEmail) || this._ADMIN_EMAILS.includes(uGEmail);
+              const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
+              const isPreApproved = PRE_APPROVED_EMAILS.includes(uEmail) || PRE_APPROVED_EMAILS.includes(uGEmail);
+
+              if (isAdmin) {
                 u.approved = true;
                 u.role = 'Admin';
+              } else if (isPreApproved) {
+                u.approved = true;
               }
             });
             localStorage.setItem('hintonn-users-db', JSON.stringify(parsed));
@@ -198,34 +210,22 @@ const Auth = {
     return { success: true, user };
   },
 
-  // ─── Google Login Approval Request Store (UI-Only Mock Demo) ───
+  // ─── Google Login Approval Request Store ───
   getGoogleApprovalRequests() {
-    try {
-      const saved = localStorage.getItem('hintonn-google-approval-requests');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {}
-
-    // Default sample pending Google request for demonstration
-    const defaultRequests = [
-      {
-        id: 'req_goog_demo1',
-        name: 'Alex Morgan',
-        email: 'alex.morgan@hintonn.com',
-        avatar: 'AM',
-        color: '#0284C7',
-        role: 'AI Developer',
-        department: 'Commercial PMO & Project Delivery',
-        reason: 'Google Workspace access for PMO project telemetry & milestone monitoring',
-        requestedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-        status: 'pending',
-        reviewedBy: null,
-        reviewedAt: null
-      }
-    ];
-    this._saveGoogleRequests(defaultRequests);
-    return defaultRequests;
+    return this.users.filter(u => u.requestSource === 'Google OAuth' || u.id.startsWith('goog_') || u.id.startsWith('req_goog')).map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email || u.googleEmail,
+      avatar: u.avatar || u.initials,
+      color: u.color,
+      role: u.role,
+      department: u.department || 'Commercial PMO & Project Delivery',
+      reason: 'Google Single Sign-On Access Request',
+      requestedAt: u.requestDate || new Date().toISOString(),
+      status: u.approved ? 'approved' : (u.rejected ? 'rejected' : 'pending'),
+      reviewedBy: u.reviewedBy || null,
+      reviewedAt: u.reviewedAt || null
+    }));
   },
 
   getPendingGoogleRequests() {
@@ -233,41 +233,63 @@ const Auth = {
   },
 
   _saveGoogleRequests(requests) {
-    try {
-      localStorage.setItem('hintonn-google-approval-requests', JSON.stringify(requests));
-    } catch (e) {}
+    // No-op, managed via users DB now
   },
 
   submitGoogleApprovalRequest(accountData, note) {
-    const requests = this.getGoogleApprovalRequests();
-    // Check if there is already an existing request for this email
-    let req = requests.find(r => r.email.toLowerCase() === (accountData.email || '').toLowerCase());
-    if (req) {
-      req.status = 'pending';
-      req.name = accountData.name || req.name;
-      req.department = note || req.department || 'Commercial PMO & Project Delivery';
-      req.requestedAt = new Date().toISOString();
-      req.reviewedBy = null;
-      req.reviewedAt = null;
+    let user = this.users.find(u => u.email && u.email.toLowerCase() === (accountData.email || '').toLowerCase());
+    if (user) {
+      user.department = note || user.department || 'Commercial PMO & Project Delivery';
+      user.requestDate = new Date().toISOString();
+      user.approved = false;
+      user.rejected = false;
+      user.requestSource = 'Google OAuth';
     } else {
-      req = {
+      user = {
         id: 'req_goog_' + Date.now().toString(36),
+        memberId: 'm_' + Date.now().toString(36),
+        loginId: (accountData.email ? accountData.email.split('@')[0] : 'user'),
         name: accountData.name || 'Google User',
         email: accountData.email || 'user@hintonn.com',
+        googleEmail: accountData.email || 'user@hintonn.com',
         avatar: accountData.avatar || (accountData.name || 'GU').split(' ').map(w=>w[0]).join('').slice(0,2),
         color: accountData.color || '#2563EB',
         role: accountData.role || 'AI Developer',
         department: note || 'Commercial PMO & Project Delivery',
-        reason: 'Google Single Sign-On Access Request',
-        requestedAt: new Date().toISOString(),
-        status: 'pending',
-        reviewedBy: null,
-        reviewedAt: null
+        requestDate: new Date().toISOString(),
+        requestSource: 'Google OAuth',
+        approved: false,
+        rejected: false
       };
-      requests.unshift(req);
+      this.users.push(user);
     }
-    this._saveGoogleRequests(requests);
-    return req;
+    this._saveUserDb();
+    this._syncApprovalToFirebase(user.email, false);
+    
+    // Convert to req format expected by UI
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      color: user.color,
+      status: 'pending',
+      requestedAt: user.requestDate
+    };
+  },
+
+  _syncApprovalToFirebase(email, isApproved) {
+    if (typeof firebase !== 'undefined' && firebase.firestore && email) {
+      try {
+        firebase.firestore().collection('users').where('email', '==', email).get().then(snap => {
+          if (!snap.empty) {
+            snap.docs.forEach(doc => {
+              doc.ref.set({ isActive: isApproved, isRejected: !isApproved }, { merge: true }).catch(()=>{});
+            });
+          }
+        }).catch(()=>{});
+      } catch(e) {}
+    }
   },
 
   approveGoogleRequest(reqId) {
@@ -301,8 +323,11 @@ const Auth = {
       this._saveUserDb();
     } else {
       user.approved = true;
+      user.rejected = false;
       this._saveUserDb();
     }
+    
+    this._syncApprovalToFirebase(req.email, true);
 
     return { success: true, request: req, user };
   },
@@ -316,6 +341,8 @@ const Auth = {
     req.reviewedBy = 'Mohit Jain (Admin)';
     req.reviewedAt = new Date().toISOString();
     this._saveGoogleRequests(requests);
+
+    this._syncApprovalToFirebase(req.email, false);
 
     return { success: true, request: req };
   },
@@ -489,6 +516,7 @@ const Auth = {
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({ type: 'user-approval', text: `✅ Access approved for <strong>${user.name}</strong> (${user.email}) — they can now log in.` });
     }
+    this._syncApprovalToFirebase(user.email, true);
     return { success: true, user };
   },
 
@@ -502,6 +530,7 @@ const Auth = {
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({ type: 'user-approval', text: `❌ Access rejected for <strong>${user.name}</strong> (${user.email}).` });
     }
+    this._syncApprovalToFirebase(user.email, false);
     return { success: true };
   },
 

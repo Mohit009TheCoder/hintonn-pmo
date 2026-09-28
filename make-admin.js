@@ -6,7 +6,7 @@ async function makeAdmin() {
   const admin = mod.default || mod;
   const { cert } = mod;
 
-  const serviceAccount = JSON.parse(fs.readFileSync('/Users/mohitjain/Desktop/hintonn-pmo-firebase-adminsdk-fbsvc-07f21d6fc3.json', 'utf8'));
+  const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, 'service-account.json'), 'utf8'));
 
   admin.initializeApp({
     credential: cert(serviceAccount)

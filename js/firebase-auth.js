@@ -136,7 +136,10 @@ const FirebaseAuth = {
         (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
       );
       
-      if (existingUser && existingUser.approved === false) {
+      // Admin emails are ALWAYS approved — never block them
+      const isKnownAdmin = isAdmin || (existingUser && existingUser.role === 'Admin');
+      
+      if (existingUser && existingUser.approved === false && !isKnownAdmin) {
         // User exists but not approved — block login
         console.warn('[Auth] Google login blocked: user not approved:', emailLower);
         return null;

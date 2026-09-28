@@ -42,6 +42,19 @@ const Auth = {
       approved: true
     },
     {
+      id: 'mohit-alt',
+      memberId: 'm3-alt',
+      loginId: 'MohitJ',
+      password: 'Mohit@123',
+      name: 'Mohit Jain',
+      role: 'Admin',
+      email: 'mohitsjain12104@gmail.com',
+      googleEmail: 'mohitsjain12104@gmail.com',
+      initials: 'MJ',
+      color: '#4F46E5',
+      approved: true
+    },
+    {
       id: 'hirvi',
       memberId: 'm4',
       loginId: 'Hirvi',
@@ -175,7 +188,7 @@ const Auth = {
   init() {
     try {
       // Version-based cache bust: clear stale localStorage on code update
-      const AUTH_VERSION = 'v3-admin-approval';
+      const AUTH_VERSION = 'v4-admin-email-fix';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
         // Migrate existing users: add approved=true for all existing users
         const savedUsers = localStorage.getItem('hintonn-users-db');
@@ -340,9 +353,10 @@ const Auth = {
     }
 
     if (user) {
+      // ─── Enforce admin role FIRST (sets approved=true for admin emails) ───
       this._enforceAdminRole(user);
 
-      // ─── ADMIN APPROVAL GATE ───
+      // ─── ADMIN APPROVAL GATE (after admin enforcement) ───
       if (user.approved === false) {
         return { 
           success: false, 

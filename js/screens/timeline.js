@@ -121,9 +121,10 @@ const TimelineScreen = {
     today.setHours(12, 0, 0, 0);
 
     if (this._viewScale === 'day') {
-      // Day view: show current month
-      const dayStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const dayEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      // Day view: show current month dynamically
+      const now = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const dayEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const daysInMonth = dayEnd.getDate();
       const days = [];
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -303,8 +304,10 @@ const TimelineScreen = {
   updateTimelineContainer() {
     const container = document.getElementById('timeline-gantt-wrapper');
     const headerTitle = document.getElementById('timeline-horizon-title');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const now = new Date();
     if (headerTitle) {
-      if (this._viewScale === 'day') headerTitle.textContent = 'September 2026 Daily Sprint & Task Grid';
+      if (this._viewScale === 'day') headerTitle.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()} Daily Sprint & Task Grid`;
       else if (this._viewScale === 'week') headerTitle.textContent = '12-Week Commercial Execution Roadmap';
       else headerTitle.textContent = 'Commercial EPC 6-Month Horizon';
     }
@@ -312,6 +315,8 @@ const TimelineScreen = {
     if (container) {
       const data = this._getFilteredData();
       container.innerHTML = this._renderGanttGrid(data.list);
+      // Auto-scroll to today after render
+      requestAnimationFrame(() => this.scrollToToday());
     } else {
       this.refresh();
     }
@@ -326,10 +331,18 @@ const TimelineScreen = {
 
   scrollToToday() {
     const canvas = document.querySelector('.timeline-macro-canvas');
+    if (!canvas) return;
+    // Try today marker first
     const todayMarker = document.querySelector('.timeline-macro-today-line');
-    if (canvas && todayMarker) {
+    if (todayMarker) {
       const markerLeft = todayMarker.offsetLeft;
-      canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 2), behavior: 'smooth' });
+      canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 3), behavior: 'smooth' });
+      return;
+    }
+    // Fallback: scroll to 70% of canvas width (near today for current date)
+    const totalWidth = canvas.scrollWidth - canvas.clientWidth;
+    if (totalWidth > 0) {
+      canvas.scrollTo({ left: totalWidth * 0.7, behavior: 'smooth' });
     }
   },
 
@@ -514,14 +527,16 @@ const TimelineScreen = {
     const filteredData = this._getFilteredData();
     const list = filteredData.list;
 
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const now = new Date();
     const horizonTitles = {
-      day: 'September 2026 Daily Sprint & Task Grid',
+      day: `${monthNames[now.getMonth()]} ${now.getFullYear()} Daily Sprint & Task Grid`,
       week: '12-Week Commercial Execution Roadmap',
       month: 'Commercial EPC 6-Month Horizon'
     };
     const currentHorizonTitle = horizonTitles[this._viewScale] || horizonTitles.month;
 
-    return `
+    const html = `
       <div class="timeline-screen" id="timeline">
         
         <!-- Page Header & Time Scale Selector Toolbar -->
@@ -609,6 +624,9 @@ const TimelineScreen = {
 
       </div>
     `;
+    // Schedule auto-scroll to today after DOM insertion
+    setTimeout(() => this.scrollToToday(), 100);
+    return html;
   },
 
   // ─── Dispatcher to multi-scale Gantt grid renderer ───

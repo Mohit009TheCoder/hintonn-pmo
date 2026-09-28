@@ -39,7 +39,8 @@ const FirebaseAuth = {
           (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
         );
         if (existingUser) {
-          existingUser.approved = data.isActive;
+          existingUser.approved = data.isActive === true;
+          existingUser.rejected = data.isRejected === true;
           existingUser.role = data.role || existingUser.role;
         } else {
           // If not in Auth.users but in Firestore (e.g. pending Google request)

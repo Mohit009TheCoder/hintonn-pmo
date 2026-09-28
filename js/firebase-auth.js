@@ -171,7 +171,7 @@ const FirebaseAuth = {
     const emailLower = (fallbackEmail || '').toLowerCase();
 
     // ─── Admin check — only mohithintonn@gmail.com ───
-    const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
+    const ADMIN_EMAILS = ['mohithintonn@gmail.com'];
     const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
     const isAdmin = ADMIN_EMAILS.includes(emailLower);
     const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
@@ -304,7 +304,7 @@ const FirebaseAuth = {
       }
       const name = (extra && extra.name) || user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
       const emailLower = (fallbackEmail || '').toLowerCase();
-      const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
+      const ADMIN_EMAILS = ['mohithintonn@gmail.com'];
       const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
       const isAdmin = ADMIN_EMAILS.includes(emailLower);
       const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;

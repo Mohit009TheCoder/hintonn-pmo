@@ -15,7 +15,7 @@ async function makeAdmin() {
   const firestoreMod = await import('firebase-admin/firestore');
   const db = firestoreMod.getFirestore();
 
-  const emailToMakeAdmin = 'mohitsjain12104@gmail.com';
+  const emailToMakeAdmin = 'mohithintonn@gmail.com';
   
   const usersRef = db.collection('users');
   const snapshot = await usersRef.where('email', '==', emailToMakeAdmin).get();

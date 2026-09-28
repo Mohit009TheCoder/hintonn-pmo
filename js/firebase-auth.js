@@ -212,7 +212,12 @@ const FirebaseAuth = {
       } else if (isPreApproved && existingUser) {
         existingUser.approved = true;
       }
-      
+
+      // ── BLOCK revoked users from Google login ──
+      if (existingUser && existingUser.revoked === true) {
+        return { approved: false, revoked: true, user: existingUser };
+      }
+
       if (existingUser && existingUser.approved === false && !isPreApproved) {
         // User exists locally but not approved
         // Ensure they actually exist in Firestore so the admin can see them!
@@ -235,14 +240,34 @@ const FirebaseAuth = {
         // Prevents already-approved users from being stuck as "pending"
         // on new devices / cleared localStorage.
         let firestoreApproved = false;
+        let firestoreRevoked = false;
         try {
           const checkRef = this._db.collection('users').doc(user.uid);
           const checkDoc = await checkRef.get();
           if (checkDoc.exists) {
             const fData = checkDoc.data();
             firestoreApproved = fData.isActive === true;
+            firestoreRevoked = fData.isRevoked === true;
           }
         } catch (e) {}
+
+        if (firestoreRevoked) {
+          // User was revoked in Firestore — block login and sync locally
+          const localUser = {
+            id: user.uid,
+            memberId: 'm_' + user.uid.slice(0, 6),
+            loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
+            email: fallbackEmail || '',
+            googleEmail: fallbackEmail || '',
+            name: defaultName,
+            role: 'AI Developer',
+            approved: false,
+            revoked: true
+          };
+          Auth.users.push(localUser);
+          Auth._saveUserDb();
+          return { approved: false, revoked: true, user: localUser };
+        }
 
         if (!firestoreApproved) {
           const localUser = {

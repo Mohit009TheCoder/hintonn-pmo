@@ -7,11 +7,11 @@ const Store = {
 
   init() {
     // One-time clear of local storage for fresh application
-    if (!localStorage.getItem('hintonn_cleared_v4')) {
+    if (!localStorage.getItem('hintonn_cleared_v5')) {
       localStorage.removeItem('hintonn-pm');
       localStorage.removeItem('hintonn-users-db');
       localStorage.removeItem('hintonn-auth-version');
-      localStorage.setItem('hintonn_cleared_v4', 'true');
+      localStorage.setItem('hintonn_cleared_v5', 'true');
     }
 
     const defaultMembers = [];
@@ -112,17 +112,11 @@ const Store = {
       this._db.collection(colName).onSnapshot(snapshot => {
         if (!snapshot) return;
 
-        // If collection is completely empty on remote, seed initial data to Cloud Firestore
+        // If collection is completely empty on remote, just accept it and clear local if necessary.
         if (snapshot.empty) {
-          const localList = this._data[colName] || [];
-          if (localList.length > 0) {
-            console.log(`⚡ [Hintonn Cloud Sync] Seeding remote Firestore collection '${colName}' (${localList.length} items)...`);
-            localList.forEach(item => {
-              if (item && item.id) {
-                this._db.collection(colName).doc(String(item.id)).set(item).catch(() => {});
-              }
-            });
-          }
+          this._data[colName] = [];
+          this._save();
+          this._notify();
           return;
         }
 

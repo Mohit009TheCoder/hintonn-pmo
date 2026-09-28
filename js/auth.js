@@ -484,6 +484,27 @@ const Auth = {
     this._saveUserDb();
     this._notifyAdminOfPendingRequest(newUser);
 
+    // Sync new pending user to Firestore so admins on other devices can see them
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      try {
+        firebase.firestore().collection('users').doc(newId).set({
+          id: newId,
+          memberId: newMemberId,
+          name: cleanName,
+          email: cleanEmail,
+          role: 'AI Developer',
+          initials: initials,
+          color: chosenColor,
+          isActive: false,
+          isRejected: false,
+          provider: 'sign_up',
+          requestDate: newUser.requestDate,
+          requestSource: 'Sign Up',
+          createdAt: new Date().toISOString()
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     return { 
       success: newUser.approved ? true : false, 
       user: newUser, 

@@ -449,6 +449,10 @@ const LoginScreen = {
       if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.user.name}!`, 'success');
       window.location.hash = '#dashboard';
       if (typeof App !== 'undefined') App.handleRoute();
+    } else if (res.pendingApproval) {
+      this.clearError();
+      if (typeof Toast !== 'undefined') Toast.show('Your account is pending admin approval.', 'info');
+      this._showPendingApprovalScreen(res.user ? res.user.name : '', res.user ? res.user.email : loginId);
     } else {
       this.showError(res.error || 'Invalid email or password.');
     }
@@ -610,7 +614,7 @@ const LoginScreen = {
     }
 
     const res = Auth.signUp(name, email, pass);
-    if (res.success) {
+    if (res.success || res.pendingApproval) {
       this.clearError();
       if (typeof Toast !== 'undefined') Toast.show('Access request submitted! Waiting for admin approval.', 'success');
       this._showPendingApprovalScreen(name, email);

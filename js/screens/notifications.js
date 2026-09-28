@@ -13,11 +13,18 @@ const NotificationsScreen = {
     const googleRequests = (isAdmin && typeof Auth !== 'undefined' && Auth.getGoogleApprovalRequests) ? Auth.getGoogleApprovalRequests() : [];
     const pendingGoogle = googleRequests.filter(r => r.status === 'pending');
 
+    // Pending standard signup users for admin approval
+    let pendingSignupUsers = [];
+    if (isAdmin && typeof Auth !== 'undefined' && Auth.getAllUsersWithStatus) {
+      const allUsers = Auth.getAllUsersWithStatus();
+      pendingSignupUsers = allUsers.filter(u => !u.approved && !u.rejected);
+    }
+
     return `
       <div class="page-header">
         <div class="page-header-left">
           <h1>Notifications</h1>
-          <p>${notifications.length + googleRequests.length} total · ${unreadCount + pendingGoogle.length} unread</p>
+          <p>${notifications.length + googleRequests.length + pendingSignupUsers.length} total · ${unreadCount + pendingGoogle.length + pendingSignupUsers.length} unread</p>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-secondary btn-sm" onclick="Store.markAllRead();App.refresh();Toast.show('All notifications marked as read')">Mark all read</button>
@@ -50,6 +57,41 @@ const NotificationsScreen = {
                 ` : `
                   <span style="font-size:11.5px;font-weight:600;color:${r.status==='approved'?'#166534':'#991B1B'};">${r.status==='approved'?'✓ Approved':'✕ Rejected'}</span>
                 `}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Pending Standard Signup Requests for Admin -->
+      ${(isAdmin && pendingSignupUsers.length > 0 && (this._filter === 'all' || this._filter === 'system')) ? `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" width="14" height="14"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Pending Sign-Up Approval Requests
+          ${pendingSignupUsers.length > 0 ? `<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">${pendingSignupUsers.length}</span>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${pendingSignupUsers.map(u => `
+            <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+              <div style="width:36px;height:36px;border-radius:50%;background:${u.color || '#F59E0B'};color:#FFF;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${u.initials || '??'}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <strong style="font-size:13.5px;color:var(--color-text-primary);">${u.name}</strong>
+                  <span style="font-size:11px;color:var(--color-text-muted);">(${u.email})</span>
+                  <span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--radius-pill);">Pending</span>
+                </div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Role: ${u.role} · Source: ${u.requestSource || 'Sign Up'} · Requested ${u.requestDate ? Utils.timeAgo(u.requestDate) : 'recently'}</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0;">
+                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}');NotificationsScreen._refresh()" class="btn btn-sm" style="background:#059669;color:#FFF;border:none;padding:6px 12px;font-size:12px;font-weight:600;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
+                </button>
+                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}');NotificationsScreen._refresh()" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;padding:6px 10px;font-size:12px;font-weight:600;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                  Reject
+                </button>
               </div>
             </div>
           `).join('')}
@@ -102,7 +144,7 @@ const NotificationsScreen = {
       'milestone': ['milestone'],
       'project': ['project'],
       'issue': ['issue'],
-      'system': ['system', 'member', 'company', 'comment', 'team']
+      'system': ['system', 'member', 'company', 'comment', 'team', 'user-approval']
     };
     const matchTypes = typeMap[this._filter] || [this._filter];
     return notifications.filter(n => matchTypes.includes(n.type));
@@ -165,7 +207,8 @@ const NotificationsScreen = {
       dlp: '⏱️',
       member: '👤',
       company: '🏢',
-      system: '⚙️'
+      system: '⚙️',
+      'user-approval': '👤'
     };
     return icons[type] || '📌';
   }

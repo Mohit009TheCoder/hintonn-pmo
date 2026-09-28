@@ -254,7 +254,6 @@ const App = {
       connectors: () => ConnectorsScreen.render(),
       notifications: () => NotificationsScreen.render(),
       settings: () => SettingsScreen.render(),
-      connectors: () => ConnectorsScreen.render(),
       'user-approvals': () => UserApprovalsScreen.render(),
       billing: () => BillingScreen.render(),
       invoices: () => BillingScreen.render(),

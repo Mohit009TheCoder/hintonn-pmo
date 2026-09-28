@@ -1,1033 +1,1396 @@
-// ─── Connectors Screen Component (Integrations, Data Sources & Knowledge Layer Ingestion) ───
+// ─── Connectors Screen (Data Sources, Webhooks, Notifications & Knowledge Layer Hub) ───
 const ConnectorsScreen = {
-  // Connector Status & Configuration State
-  state: {
-    // Section A: Notifications
-    fcm: {
-      status: 'active', // 'active' | 'inactive'
-      projectId: 'hintonn-pmo-enterprise',
-      senderId: '849204918231',
-      serverKey: '••••••••••••••••••••••••••••••••••••••••',
-      pushEnabled: true,
-      incidentAlerts: true
+  _tab: 'all',
+  _searchQuery: '',
+  _isUploading: false,
+  _uploadProgress: 0,
+  _isSyncingAll: false,
+
+  _connections: {
+    firebase: {
+      id: 'firebase',
+      category: 'notifications',
+      name: 'Internal Notifications',
+      service: 'Firebase Cloud Messaging',
+      icon: 'firebase',
+      status: 'connected',
+      statusLabel: 'Active · Real-time Push',
+      description: 'Push critical project notifications, milestone alerts, and high-priority commercial triggers via Firebase Cloud Messaging.',
+      meta: [
+        { label: 'Endpoints', value: '3 Active Channels' },
+        { label: 'Latency', value: '38ms' },
+        { label: 'Last Dispatch', value: 'Just now' }
+      ],
+      topics: ['task-updates', 'commercial-alerts', 'system-health', 'pmo-critical'],
+      serverKey: 'AAAA9z...k3P8wX'
     },
-    // Section B: Webhooks
     webhooks: {
-      status: 'configured', // 'configured' | 'inactive'
-      url: 'https://api.hintonn.com/v1/webhooks/events',
-      secretKey: 'whsec_••••••••••••••••••••••••••••',
-      events: ['task.created', 'issue.escalated', 'milestone.completed', 'invoice.approved'],
-      retryCount: 3
+      id: 'webhooks',
+      category: 'webhooks',
+      name: 'System Alerts',
+      service: 'Internal Webhooks',
+      icon: 'webhook',
+      status: 'connected',
+      statusLabel: 'Active · Delivering',
+      description: 'Dispatches real-time JSON event payloads on project milestones, task state changes, and commercial deadlines to internal endpoints.',
+      meta: [
+        { label: 'Subscribed Events', value: '5 System Events' },
+        { label: 'Success Rate', value: '99.9%' },
+        { label: 'Last Dispatch', value: '4m ago' }
+      ],
+      endpoint: 'https://api.internal.hintonn.com/hooks/v1/pms-events',
+      events: ['project.created', 'task.status_changed', 'milestone.completed', 'issue.raised', 'bg.expiry_warning']
     },
-    // Section C: Data Sources
     sheets: {
-      status: 'connected', // 'connected' | 'syncing' | 'error'
-      lastSynced: '10 minutes ago',
-      sheetName: 'EPC_Commercial_Master_Ledger',
-      recordCount: 428
+      id: 'sheets',
+      category: 'datasources',
+      name: 'Google Sheets',
+      service: 'Sheets API / Import Source',
+      icon: 'googleSheets',
+      status: 'connected',
+      statusLabel: 'Connected · Hourly Sync',
+      description: 'Sync project data from your PMO master sheets.',
+      meta: [
+        { label: 'Imported Rows', value: '1,420 Records' },
+        { label: 'Last Sync', value: '18m ago' }
+      ],
+      sheetUrl: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+      syncInterval: 'Hourly'
     },
     jira: {
-      connected: false,
-      workspaceUrl: '',
-      apiToken: '',
-      projectKey: 'PMO'
+      id: 'jira',
+      category: 'datasources',
+      name: 'Jira Software',
+      service: 'Atlassian Cloud & Server',
+      icon: 'jira',
+      status: 'available',
+      statusLabel: 'Available · Not Connected',
+      description: 'Sync Jira projects, issues, tasks, and milestones with PMS.',
+      meta: [
+        { label: 'Data Scope', value: 'Projects & Issues' },
+        { label: 'Sync', value: 'On Connect' }
+      ],
+      domain: '',
+      projectKey: ''
     },
     slack: {
-      connected: false,
-      workspaceUrl: '',
-      botToken: '',
-      channel: '#pmo-updates'
+      id: 'slack',
+      category: 'datasources',
+      name: 'Slack Workspace',
+      service: 'Slack Bot & PMO Channels',
+      icon: 'slack',
+      status: 'available',
+      statusLabel: 'Available · Not Connected',
+      description: 'Connect Slack channels to bring project conversations and updates into PMS.',
+      meta: [
+        { label: 'Channels', value: '#pmo-alerts, #project-alpha' },
+        { label: 'AI Interaction', value: 'Enabled' }
+      ],
+      workspace: '',
+      channel: '#pmo-alerts'
     },
-    // Files State
-    files: [
-      {
-        id: 'f1',
-        name: 'EPC_Commercial_Schedule_v2.xlsx',
-        ext: 'XLSX',
-        size: '2.4 MB',
-        uploadedAt: '2 hours ago',
-        status: 'Processed in Knowledge Layer'
-      },
-      {
-        id: 'f2',
-        name: 'Site_Audit_Report.pdf',
-        ext: 'PDF',
-        size: '5.8 MB',
-        uploadedAt: '1 day ago',
-        status: 'Processed in Knowledge Layer'
-      },
-      {
-        id: 'f3',
-        name: 'Technical_Specifications_Contract.docx',
-        ext: 'DOCX',
-        size: '1.2 MB',
-        uploadedAt: '3 days ago',
-        status: 'Processed in Knowledge Layer'
-      },
-      {
-        id: 'f4',
-        name: 'Vendor_Procurement_Register.csv',
-        ext: 'CSV',
-        size: '840 KB',
-        uploadedAt: '5 days ago',
-        status: 'Processed in Knowledge Layer'
-      },
-      {
-        id: 'f5',
-        name: 'Project_Architecture_Overview.pptx',
-        ext: 'PPTX',
-        size: '14.6 MB',
-        uploadedAt: '1 week ago',
-        status: 'Processed in Knowledge Layer'
-      }
-    ]
+    files: {
+      id: 'files',
+      category: 'datasources',
+      name: 'Project Files & Documents',
+      service: 'Document Ingestion Pipeline',
+      icon: 'fileText',
+      status: 'connected',
+      statusLabel: 'Ingestion Active',
+      description: 'Upload project documents and make their information available to the Knowledge Layer and AI Assistant.',
+      meta: [
+        { label: 'Indexed Files', value: '5 Documents' },
+        { label: 'Supported Types', value: 'PDF, DOCX, XLSX, etc.' }
+      ]
+    }
   },
 
-  // Main Screen Renderer
+  _filesList: [
+    {
+      id: 'f-1',
+      name: 'Hintonn_EPC_Project_Charter_v2.4.pdf',
+      type: 'pdf',
+      size: '3.8 MB',
+      uploadedAt: '2026-09-23T14:30:00Z',
+      status: 'synced',
+      statusText: 'Synced to Knowledge Layer',
+      chunks: 142,
+      category: 'Project Charter'
+    },
+    {
+      id: 'f-2',
+      name: 'Q3_Commercial_Retention_Register.xlsx',
+      type: 'xlsx',
+      size: '1.2 MB',
+      uploadedAt: '2026-09-24T06:15:00Z',
+      status: 'synced',
+      statusText: 'Synced to Knowledge Layer',
+      chunks: 68,
+      category: 'Commercial Data'
+    },
+    {
+      id: 'f-3',
+      name: 'Site_Safety_Inspection_Protocol_2026.docx',
+      type: 'docx',
+      size: '890 KB',
+      uploadedAt: '2026-09-22T09:40:00Z',
+      status: 'synced',
+      statusText: 'Synced to Knowledge Layer',
+      chunks: 48,
+      category: 'Compliance & Safety'
+    },
+    {
+      id: 'f-4',
+      name: 'Milestone_Execution_Schedule_Phase3.pptx',
+      type: 'pptx',
+      size: '5.4 MB',
+      uploadedAt: '2026-09-21T18:20:00Z',
+      status: 'synced',
+      statusText: 'Synced to Knowledge Layer',
+      chunks: 96,
+      category: 'Planning & Milestones'
+    },
+    {
+      id: 'f-5',
+      name: 'Subcontractor_Vendor_Rate_Master.csv',
+      type: 'csv',
+      size: '340 KB',
+      uploadedAt: '2026-09-20T11:10:00Z',
+      status: 'synced',
+      statusText: 'Synced to Knowledge Layer',
+      chunks: 36,
+      category: 'Commercial Rates'
+    }
+  ],
+
   render() {
+    const activeCount = Object.values(this._connections).filter(c => c.status === 'connected').length;
+    const availableCount = Object.values(this._connections).filter(c => c.status !== 'connected').length;
+    const totalFiles = this._filesList.length;
+
     return `
-      <div class="screen-content connectors-screen" id="connectors" style="padding: 24px 28px; max-width: 1400px; margin: 0 auto; box-sizing: border-box;">
+      <div class="connectors-page-container">
         
-        <!-- Page Header -->
-        <div class="screen-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 16px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-              <h1 style="font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 0; letter-spacing: -0.02em;">Connectors</h1>
-              <span class="badge" style="background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; font-weight: 600; font-size: 11.5px; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px;">
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563EB;"></span>
-                Knowledge Ingestion Active
-              </span>
+        <!-- Header -->
+        <div class="page-header" style="margin-bottom: 20px;">
+          <div class="page-header-left">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h1>Connectors</h1>
+              <span class="badge badge-primary" style="font-size: 11px; padding: 3px 9px;">Enterprise Integration Hub</span>
+              <span class="badge" style="background: var(--color-surface-active); color: var(--color-primary); font-size: 11px; border: 1px solid var(--color-border-brand);">${activeCount} Active</span>
             </div>
-            <p style="font-size: 14px; color: var(--color-text-secondary); margin: 0; line-height: 1.5;">Connect your tools, data sources, and services to bring project information into PMS.</p>
+            <p>Connect your tools, data sources, and services to bring project information into PMS.</p>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.syncAllSources(this)" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-              ${Icons.refresh || ''}
-              <span>Sync All Sources</span>
+          <div class="page-header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openPipelineLogsModal()">
+              ${Icons.activity} Integration Logs
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.triggerSyncAll()" ${this._isSyncingAll ? 'disabled' : ''}>
+              ${this._isSyncingAll ? '<span class="spinner" style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite;"></span>' : Icons.refresh}
+              <span>${this._isSyncingAll ? 'Synchronizing Sources...' : 'Sync All Sources'}</span>
             </button>
           </div>
         </div>
 
-        <!-- 3 Clearly Separated Sections -->
-        <div style="display: flex; flex-direction: column; gap: 32px;">
-
-          <!-- ════════════════════════════════════════════════════════════════════
-               SECTION A: Notifications
-               ════════════════════════════════════════════════════════════════════ -->
-          <section class="connector-section" id="section-notifications">
-            <div class="section-title-wrap" style="margin-bottom: 14px;">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #2563EB;"></span>
-                Section A: Notifications
-              </div>
-              <h2 style="font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">Push Notifications & Alerting</h2>
+        <!-- Metric KPI Cards -->
+        <div class="connectors-kpi-grid">
+          <div class="connector-kpi-card">
+            <div class="kpi-icon-wrap" style="background: var(--color-primary-50); color: var(--color-primary);">
+              ${Icons.connectors}
             </div>
-
-            <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
-              ${this._renderFcmCard()}
+            <div class="kpi-info">
+              <div class="kpi-label">Active Connections</div>
+              <div class="kpi-value">${activeCount} <span class="kpi-subtext">of 6 connected</span></div>
             </div>
-          </section>
-
-          <!-- ════════════════════════════════════════════════════════════════════
-               SECTION B: Webhooks
-               ════════════════════════════════════════════════════════════════════ -->
-          <section class="connector-section" id="section-webhooks">
-            <div class="section-title-wrap" style="margin-bottom: 14px;">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #7C3AED; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #7C3AED;"></span>
-                Section B: Webhooks
-              </div>
-              <h2 style="font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">System Event Listeners & Automation</h2>
+          </div>
+          <div class="connector-kpi-card">
+            <div class="kpi-icon-wrap" style="background: #FAF5FF; color: var(--color-ai);">
+              ${Icons.fileText}
             </div>
-
-            <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px;">
-              ${this._renderWebhooksCard()}
+            <div class="kpi-info">
+              <div class="kpi-label">Indexed Documents</div>
+              <div class="kpi-value">${totalFiles} <span class="kpi-subtext">Documents indexed</span></div>
             </div>
-          </section>
-
-          <!-- ════════════════════════════════════════════════════════════════════
-               SECTION C: Data Sources
-               ════════════════════════════════════════════════════════════════════ -->
-          <section class="connector-section" id="section-datasources">
-            <div class="section-title-wrap" style="margin-bottom: 14px;">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #2563EB;"></span>
-                Section C: Data Sources
-              </div>
-              <h2 style="font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">External Integrations & Document Repositories</h2>
+          </div>
+          <div class="connector-kpi-card">
+            <div class="kpi-icon-wrap" style="background: #EFF6FF; color: #1D4ED8;">
+              ${Icons.database}
             </div>
-
-            <div class="connector-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px;">
-              ${this._renderGoogleSheetsCard()}
-              ${this._renderJiraCard()}
-              ${this._renderSlackCard()}
-              ${this._renderFilesCard()}
+            <div class="kpi-info">
+              <div class="kpi-label">Knowledge Items</div>
+              <div class="kpi-value">12,480 <span class="kpi-subtext">Items available to AI</span></div>
             </div>
-          </section>
-
-          <!-- ════════════════════════════════════════════════════════════════════
-               3. Polished File Connector Interface (Files Component)
-               ════════════════════════════════════════════════════════════════════ -->
-          <section class="connector-section" id="section-file-interface" style="background: var(--color-surface, #FFFFFF); border: 1px solid var(--color-border, #E2E8F0); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(15,23,42,0.03);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; width: 100%;">
-              <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 280px;">
-                <div class="file-section-icon-wrap" style="width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important; max-width: 40px !important; max-height: 40px !important; background-color: #EFF6FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px !important; height: 24px !important; min-width: 24px !important; min-height: 24px !important; max-width: 24px !important; max-height: 24px !important; color: #2563EB; flex-shrink: 0; display: block;">
-                    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
-                    <path d="M12 10v6"></path>
-                    <path d="m9 13 3-3 3 3"></path>
-                  </svg>
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                  <h3 style="font-size: 16px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 2px 0;">
-                    Project Documents &amp; Knowledge Base Files
-                  </h3>
-                  <p style="font-size: 13px; color: var(--color-text-muted); margin: 0;">Upload project documentation, commercial schedules, and contract specs to vectorize for AI Assistant context.</p>
-                </div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                <span class="badge" style="background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
-                  <span id="files-count-badge">${this.state.files.length}</span> Indexed Files
-                </span>
-              </div>
+          </div>
+          <div class="connector-kpi-card">
+            <div class="kpi-icon-wrap" style="background: var(--color-surface-active); color: var(--color-primary);">
+              ${Icons.zap}
             </div>
-
-            <!-- Drag & Drop Zone -->
-            <div 
-              class="file-dropzone" 
-              id="file-dropzone-container"
-              onclick="ConnectorsScreen.triggerFilePicker()"
-              ondragover="ConnectorsScreen.handleDragOver(event)"
-              ondragleave="ConnectorsScreen.handleDragLeave(event)"
-              ondrop="ConnectorsScreen.handleDrop(event)"
-              style="border: 2px dashed #CBD5E1; border-radius: 10px; background: #F8FAFC; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; margin-bottom: 24px;"
-            >
-              <input type="file" id="connector-file-picker" multiple accept=".pdf,.docx,.xlsx,.csv,.pptx" style="display: none;" onchange="ConnectorsScreen.handleFilesSelected(event)" />
-              <div class="dropzone-icon-wrap" style="width: 48px; height: 48px; min-width: 48px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; flex-shrink: 0;">
-                <svg style="width: 28px; height: 28px; max-width: 28px; max-height: 28px; color: #2563EB; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-              </div>
-              <div style="font-size: 14.5px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 6px;">
-                Drag and drop files here, or <span style="color: #2563EB; text-decoration: underline;">click to browse</span>
-              </div>
-              <div style="display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px;">
-                <span style="font-size: 11px; font-weight: 600; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 2px 8px;">PDF</span>
-                <span style="font-size: 11px; font-weight: 600; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 2px 8px;">DOCX</span>
-                <span style="font-size: 11px; font-weight: 600; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 2px 8px;">XLSX</span>
-                <span style="font-size: 11px; font-weight: 600; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 2px 8px;">CSV</span>
-                <span style="font-size: 11px; font-weight: 600; color: #475569; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 2px 8px;">PPTX</span>
-              </div>
-              <div style="font-size: 11.5px; color: #94A3B8; margin-top: 8px;">Supported formats up to 50MB each • AES-256 Vector Encryption</div>
+            <div class="kpi-info">
+              <div class="kpi-label">Pipeline Health</div>
+              <div class="kpi-value">99.9% <span class="kpi-subtext" style="color:var(--color-primary);">Operational</span></div>
             </div>
-
-            <!-- Mock Interactive File List -->
-            <div id="connector-files-list-container">
-              ${this._renderFileList()}
-            </div>
-          </section>
-
-          <!-- ════════════════════════════════════════════════════════════════════
-               4. Knowledge Layer Data Flow Section (Bottom Footer Component)
-               ════════════════════════════════════════════════════════════════════ -->
-          <footer class="data-flow-section" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 22px 24px; box-sizing: border-box;">
-            <div style="margin-bottom: 16px;">
-              <h3 style="font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 4px 0;">Data Flow Architecture</h3>
-              <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0;">Connected project information is processed through the Knowledge Layer and made available to the AI Assistant.</p>
-            </div>
-
-            <!-- Visual Flow Diagram -->
-            <div class="flow-diagram-container" style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-              
-              <!-- Step 1: Connected Sources -->
-              <div class="flow-step-card" style="flex: 1; min-width: 220px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                  <div class="connector-icon-wrap" style="width: 32px; height: 32px; min-width: 32px; border-radius: 6px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg style="width: 18px; height: 18px; max-width: 18px; max-height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                  </div>
-                  <span style="font-size: 13.5px; font-weight: 700; color: var(--color-text-primary);">Connected Sources</span>
-                </div>
-                <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.4;">
-                  Google Sheets, Files, Webhooks, Jira, Slack
-                </div>
-              </div>
-
-              <!-- Directional Arrow 1 -->
-              <div class="flow-arrow" style="color: #7C3AED; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px;">
-                <svg style="width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </div>
-
-              <!-- Step 2: Knowledge Layer -->
-              <div class="flow-step-card" style="flex: 1; min-width: 220px; background: #FFFFFF; border: 1px solid #DDD6FE; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(124,58,237,0.05);">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                  <div class="connector-icon-wrap" style="width: 32px; height: 32px; min-width: 32px; border-radius: 6px; background: #F5F3FF; color: #7C3AED; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg style="width: 18px; height: 18px; max-width: 18px; max-height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
-                  </div>
-                  <span style="font-size: 13.5px; font-weight: 700; color: #7C3AED;">Knowledge Layer</span>
-                </div>
-                <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.4;">
-                  Processing, Vector Chunking & Semantic Indexing
-                </div>
-              </div>
-
-              <!-- Directional Arrow 2 -->
-              <div class="flow-arrow" style="color: #7C3AED; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px;">
-                <svg style="width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </div>
-
-              <!-- Step 3: AI Assistant -->
-              <div class="flow-step-card" style="flex: 1; min-width: 220px; background: #FFFFFF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(37,99,235,0.05);">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                  <div class="connector-icon-wrap" style="width: 32px; height: 32px; min-width: 32px; border-radius: 6px; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg style="width: 18px; height: 18px; max-width: 18px; max-height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/><path d="M9.5 17h5"/></svg>
-                  </div>
-                  <span style="font-size: 13.5px; font-weight: 700; color: #2563EB;">AI Assistant</span>
-                </div>
-                <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.4;">
-                  Real-time Copilot Context & Intelligent Agent Actions
-                </div>
-              </div>
-
-            </div>
-          </footer>
-
+          </div>
         </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="connectors-toolbar">
+          <div class="connectors-tabs">
+            <button class="connector-tab-btn ${this._tab === 'all' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('all')">
+              All Connectors (${Object.keys(this._connections).length})
+            </button>
+            <button class="connector-tab-btn ${this._tab === 'notifications' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('notifications')">
+              Notifications (1)
+            </button>
+            <button class="connector-tab-btn ${this._tab === 'webhooks' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('webhooks')">
+              Webhooks (1)
+            </button>
+            <button class="connector-tab-btn ${this._tab === 'datasources' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('datasources')">
+              Data Sources (4)
+            </button>
+          </div>
+          <div class="connectors-search-box">
+            ${Icons.search}
+            <input 
+              type="text" 
+              placeholder="Filter connectors or files..." 
+              value="${this._searchQuery}" 
+              oninput="ConnectorsScreen.onSearch(this.value)"
+            />
+            ${this._searchQuery ? `<button class="search-clear-btn" onclick="ConnectorsScreen.onSearch('')" style="display:flex;align-items:center;background:none;border:none;cursor:pointer;color:var(--color-text-muted);">${Icons.x}</button>` : ''}
+          </div>
+        </div>
+
+        <!-- Section 1: Notifications -->
+        ${this._shouldShowSection('notifications') ? this._renderNotificationsSection() : ''}
+
+        <!-- Section 2: Webhooks -->
+        ${this._shouldShowSection('webhooks') ? this._renderWebhooksSection() : ''}
+
+        <!-- Section 3: Data Sources -->
+        ${this._shouldShowSection('datasources') ? this._renderDataSourcesSection() : ''}
+
+        <!-- Files Upload & Document Manager Section -->
+        ${this._shouldShowFilesArea() ? this._renderFilesUploadSection() : ''}
+
+        <!-- Knowledge Layer Architecture Pipeline Section -->
+        ${this._renderKnowledgeLayerSection()}
+
       </div>
     `;
   },
 
-  // ─── Section A Cards ───
-  _renderFcmCard() {
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#EFF6FF;color:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">Internal Notifications</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Firebase Cloud Messaging (FCM)</span>
-              </div>
-            </div>
-            <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-              Active
-            </span>
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 14px 0;line-height:1.5;">
-            Real-time push notifications and event dispatching across project teams.
-          </p>
-
-          <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);background:#F8FAFC;padding:8px 12px;border-radius:6px;border:1px solid #E2E8F0;">
-            <span>Project: <strong style="color:var(--color-text-primary);">${this.state.fcm.projectId}</strong></span>
-            <span>•</span>
-            <span>Push: <strong style="color:#166534;">Enabled</strong></span>
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openFcmModal()" style="font-weight:600;">
-            Configure
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  // ─── Section B Cards ───
-  _renderWebhooksCard() {
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#F5F3FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c0-2.21 1.79-4 4-4h5.99c1.1 0 1.95-.94 2.48-1.9A4 4 0 0 1 22 13c0 2.21-1.79 4-4 4z"/><circle cx="6" cy="17" r="1"/><circle cx="18" cy="13" r="1"/><circle cx="12" cy="7" r="1"/><path d="M12 7V2"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">System Alerts</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Internal Webhooks</span>
-              </div>
-            </div>
-            <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-              Configured
-            </span>
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 14px 0;line-height:1.5;">
-            HTTP callbacks for real-time external system event listening and automation.
-          </p>
-
-          <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);background:#F8FAFC;padding:8px 12px;border-radius:6px;border:1px solid #E2E8F0;">
-            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Endpoint: <strong style="color:var(--color-text-primary);">${this.state.webhooks.url}</strong></span>
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openWebhooksModal()" style="font-weight:600;">
-            Manage Webhooks
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  // ─── Section C Cards ───
-  _renderGoogleSheetsCard() {
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#ECFDF5;color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M12 13v8"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">Google Sheets</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Sheets API / Import Source</span>
-              </div>
-            </div>
-            <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-              Connected
-            </span>
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
-            Live project data synchronization and commercial schedule import source.
-          </p>
-
-          <div style="font-size:12px;color:var(--color-text-muted);">
-            Last synced: <strong style="color:var(--color-text-primary);">${this.state.sheets.lastSynced}</strong> (${this.state.sheets.recordCount} rows)
-          </div>
-        </div>
-
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
-          <button type="button" class="btn btn-outline btn-sm" id="btn-sync-sheets" onclick="ConnectorsScreen.syncGoogleSheets(this)" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
-            ${Icons.refresh || ''}
-            <span>Sync Now</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openSheetModal()" style="font-weight:600;">
-            Manage
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  _renderJiraCard() {
-    const isConn = this.state.jira.connected;
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#EFF6FF;color:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">Jira</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Issue Tracker / Atlassian</span>
-              </div>
-            </div>
-            ${isConn ? `
-              <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-                <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-                Connected
-              </span>
-            ` : `
-              <span class="badge" style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;flex-shrink:0;">
-                Available
-              </span>
-            `}
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
-            Import issues, epics, and sprint progress into PMS milestones.
-          </p>
-
-          <div style="font-size:12px;color:var(--color-text-muted);">
-            ${isConn ? `Workspace: <strong style="color:var(--color-text-primary);">${this.state.jira.workspaceUrl || 'atlassian.net'}</strong>` : 'Direct two-way sync for sprint tracking'}
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn ${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openJiraModal()" style="font-weight:600;">
-            ${isConn ? 'Manage' : 'Connect'}
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  _renderSlackCard() {
-    const isConn = this.state.slack.connected;
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#F5F3FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">Slack</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Team Chat & Incident Feeds</span>
-              </div>
-            </div>
-            ${isConn ? `
-              <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-                <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-                Connected
-              </span>
-            ` : `
-              <span class="badge" style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;flex-shrink:0;">
-                Available
-              </span>
-            `}
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
-            Sync channel conversations and automated daily task updates.
-          </p>
-
-          <div style="font-size:12px;color:var(--color-text-muted);">
-            ${isConn ? `Channel: <strong style="color:var(--color-text-primary);">${this.state.slack.channel || '#pmo-updates'}</strong>` : 'Automated daily standup broadcasts'}
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn ${isConn ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="ConnectorsScreen.openSlackModal()" style="font-weight:600;">
-            ${isConn ? 'Manage' : 'Connect'}
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  _renderFilesCard() {
-    return `
-      <div class="section-card connector-card" style="background:var(--color-surface, #FFFFFF);border:1px solid var(--color-border, #E2E8F0);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
-        <div>
-          <div class="connector-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-              <div class="connector-icon-wrap" style="width:44px;height:44px;min-width:44px;border-radius:10px;background:#EFF6FF;color:#2563EB;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg style="width:24px;height:24px;max-width:24px;max-height:24px;object-fit:contain;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M12 10v6"/><path d="m9 13 3-3 3 3"/>
-                </svg>
-              </div>
-              <div style="min-width:0;">
-                <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 2px 0;">Files</h3>
-                <span style="font-size:12px;color:var(--color-text-muted);font-weight:500;">Document Repository</span>
-              </div>
-            </div>
-            <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-weight:600;font-size:11.5px;padding:3px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
-              <span style="width:6px;height:6px;border-radius:50%;background:#2563EB;"></span>
-              Active Source
-            </span>
-          </div>
-
-          <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0 0 12px 0;line-height:1.5;">
-            Upload project documentation, commercial schedules, and contract specs.
-          </p>
-
-          <div style="font-size:12px;color:var(--color-text-muted);">
-            <strong style="color:var(--color-text-primary);">${this.state.files.length} documents</strong> processed into vector memory
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="ConnectorsScreen.scrollToUpload()" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;">
-            ${Icons.upload || ''}
-            <span>Upload Files</span>
-          </button>
-        </div>
-      </div>
-    `;
-  },
-
-  // ─── Render File List ───
-  _renderFileList() {
-    if (!this.state.files || this.state.files.length === 0) {
-      return `
-        <div style="text-align:center;padding:32px 20px;color:var(--color-text-muted);font-size:14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;">
-          No files uploaded yet. Drag and drop your project documents above.
-        </div>
-      `;
+  _shouldShowSection(sectionName) {
+    if (this._tab !== 'all' && this._tab !== sectionName) return false;
+    if (!this._searchQuery) return true;
+    const query = this._searchQuery.toLowerCase();
+    
+    if (sectionName === 'notifications') {
+      return this._matchesSearch(this._connections.firebase, query);
     }
+    if (sectionName === 'webhooks') {
+      return this._matchesSearch(this._connections.webhooks, query);
+    }
+    if (sectionName === 'datasources') {
+      return ['sheets', 'jira', 'slack', 'files'].some(k => this._matchesSearch(this._connections[k], query));
+    }
+    return true;
+  },
 
-    const badgeStyles = {
-      PDF: { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' },
-      XLSX: { bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' },
-      CSV: { bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' },
-      DOCX: { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
-      PPTX: { bg: '#FFF7ED', color: '#EA580C', border: '#FFEDD5' }
-    };
+  _shouldShowFilesArea() {
+    if (this._tab === 'notifications' || this._tab === 'webhooks') return false;
+    if (!this._searchQuery) return true;
+    const query = this._searchQuery.toLowerCase();
+    if (this._matchesSearch(this._connections.files, query)) return true;
+    return this._filesList.some(f => f.name.toLowerCase().includes(query) || f.type.toLowerCase().includes(query));
+  },
 
+  _matchesSearch(item, query) {
+    if (!item) return false;
+    return item.name.toLowerCase().includes(query) ||
+      item.service.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query);
+  },
+
+  _renderNotificationsSection() {
+    const fcm = this._connections.firebase;
     return `
-      <div style="overflow-x:auto;">
-        <table class="table" style="width:100%;border-collapse:collapse;text-align:left;font-size:13.5px;">
-          <thead>
-            <tr style="border-bottom:1px solid var(--color-border);color:var(--color-text-muted);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">
-              <th style="padding:10px 14px;font-weight:600;">File Name</th>
-              <th style="padding:10px 14px;font-weight:600;">Size</th>
-              <th style="padding:10px 14px;font-weight:600;">Uploaded</th>
-              <th style="padding:10px 14px;font-weight:600;">Knowledge State</th>
-              <th style="padding:10px 14px;font-weight:600;text-align:right;">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.state.files.map(f => {
-              const b = badgeStyles[f.ext] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
-              return `
-                <tr style="border-bottom:1px solid var(--color-border-subtle);transition:background 0.15s;" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='transparent'">
-                  <td style="padding:12px 14px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                      <span style="background:${b.bg};color:${b.color};border:1px solid ${b.border};font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.03em;">
-                        ${f.ext}
-                      </span>
-                      <span style="font-weight:600;color:var(--color-text-primary);">${f.name}</span>
-                    </div>
-                  </td>
-                  <td style="padding:12px 14px;color:var(--color-text-secondary);font-size:13px;">${f.size}</td>
-                  <td style="padding:12px 14px;color:var(--color-text-muted);font-size:13px;">${f.uploadedAt}</td>
-                  <td style="padding:12px 14px;">
-                    <span style="display:inline-flex;align-items:center;gap:6px;background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:12px;">
-                      <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                      ${f.status}
-                    </span>
-                  </td>
-                  <td style="padding:12px 14px;text-align:right;">
-                    <button 
-                      type="button" 
-                      class="btn btn-ghost btn-icon btn-sm" 
-                      onclick="ConnectorsScreen.openDeleteFileModal('${f.id}')"
-                      title="Remove file from Knowledge Layer"
-                      style="color:#94A3B8;transition:color 0.15s;"
-                      onmouseover="this.style.color='#DC2626'"
-                      onmouseout="this.style.color='#94A3B8'"
-                    >
-                      <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
+      <div class="connector-group-section">
+        <div class="connector-group-header">
+          <div class="group-title-wrap">
+            <div class="group-indicator-pill">01</div>
+            <div>
+              <h2 class="group-title">Notifications</h2>
+              <p class="group-subtitle">Outbound notification dispatch and team push alerts</p>
+            </div>
+          </div>
+          <span class="badge badge-primary" style="font-size: 11px;">1 Active Service</span>
+        </div>
+
+        <div class="connector-cards-grid">
+          ${this._renderConnectorCard(fcm, `
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.testFCMPush()">
+              ${Icons.zap} Send Test Push
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.openFCMModal()">
+              ${Icons.settings} Configure
+            </button>
+          `)}
+        </div>
       </div>
     `;
   },
 
-  // ─── Modals & Interactivity ───
+  _renderWebhooksSection() {
+    const wh = this._connections.webhooks;
+    return `
+      <div class="connector-group-section">
+        <div class="connector-group-header">
+          <div class="group-title-wrap">
+            <div class="group-indicator-pill">02</div>
+            <div>
+              <h2 class="group-title">Webhooks</h2>
+              <p class="group-subtitle">Event streaming and real-time payload integration for PMS lifecycle events</p>
+            </div>
+          </div>
+          <span class="badge badge-primary" style="font-size: 11px;">1 Active Service</span>
+        </div>
 
-  // Scroll to file upload section
+        <div class="connector-cards-grid">
+          ${this._renderConnectorCard(wh, `
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.testWebhookEvent()">
+              ${Icons.zap} Dispatch Event
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.openWebhookModal()">
+              ${Icons.settings} Manage Webhooks
+            </button>
+          `)}
+        </div>
+      </div>
+    `;
+  },
+
+  _renderDataSourcesSection() {
+    const sheets = this._connections.sheets;
+    const jira = this._connections.jira;
+    const slack = this._connections.slack;
+    const files = this._connections.files;
+
+    return `
+      <div class="connector-group-section">
+        <div class="connector-group-header">
+          <div class="group-title-wrap">
+            <div class="group-indicator-pill">03</div>
+            <div>
+              <h2 class="group-title">Data Sources</h2>
+              <p class="group-subtitle">Connect external project management repositories, spreadsheets, chat tools, and files</p>
+            </div>
+          </div>
+          <span class="badge badge-primary" style="font-size: 11px;">4 Connectors</span>
+        </div>
+
+        <div class="connector-cards-grid connector-grid-2cols">
+          
+          <!-- Google Sheets Card -->
+          ${this._renderConnectorCard(sheets, `
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openSheetsModal()">
+              ${Icons.settings} Configure
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.triggerSingleSync('sheets')">
+              ${Icons.refresh} Sync Now
+            </button>
+          `)}
+
+          <!-- Jira Card -->
+          ${this._renderConnectorCard(jira, `
+            ${jira.status === 'connected' ? `
+              <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openJiraModal()">
+                ${Icons.settings} Manage
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.triggerSingleSync('jira')">
+                ${Icons.refresh} Sync Epics
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.openJiraModal()">
+                ${Icons.link} Connect Jira
+              </button>
+            `}
+          `)}
+
+          <!-- Slack Card -->
+          ${this._renderConnectorCard(slack, `
+            ${slack.status === 'connected' ? `
+              <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.openSlackModal()">
+                ${Icons.settings} Manage
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.testSlackMessage()">
+                ${Icons.zap} Test Alert
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.openSlackModal()">
+                ${Icons.link} Connect Slack
+              </button>
+            `}
+          `)}
+
+          <!-- Files Connector Card -->
+          ${this._renderConnectorCard(files, `
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.scrollToUpload()">
+              ${Icons.folder} View Files (${this._filesList.length})
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="ConnectorsScreen.triggerBrowseFile()">
+              ${Icons.upload} Upload Files
+            </button>
+          `)}
+
+        </div>
+      </div>
+    `;
+  },
+
+  _renderConnectorCard(connector, actionsHtml) {
+    const isConnected = connector.status === 'connected';
+    const iconSvg = Icons[connector.icon] || Icons.connectors;
+
+    return `
+      <div class="connector-card ${isConnected ? 'is-connected' : 'is-available'}" id="connector-card-${connector.id}">
+        
+        <div class="connector-card-top">
+          <div class="connector-icon-badge ${isConnected ? 'active-icon' : 'neutral-icon'}">
+            ${iconSvg}
+          </div>
+          <div class="connector-header-text">
+            <div class="connector-service-tag">${connector.service}</div>
+            <h3 class="connector-card-title">${connector.name}</h3>
+          </div>
+          <div class="connector-status-badge ${isConnected ? 'status-connected' : 'status-available'}">
+            <span class="status-dot-pulse"></span>
+            <span>${connector.statusLabel}</span>
+          </div>
+        </div>
+
+        <p class="connector-card-desc">${connector.description}</p>
+
+        <div class="connector-meta-grid">
+          ${(connector.meta || []).map(m => `
+            <div class="connector-meta-item">
+              <span class="meta-item-label">${m.label}</span>
+              <span class="meta-item-val">${m.value}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="connector-card-footer">
+          <div class="connector-card-status-info">
+            ${isConnected ? `
+              <span class="footer-indicator connected">
+                ${Icons.checkCircle} Linked & Monitored
+              </span>
+            ` : `
+              <span class="footer-indicator available">
+                ${Icons.link} Ready for integration
+              </span>
+            `}
+          </div>
+          <div class="connector-card-actions">
+            ${actionsHtml}
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  _renderFilesUploadSection() {
+    return `
+      <div class="connector-group-section" id="files-upload-section">
+        <div class="connector-group-header">
+          <div class="group-title-wrap">
+            <div class="group-indicator-pill">04</div>
+            <div>
+              <h2 class="group-title">Document Repository & File Ingestion</h2>
+              <p class="group-subtitle">Upload project deliverables, specifications, contracts, and matrices to feed the AI Knowledge Layer</p>
+            </div>
+          </div>
+          <span class="badge" style="background:var(--color-primary-50);color:var(--color-primary);border:1px solid var(--color-border-brand);font-size:11px;">
+            ${this._filesList.length} Documents Indexed
+          </span>
+        </div>
+
+        <!-- Drag and Drop Box -->
+        <div 
+          class="connector-upload-dropzone ${this._isUploading ? 'uploading' : ''}" 
+          id="connector-dropzone"
+          ondragover="ConnectorsScreen.onDragOver(event)"
+          ondragleave="ConnectorsScreen.onDragLeave(event)"
+          ondrop="ConnectorsScreen.onDropFile(event)"
+          onclick="ConnectorsScreen.triggerBrowseFile()"
+        >
+          <input 
+            type="file" 
+            id="connector-hidden-file-input" 
+            style="display:none" 
+            multiple 
+            accept=".pdf,.docx,.xlsx,.csv,.pptx"
+            onchange="ConnectorsScreen.onFileInputChange(event)"
+          />
+
+          <div class="dropzone-inner">
+            <div class="dropzone-icon-circle">
+              ${this._isUploading ? '<span class="spinner" style="width:24px;height:24px;border:3px solid var(--color-primary);border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite;"></span>' : Icons.upload}
+            </div>
+
+            <div class="dropzone-text-block">
+              <div class="dropzone-title">
+                ${this._isUploading ? `Vectorizing & Processing Documents... (${this._uploadProgress}%)` : 'Drag and drop project files here, or <span class="dropzone-browse-link">browse files</span>'}
+              </div>
+              <div class="dropzone-subtitle">
+                Automated OCR parsing & vector chunking supported for <strong>PDF, DOCX, XLSX, CSV, PPTX</strong> (up to 50MB)
+              </div>
+            </div>
+
+            <div class="supported-badges-row">
+              <span class="type-pill pill-pdf">PDF</span>
+              <span class="type-pill pill-docx">DOCX</span>
+              <span class="type-pill pill-xlsx">XLSX</span>
+              <span class="type-pill pill-csv">CSV</span>
+              <span class="type-pill pill-pptx">PPTX</span>
+            </div>
+          </div>
+
+          ${this._isUploading ? `
+            <div class="dropzone-progress-wrap">
+              <div class="dropzone-progress-bar" style="width: ${this._uploadProgress}%"></div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Files List Table -->
+        <div class="connector-files-card">
+          <div class="files-card-header">
+            <div style="display:flex;align-items:center;gap:10px">
+              <h3 style="font-size:15px;font-weight:700;margin:0">Ingested Project Files</h3>
+              <span class="badge badge-primary" style="font-size:11px">${this._filesList.length} Active in Knowledge Layer</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="ConnectorsScreen.reindexAllFiles()">
+              ${Icons.refresh} Re-index All Chunks
+            </button>
+          </div>
+
+          <div class="connector-table-responsive">
+            <table class="connector-files-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Document Name</th>
+                  <th class="col-category">Category</th>
+                  <th class="col-type">File Format</th>
+                  <th class="col-size">Size</th>
+                  <th class="col-chunks">Vector Chunks</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this._filesList.map(file => `
+                  <tr id="file-row-${file.id}">
+                    <td class="col-name">
+                      <div class="file-name-cell">
+                        <span class="file-type-icon ${file.type}">
+                          ${this._getFileIcon(file.type)}
+                        </span>
+                        <div>
+                          <div class="file-title-text">${file.name}</div>
+                          <div class="file-date-subtext">Uploaded ${Utils.timeAgo(file.uploadedAt)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="col-category">
+                      <span class="file-category-badge">${file.category || 'General'}</span>
+                    </td>
+                    <td class="col-type">
+                      <span class="type-pill pill-${file.type}" style="font-size:11px">${file.type.toUpperCase()}</span>
+                    </td>
+                    <td class="col-size"><span class="file-size-text">${file.size}</span></td>
+                    <td class="col-chunks">
+                      <span class="vector-chunks-pill">
+                        ${Icons.database} ${file.chunks} chunks
+                      </span>
+                    </td>
+                    <td class="col-status">
+                      <span class="file-status-tag ${file.status}">
+                        ${file.status === 'synced' ? '<span class="status-check">✓</span>' : '<span class="status-dot"></span>'}
+                        <span>${file.status === 'synced' ? 'Synced to Knowledge Layer' : (file.statusText || 'Synced to Knowledge Layer')}</span>
+                      </span>
+                    </td>
+                    <td class="col-actions">
+                      <div class="file-action-buttons">
+                        <button type="button" class="file-action-btn file-action-view" title="View Document Details" onclick="ConnectorsScreen.openFilePreviewModal('${file.id}')" aria-label="View Details">
+                          ${Icons.fileText}
+                        </button>
+                        <button type="button" class="file-action-btn file-action-sync" title="Sync / Re-index Vector Chunks" onclick="ConnectorsScreen.reindexFile('${file.id}')" aria-label="Sync">
+                          ${Icons.refresh}
+                        </button>
+                        <button type="button" class="file-action-btn file-action-delete" title="Delete Document" onclick="ConnectorsScreen.removeFile('${file.id}')" aria-label="Delete">
+                          ${Icons.trash}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  _getFileIcon(type) {
+    switch (type.toLowerCase()) {
+      case 'pdf': return Icons.filePdf || Icons.fileText;
+      case 'docx': return Icons.fileDocx || Icons.fileText;
+      case 'xlsx': return Icons.fileXlsx || Icons.fileText;
+      case 'csv': return Icons.fileCsv || Icons.fileText;
+      case 'pptx': return Icons.filePptx || Icons.fileText;
+      default: return Icons.file;
+    }
+  },
+
+  _renderKnowledgeLayerSection() {
+    return `
+      <div class="knowledge-layer-section">
+        <div class="knowledge-layer-card">
+          
+          <div class="knowledge-layer-header">
+            <div class="knowledge-badge-wrap">
+              <span class="knowledge-pill">Intelligent Data Pipeline</span>
+              <span class="knowledge-status-indicator">
+                <span class="pulse-dot"></span> Active Vector Retrieval
+              </span>
+            </div>
+            <h2 class="knowledge-card-title">Knowledge Layer & Data Flow</h2>
+            <p class="knowledge-card-desc">
+              Connected project information is processed through the Knowledge Layer and made available to the AI Assistant.
+            </p>
+          </div>
+
+          <!-- Visual Flow Diagram -->
+          <div class="knowledge-flow-diagram">
+            
+            <!-- Step 1: Connected Sources -->
+            <div class="flow-step-box">
+              <div class="flow-step-icon" style="background:var(--color-primary-50);color:var(--color-primary);">
+                ${Icons.connectors}
+              </div>
+              <div class="flow-step-content">
+                <div class="flow-step-tag">Step 1</div>
+                <div class="flow-step-name">Connected Sources</div>
+                <div class="flow-step-detail">FCM · Webhooks · Google Sheets · Jira · Slack · Files</div>
+              </div>
+              <div class="flow-step-status">
+                <span class="flow-status-dot"></span> 6 Data Streams
+              </div>
+            </div>
+
+            <!-- Arrow 1 -->
+            <div class="flow-connector-arrow">
+              <div class="arrow-line"></div>
+              <div class="arrow-tip">${Icons.chevronRight}</div>
+            </div>
+
+            <!-- Step 2: Knowledge Layer -->
+            <div class="flow-step-box active-pulse-node">
+              <div class="flow-step-icon" style="background:#FAF5FF;color:var(--color-ai);">
+                ${Icons.database}
+              </div>
+              <div class="flow-step-content">
+                <div class="flow-step-tag">Step 2</div>
+                <div class="flow-step-name">Knowledge Layer</div>
+                <div class="flow-step-detail">Parsing · Semantic Chunking · Vector Embeddings · RAG</div>
+              </div>
+              <div class="flow-step-status">
+                <span class="flow-status-dot"></span> 12,480 Vectors
+              </div>
+            </div>
+
+            <!-- Arrow 2 -->
+            <div class="flow-connector-arrow">
+              <div class="arrow-line"></div>
+              <div class="arrow-tip">${Icons.chevronRight}</div>
+            </div>
+
+            <!-- Step 3: AI Assistant -->
+            <div class="flow-step-box">
+              <div class="flow-step-icon" style="background:#EFF6FF;color:#1D4ED8;">
+                ${Icons.assistant}
+              </div>
+              <div class="flow-step-content">
+                <div class="flow-step-tag">Step 3</div>
+                <div class="flow-step-name">AI Assistant</div>
+                <div class="flow-step-detail">Contextual Grounding · PM Copilot · Automated Insights</div>
+              </div>
+              <div class="flow-step-status">
+                <span class="flow-status-dot"></span> Copilot Ready
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Footer Action -->
+          <div class="knowledge-layer-footer">
+            <div class="knowledge-footer-info">
+              <div style="font-size:13.5px;font-weight:600;color:var(--color-text-primary)">
+                Ready for Natural Language Project Inquiries
+              </div>
+              <div style="font-size:12.5px;color:var(--color-text-muted)">
+                Ask the AI Assistant questions grounded in your synchronized documents, spreadsheets, and task backlogs.
+              </div>
+            </div>
+            <div class="knowledge-footer-actions">
+              <button class="btn btn-primary btn-sm" onclick="App.navigate('ai-assistant')">
+                ${Icons.assistant} Ask AI Copilot
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  },
+
+  // ─── Interaction Handlers & Filtering ───
+
+  setTab(tab) {
+    this._tab = tab;
+    this.refresh();
+  },
+
+  onSearch(val) {
+    this._searchQuery = (val || '').trim();
+    this.refresh();
+  },
+
+  refresh() {
+    const content = document.getElementById('page-content');
+    if (content && App.currentScreen === 'connectors') {
+      content.innerHTML = this.render();
+    }
+  },
+
   scrollToUpload() {
-    const el = document.getElementById('section-file-interface');
+    const el = document.getElementById('files-upload-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
-      const dropzone = document.getElementById('file-dropzone-container');
-      if (dropzone) {
-        dropzone.style.borderColor = '#2563EB';
-        dropzone.style.background = '#EFF6FF';
-        setTimeout(() => {
-          dropzone.style.borderColor = '#CBD5E1';
-          dropzone.style.background = '#F8FAFC';
-        }, 800);
-      }
     }
   },
 
-  triggerFilePicker() {
-    const picker = document.getElementById('connector-file-picker');
-    if (picker) picker.click();
+  // ─── Drag & Drop / File Selection ───
+
+  triggerBrowseFile() {
+    const input = document.getElementById('connector-hidden-file-input');
+    if (input) input.click();
   },
 
-  handleDragOver(e) {
+  onDragOver(e) {
     e.preventDefault();
     e.stopPropagation();
-    const el = document.getElementById('file-dropzone-container');
-    if (el) {
-      el.style.borderColor = '#2563EB';
-      el.style.background = '#EFF6FF';
-    }
+    const dropzone = document.getElementById('connector-dropzone');
+    if (dropzone) dropzone.classList.add('drag-over');
   },
 
-  handleDragLeave(e) {
+  onDragLeave(e) {
     e.preventDefault();
     e.stopPropagation();
-    const el = document.getElementById('file-dropzone-container');
-    if (el) {
-      el.style.borderColor = '#CBD5E1';
-      el.style.background = '#F8FAFC';
-    }
+    const dropzone = document.getElementById('connector-dropzone');
+    if (dropzone) dropzone.classList.remove('drag-over');
   },
 
-  handleDrop(e) {
+  onDropFile(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.handleDragLeave(e);
+    const dropzone = document.getElementById('connector-dropzone');
+    if (dropzone) dropzone.classList.remove('drag-over');
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      this._processAddedFiles(e.dataTransfer.files);
+      this.handleSelectedFiles(Array.from(e.dataTransfer.files));
     }
   },
 
-  handleFilesSelected(e) {
+  onFileInputChange(e) {
     if (e.target && e.target.files && e.target.files.length > 0) {
-      this._processAddedFiles(e.target.files);
+      this.handleSelectedFiles(Array.from(e.target.files));
       e.target.value = '';
     }
   },
 
-  _processAddedFiles(fileList) {
-    const newFiles = Array.from(fileList).map(file => {
-      const parts = file.name.split('.');
-      const ext = parts.length > 1 ? parts.pop().toUpperCase() : 'DOC';
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      const sizeStr = file.size < 1024 * 1024 ? `${Math.round(file.size / 1024)} KB` : `${sizeMb} MB`;
-      return {
-        id: 'f-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-        name: file.name,
-        ext: ext,
-        size: sizeStr,
-        uploadedAt: 'Just now',
-        status: 'Processed in Knowledge Layer'
-      };
-    });
+  handleSelectedFiles(files) {
+    if (!files || files.length === 0) return;
 
-    this.state.files = [...newFiles, ...this.state.files];
-    Toast.show(`Uploaded and indexed ${newFiles.length} file(s) into Knowledge Layer`, 'success');
-    this._refreshFileList();
+    this._isUploading = true;
+    this._uploadProgress = 10;
+    this.refresh();
+
+    const allowedExtensions = ['pdf', 'docx', 'xlsx', 'csv', 'pptx'];
+
+    let interval = setInterval(() => {
+      this._uploadProgress += 20;
+      if (this._uploadProgress >= 100) {
+        clearInterval(interval);
+        this._isUploading = false;
+        this._uploadProgress = 0;
+
+        files.forEach((f, idx) => {
+          const ext = f.name.split('.').pop().toLowerCase();
+          const validExt = allowedExtensions.includes(ext) ? ext : 'pdf';
+          const sizeMb = (f.size / (1024 * 1024)).toFixed(1);
+          const formattedSize = f.size > 1024 * 1024 ? `${sizeMb} MB` : `${Math.max(12, Math.round(f.size / 1024))} KB`;
+
+          const newFile = {
+            id: 'f-' + Date.now() + '-' + idx,
+            name: f.name,
+            type: validExt,
+            size: formattedSize,
+            uploadedAt: new Date().toISOString(),
+            status: 'synced',
+            statusText: 'Synced to Knowledge Layer',
+            chunks: Math.floor(Math.random() * 80) + 20,
+            category: 'Uploaded Document'
+          };
+          this._filesList.unshift(newFile);
+        });
+
+        Toast.show(`Successfully ingested and vectorized ${files.length} document${files.length > 1 ? 's' : ''}`, 'success');
+        this.refresh();
+      } else {
+        this.refresh();
+      }
+    }, 250);
   },
 
-  _refreshFileList() {
-    const container = document.getElementById('connector-files-list-container');
-    const badge = document.getElementById('files-count-badge');
-    if (container) container.innerHTML = this._renderFileList();
-    if (badge) badge.textContent = this.state.files.length;
-  },
-
-  openDeleteFileModal(fileId) {
-    const file = this.state.files.find(f => f.id === fileId);
+  removeFile(fileId) {
+    const file = this._filesList.find(f => f.id === fileId);
     if (!file) return;
 
     Modal.confirm(
-      'Remove File from Knowledge Base',
-      `Are you sure you want to remove <strong>${file.name}</strong>? This document will be unindexed from the AI Assistant context memory.`,
+      'Remove Document',
+      `Are you sure you want to remove <strong>${file.name}</strong> from the Knowledge Layer? Its ${file.chunks} vector chunks will be un-indexed.`,
       () => {
-        this.state.files = this.state.files.filter(f => f.id !== fileId);
-        Toast.show(`Removed ${file.name} from Knowledge Layer`, 'success');
-        this._refreshFileList();
+        this._filesList = this._filesList.filter(f => f.id !== fileId);
+        Toast.show(`Document "${file.name}" removed from Knowledge Layer`, 'info');
+        this.refresh();
       },
-      { confirmText: 'Remove File', danger: true }
+      { danger: true, confirmText: 'Remove Document' }
     );
   },
 
-  // 1. Firebase Cloud Messaging Modal
-  openFcmModal() {
-    const fcm = this.state.fcm;
-    const body = `
-      <form id="fcm-config-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveFcmConfig(this);" style="display:flex;flex-direction:column;gap:14px;">
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Firebase Project ID</label>
-          <input type="text" id="fcm-project-id" class="form-input" value="${fcm.projectId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
+  reindexFile(fileId) {
+    const file = this._filesList.find(f => f.id === fileId);
+    if (!file) return;
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">FCM Sender ID</label>
-          <input type="text" id="fcm-sender-id" class="form-input" value="${fcm.senderId}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
+    file.status = 'syncing';
+    file.statusText = 'Re-vectorizing...';
+    this.refresh();
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Server API Key / Service Account</label>
-          <input type="password" id="fcm-server-key" class="form-input" value="${fcm.serverKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
-
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-text-primary);cursor:pointer;">
-            <input type="checkbox" id="fcm-push-toggle" ${fcm.pushEnabled ? 'checked' : ''} />
-            <span>Enable real-time push notifications for assigned tasks</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-text-primary);cursor:pointer;">
-            <input type="checkbox" id="fcm-incident-toggle" ${fcm.incidentAlerts ? 'checked' : ''} />
-            <span>Dispatch high-priority incident and blocker broadcasts</span>
-          </label>
-        </div>
-      </form>
-    `;
-
-    const footer = `
-      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('fcm-config-form').requestSubmit()">Save Configuration</button>
-    `;
-
-    Modal.open('Configure Firebase Cloud Messaging (FCM)', body, footer);
+    setTimeout(() => {
+      file.status = 'synced';
+      file.statusText = 'Synced to Knowledge Layer';
+      file.uploadedAt = new Date().toISOString();
+      Toast.show(`Re-indexed ${file.chunks} vector chunks for "${file.name}"`, 'success');
+      this.refresh();
+    }, 900);
   },
 
-  saveFcmConfig(form) {
-    const projectId = document.getElementById('fcm-project-id').value.trim();
-    const senderId = document.getElementById('fcm-sender-id').value.trim();
-    const pushEnabled = document.getElementById('fcm-push-toggle').checked;
-    const incidentAlerts = document.getElementById('fcm-incident-toggle').checked;
-
-    this.state.fcm.projectId = projectId || this.state.fcm.projectId;
-    this.state.fcm.senderId = senderId || this.state.fcm.senderId;
-    this.state.fcm.pushEnabled = pushEnabled;
-    this.state.fcm.incidentAlerts = incidentAlerts;
-
-    Modal.closeAll();
-    Toast.show('Firebase Cloud Messaging settings updated successfully', 'success');
-    if (App.currentScreen === 'connectors') App.refresh();
+  reindexAllFiles() {
+    Toast.show('Re-indexing all document vector embeddings...', 'info');
+    setTimeout(() => {
+      this._filesList.forEach(f => {
+        f.status = 'synced';
+        f.statusText = 'Synced to Knowledge Layer';
+      });
+      Toast.show(`All ${this._filesList.length} documents re-synchronized with Knowledge Layer`, 'success');
+      this.refresh();
+    }, 1000);
   },
 
-  // 2. Webhooks Configuration Modal
-  openWebhooksModal() {
-    const wh = this.state.webhooks;
+  // ─── Sync All Sources Handlers ───
+
+  triggerSyncAll() {
+    if (this._isSyncingAll) return;
+    this._isSyncingAll = true;
+    this.refresh();
+    Toast.show('Initiating global data synchronization across all connected sources...', 'info');
+
+    setTimeout(() => {
+      this._isSyncingAll = false;
+      const sheetsSync = this._connections.sheets.meta.find(m => m.label.toLowerCase().includes('sync'));
+      if (sheetsSync) sheetsSync.value = 'Just now';
+      if (this._connections.webhooks.meta[2]) this._connections.webhooks.meta[2].value = 'Just now';
+      if (this._connections.firebase.meta[2]) this._connections.firebase.meta[2].value = 'Just now';
+      Toast.show('All active connectors and Knowledge Layer vector embeddings synchronized!', 'success');
+      this.refresh();
+    }, 1400);
+  },
+
+  triggerSingleSync(connectorId) {
+    const connector = this._connections[connectorId];
+    if (!connector) return;
+
+    Toast.show(`Synchronizing ${connector.name} with Knowledge Layer...`, 'info');
+    setTimeout(() => {
+      if (connector.meta && connector.meta.length > 0) {
+        const syncItem = connector.meta.find(m => m.label.toLowerCase().includes('sync') || m.label.toLowerCase().includes('last'));
+        if (syncItem) syncItem.value = 'Just now';
+      }
+      Toast.show(`${connector.name} synchronization complete!`, 'success');
+      this.refresh();
+    }, 900);
+  },
+
+  // ─── Interactive Modals for Each Connector ───
+
+  openFCMModal() {
+    const fcm = this._connections.firebase;
     const body = `
-      <form id="webhook-config-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveWebhooksConfig(this);" style="display:flex;flex-direction:column;gap:14px;">
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Webhook Destination URL</label>
-          <input type="url" id="wh-url" class="form-input" value="${wh.url}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
+      <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+        Configure Firebase Cloud Messaging (FCM) credentials and topic subscription rules for instant push notifications to project managers and AI developers.
+      </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Secret Signing Key (HMAC-SHA256)</label>
-          <input type="text" id="wh-secret" class="form-input" value="${wh.secretKey}" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;font-family:monospace;" />
-        </div>
+      <div class="form-group">
+        <label class="form-label">FCM Project Service Account / API Key</label>
+        <input type="password" class="form-input" id="fcm-key" value="${fcm.serverKey}" placeholder="AIzaSy...">
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Key is encrypted with AES-256 in memory</div>
+      </div>
 
-        <div style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;">Subscribed Events</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#F8FAFC;padding:12px;border-radius:8px;border:1px solid #E2E8F0;font-size:12.5px;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked /> task.created</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked /> issue.escalated</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked /> milestone.completed</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" checked /> invoice.approved</label>
+      <div class="form-group">
+        <label class="form-label">Subscribed Push Notification Topics</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+          ${fcm.topics.map(topic => `
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);border-radius:var(--radius-pill);font-size:12px;font-weight:600">
+              ${topic}
+            </span>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">Alert Dispatch Priority</label>
+        <select class="form-select">
+          <option value="high" selected>High Priority (Immediate delivery with sound & badge)</option>
+          <option value="normal">Normal (Batched delivery)</option>
+        </select>
+      </div>
+
+      <div style="padding:12px 14px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">Connection Health Status</div>
+            <div style="font-size:12px;color:var(--color-text-muted)">3 Mobile & Web endpoints receiving FCM signals</div>
           </div>
-        </div>
-      </form>
-    `;
-
-    const footer = `
-      <button type="button" class="btn btn-secondary" onclick="ConnectorsScreen.testWebhookPing()">Send Test Ping</button>
-      <div style="flex:1;"></div>
-      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('webhook-config-form').requestSubmit()">Save Webhook</button>
-    `;
-
-    Modal.open('Manage Webhooks & Event Dispatches', body, footer, { large: true });
-  },
-
-  testWebhookPing() {
-    Toast.show('Test ping dispatched: HTTP 200 OK received (84ms)', 'success');
-  },
-
-  saveWebhooksConfig(form) {
-    const url = document.getElementById('wh-url').value.trim();
-    if (url) this.state.webhooks.url = url;
-    Modal.closeAll();
-    Toast.show('Webhook listener endpoint and payload rules saved', 'success');
-    if (App.currentScreen === 'connectors') App.refresh();
-  },
-
-  // 3. Google Sheets Modal & Sync
-  openSheetModal() {
-    const sheets = this.state.sheets;
-    const body = `
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:12px 14px;font-size:13px;color:#166534;">
-          <strong>Active Spreadsheet:</strong> ${sheets.sheetName} (${sheets.recordCount} rows synchronized)
-        </div>
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Google Sheet Document URL or ID</label>
-          <input type="text" class="form-input" value="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Sync Schedule</label>
-          <select class="form-select" style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;">
-            <option value="15">Every 15 minutes (Real-time)</option>
-            <option value="60">Hourly</option>
-            <option value="daily">Daily at 00:00 UTC</option>
-          </select>
+          <span class="badge badge-primary" style="font-size:11px">Connected</span>
         </div>
       </div>
     `;
 
     const footer = `
-      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
-      <button type="button" class="btn btn-primary" onclick="Modal.closeAll(); Toast.show('Google Sheets configuration saved', 'success');">Save Settings</button>
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+      <button class="btn btn-secondary" onclick="ConnectorsScreen.testFCMPush();Modal.closeAll();">${Icons.zap} Send Test Signal</button>
+      <button class="btn btn-primary" onclick="Toast.show('FCM Notification settings updated', 'success');Modal.closeAll();">Save Changes</button>
     `;
 
-    Modal.open('Manage Google Sheets Data Source', body, footer);
+    Modal.open('Internal Notifications — Firebase Cloud Messaging', body, footer, { large: true });
   },
 
-  syncGoogleSheets(btnEl) {
-    if (btnEl) {
-      btnEl.disabled = true;
-      btnEl.innerHTML = `<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...`;
-    }
+  testFCMPush() {
+    Toast.show('Pushing test FCM notification to subscribed devices...', 'info');
     setTimeout(() => {
-      this.state.sheets.lastSynced = 'Just now';
-      if (btnEl) {
-        btnEl.disabled = false;
-        btnEl.innerHTML = `${Icons.refresh || ''} <span>Sync Now</span>`;
-      }
-      Toast.show('Google Sheets synchronized: 428 records updated in Knowledge Layer', 'success');
-      if (App.currentScreen === 'connectors') App.refresh();
-    }, 900);
+      Store._addNotification('system', 'FCM Test Alert: Real-time messaging signal verified successfully');
+      Toast.show('Firebase Cloud Messaging test push received!', 'success');
+      App.updateNotifDot();
+    }, 600);
   },
 
-  // 4. Jira Connection Modal
-  openJiraModal() {
-    const isConn = this.state.jira.connected;
+  openWebhookModal() {
+    const wh = this._connections.webhooks;
     const body = `
-      <form id="jira-connection-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveJiraConnection(this);" style="display:flex;flex-direction:column;gap:14px;">
-        <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0;">
-          Authenticate Atlassian Jira to map epics, stories, and sprint tasks directly into PMS milestones.
-        </p>
+      <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+        Configure internal webhook endpoints to deliver structured JSON payloads whenever milestone deadlines, tasks, or commercial events occur.
+      </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Jira Workspace Domain</label>
-          <input type="text" id="jira-domain" class="form-input" placeholder="e.g. hintonn-tech.atlassian.net" value="${this.state.jira.workspaceUrl || 'hintonn-team.atlassian.net'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
+      <div class="form-group">
+        <label class="form-label">Webhook Destination URL</label>
+        <input type="text" class="form-input" id="wh-endpoint" value="${wh.endpoint}" placeholder="https://api.domain.com/hooks">
+      </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Atlassian API Token / OAuth Key</label>
-          <input type="password" id="jira-token" class="form-input" placeholder="Enter API token" value="${this.state.jira.apiToken || '••••••••••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
-        </div>
+      <div class="form-group">
+        <label class="form-label">Signing Secret</label>
+        <input type="password" class="form-input" value="whsec_8f9a2b4c1e0d3f2e1a7b" readonly>
+      </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Target Project Key</label>
-          <input type="text" id="jira-key" class="form-input" value="${this.state.jira.projectKey || 'PMO'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+      <div class="form-group">
+        <label class="form-label">Subscribed Events</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" checked style="accent-color:var(--color-primary)"> <code>project.created</code>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" checked style="accent-color:var(--color-primary)"> <code>task.status_changed</code>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" checked style="accent-color:var(--color-primary)"> <code>milestone.completed</code>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" checked style="accent-color:var(--color-primary)"> <code>issue.raised</code>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+            <input type="checkbox" checked style="accent-color:var(--color-primary)"> <code>bg.expiry_warning</code>
+          </label>
         </div>
-      </form>
+      </div>
     `;
 
     const footer = `
-      ${isConn ? `
-        <button type="button" class="btn btn-danger" onclick="ConnectorsScreen.disconnectJira()">Disconnect</button>
-      ` : ''}
-      <div style="flex:1;"></div>
-      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('jira-connection-form').requestSubmit()">${isConn ? 'Update Connection' : 'Save Connection'}</button>
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+      <button class="btn btn-secondary" onclick="ConnectorsScreen.testWebhookEvent();Modal.closeAll();">${Icons.zap} Test Payload</button>
+      <button class="btn btn-primary" onclick="Toast.show('Webhook configuration saved', 'success');Modal.closeAll();">Save Webhook</button>
     `;
 
-    Modal.open(isConn ? 'Manage Jira Connection' : 'Connect Jira Workspace', body, footer);
+    Modal.open('System Alerts — Internal Webhooks', body, footer, { large: true });
   },
 
-  saveJiraConnection(form) {
-    const domain = document.getElementById('jira-domain').value.trim();
-    const token = document.getElementById('jira-token').value.trim();
-    const key = document.getElementById('jira-key').value.trim();
+  testWebhookEvent() {
+    Toast.show('Dispatching simulated event payload: "task.status_changed"...', 'info');
+    setTimeout(() => {
+      Toast.show('HTTP 200 OK — Webhook endpoint responded in 42ms', 'success');
+    }, 600);
+  },
 
-    this.state.jira.connected = true;
-    this.state.jira.workspaceUrl = domain;
-    this.state.jira.apiToken = token;
-    this.state.jira.projectKey = key;
+  openSheetsModal() {
+    const sheets = this._connections.sheets;
+    const body = `
+      <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+        Manage Google Sheets bi-directional integration for PMO task registers, milestone schedules, and retention tracking.
+      </div>
 
-    Modal.closeAll();
-    Toast.show('Jira Workspace connected: Sprint & Issue sync enabled', 'success');
-    if (App.currentScreen === 'connectors') App.refresh();
+      <div class="form-group">
+        <label class="form-label">Google Sheet URL / ID</label>
+        <input type="text" class="form-input" id="sheet-url" value="${sheets.sheetUrl}">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Target Sheet Tab</label>
+          <input type="text" class="form-input" value="PMO_Master_Register_2026">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Automated Sync Frequency</label>
+          <select class="form-select">
+            <option value="hourly" selected>Every Hour</option>
+            <option value="realtime">Real-time on Sheet Edit</option>
+            <option value="daily">Daily at 08:00 AM</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="padding:12px 14px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);margin-top:10px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:var(--color-text-primary)">Column Schema Mapping</div>
+        <div style="font-size:12px;color:var(--color-text-muted)">Columns A-H mapped to Project Name, Task ID, Assignee, Start Date, Due Date, Progress, Status</div>
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+      <button class="btn btn-primary" onclick="ConnectorsScreen.triggerSingleSync('sheets');Modal.closeAll();">${Icons.refresh} Sync Now</button>
+    `;
+
+    Modal.open('Google Sheets — Import Source & Sheets API', body, footer, { large: true });
+  },
+
+  openJiraModal() {
+    const jira = this._connections.jira;
+    const isConnected = jira.status === 'connected';
+
+    if (isConnected) {
+      const body = `
+        <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+          Jira Cloud is currently linked and actively synchronizing engineering tasks and bug reports.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Connected Atlassian Domain</label>
+          <input type="text" class="form-input" value="${jira.domain || 'hintonn-ai.atlassian.net'}" readonly>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target Project Key</label>
+          <input type="text" class="form-input" value="${jira.projectKey || 'HIN-PMS'}" readonly>
+        </div>
+
+        <div style="padding:12px 14px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;font-weight:600">Sync Status</span>
+            <span class="badge badge-primary" style="font-size:11px">Synchronized</span>
+          </div>
+        </div>
+      `;
+
+      const footer = `
+        <button class="btn btn-danger" onclick="ConnectorsScreen.disconnectJira();Modal.closeAll();">Disconnect Jira</button>
+        <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+        <button class="btn btn-primary" onclick="ConnectorsScreen.triggerSingleSync('jira');Modal.closeAll();">${Icons.refresh} Sync Now</button>
+      `;
+
+      Modal.open('Jira Software Integration', body, footer);
+    } else {
+      const body = `
+        <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+          Connect your Atlassian Jira workspace to import sprints, backlog issues, and synchronize task progress with PMS.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Atlassian Domain / URL</label>
+          <input type="text" class="form-input" id="jira-domain" placeholder="e.g. company.atlassian.net" value="hintonn-ai.atlassian.net">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Atlassian Email</label>
+          <input type="email" class="form-input" id="jira-email" placeholder="name@company.com" value="ayush@hintonn.com">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">API Token / OAuth Key</label>
+          <input type="password" class="form-input" id="jira-token" placeholder="Enter Jira API Token" value="jira_pat_9a8b7c6d5e4f">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Project Key to Sync</label>
+          <input type="text" class="form-input" id="jira-key" placeholder="e.g. EPC, PMS, DEV" value="PMS">
+        </div>
+      `;
+
+      const footer = `
+        <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+        <button class="btn btn-primary" onclick="ConnectorsScreen.connectJira();Modal.closeAll();">${Icons.link} Authorize & Connect Jira</button>
+      `;
+
+      Modal.open('Connect Jira Software', body, footer);
+    }
+  },
+
+  connectJira() {
+    const domain = document.getElementById('jira-domain')?.value || 'hintonn-ai.atlassian.net';
+    const key = document.getElementById('jira-key')?.value || 'PMS';
+
+    Toast.show('Authenticating with Atlassian Cloud OAuth...', 'info');
+    setTimeout(() => {
+      this._connections.jira.status = 'connected';
+      this._connections.jira.statusLabel = 'Connected · Bi-directional';
+      this._connections.jira.domain = domain;
+      this._connections.jira.projectKey = key;
+      this._connections.jira.meta = [
+        { label: 'Data Scope', value: `Project: ${key}` },
+        { label: 'Sync', value: 'Active' }
+      ];
+      Toast.show('Jira Software connected successfully!', 'success');
+      this.refresh();
+    }, 800);
   },
 
   disconnectJira() {
-    this.state.jira.connected = false;
-    Modal.closeAll();
-    Toast.show('Jira connection deactivated', 'info');
-    if (App.currentScreen === 'connectors') App.refresh();
+    this._connections.jira.status = 'available';
+    this._connections.jira.statusLabel = 'Available · Not Connected';
+    this._connections.jira.meta = [
+      { label: 'Data Scope', value: 'Projects & Issues' },
+      { label: 'Sync', value: 'On Connect' }
+    ];
+    Toast.show('Jira disconnected', 'info');
+    this.refresh();
   },
 
-  // 5. Slack Connection Modal
   openSlackModal() {
-    const isConn = this.state.slack.connected;
-    const body = `
-      <form id="slack-connection-form" onsubmit="event.preventDefault(); ConnectorsScreen.saveSlackConnection(this);" style="display:flex;flex-direction:column;gap:14px;">
-        <p style="font-size:13.5px;color:var(--color-text-secondary);margin:0;">
-          Connect your Slack workspace for automated daily task summaries and team event dispatching.
-        </p>
+    const slack = this._connections.slack;
+    const isConnected = slack.status === 'connected';
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Slack Workspace URL</label>
-          <input type="text" id="slack-domain" class="form-input" placeholder="e.g. hintonn.slack.com" value="${this.state.slack.workspaceUrl || 'hintonn-ai.slack.com'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+    if (isConnected) {
+      const body = `
+        <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+          Slack workspace is connected. Project milestone alerts and Copilot query dispatches are active.
         </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Bot User OAuth Token (xoxb-...)</label>
-          <input type="password" id="slack-token" class="form-input" placeholder="xoxb-..." value="${this.state.slack.botToken || 'xoxb-948291048102-••••••••••••'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+        <div class="form-group">
+          <label class="form-label">Connected Workspace</label>
+          <input type="text" class="form-input" value="${slack.workspace || 'Hintonn AI Workspace'}" readonly>
         </div>
 
-        <div class="form-group" style="text-align:left;">
-          <label class="form-label" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Broadcast Channel</label>
-          <input type="text" id="slack-channel" class="form-input" value="${this.state.slack.channel || '#pmo-updates'}" required style="width:100%;height:40px;border-radius:8px;border:1px solid var(--color-border);padding:0 12px;" />
+        <div class="form-group">
+          <label class="form-label">Primary Notification Channel</label>
+          <input type="text" class="form-input" value="${slack.channel || '#pmo-alerts'}" readonly>
         </div>
-      </form>
-    `;
+      `;
 
-    const footer = `
-      ${isConn ? `
-        <button type="button" class="btn btn-danger" onclick="ConnectorsScreen.disconnectSlack()">Disconnect</button>
-      ` : ''}
-      <div style="flex:1;"></div>
-      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="document.getElementById('slack-connection-form').requestSubmit()">${isConn ? 'Update Channel' : 'Save Connection'}</button>
-    `;
+      const footer = `
+        <button class="btn btn-danger" onclick="ConnectorsScreen.disconnectSlack();Modal.closeAll();">Disconnect Slack</button>
+        <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+        <button class="btn btn-primary" onclick="ConnectorsScreen.testSlackMessage();Modal.closeAll();">${Icons.zap} Test Message</button>
+      `;
 
-    Modal.open(isConn ? 'Manage Slack Connection' : 'Connect Slack Workspace', body, footer);
+      Modal.open('Slack Workspace Integration', body, footer);
+    } else {
+      const body = `
+        <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
+          Connect your Slack workspace to receive automated milestone notifications and allow team members to query the AI Copilot inside Slack.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Slack Workspace Name</label>
+          <input type="text" class="form-input" id="slack-workspace" placeholder="e.g. Hintonn Workspace" value="Hintonn AI Workspace">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Bot OAuth Token</label>
+          <input type="password" class="form-input" id="slack-token" placeholder="xoxb-..." value="xoxb-982138719283-pms">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Broadcast Channel</label>
+          <select class="form-select" id="slack-channel">
+            <option value="#pmo-alerts" selected>#pmo-alerts</option>
+            <option value="#project-alpha">#project-alpha</option>
+            <option value="#general">#general</option>
+          </select>
+        </div>
+      `;
+
+      const footer = `
+        <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+        <button class="btn btn-primary" onclick="ConnectorsScreen.connectSlack();Modal.closeAll();">${Icons.link} Authorize & Connect Slack</button>
+      `;
+
+      Modal.open('Connect Slack Workspace', body, footer);
+    }
   },
 
-  saveSlackConnection(form) {
-    const domain = document.getElementById('slack-domain').value.trim();
-    const token = document.getElementById('slack-token').value.trim();
-    const channel = document.getElementById('slack-channel').value.trim();
+  connectSlack() {
+    const ws = document.getElementById('slack-workspace')?.value || 'Hintonn AI Workspace';
+    const ch = document.getElementById('slack-channel')?.value || '#pmo-alerts';
 
-    this.state.slack.connected = true;
-    this.state.slack.workspaceUrl = domain;
-    this.state.slack.botToken = token;
-    this.state.slack.channel = channel;
-
-    Modal.closeAll();
-    Toast.show(`Slack Workspace connected to ${channel}`, 'success');
-    if (App.currentScreen === 'connectors') App.refresh();
+    Toast.show('Verifying Slack Bot OAuth tokens...', 'info');
+    setTimeout(() => {
+      this._connections.slack.status = 'connected';
+      this._connections.slack.statusLabel = 'Active · Bot Streaming';
+      this._connections.slack.workspace = ws;
+      this._connections.slack.channel = ch;
+      this._connections.slack.meta = [
+        { label: 'Channels', value: ch },
+        { label: 'AI Interaction', value: 'Enabled' }
+      ];
+      Toast.show(`Slack connected to ${ch}!`, 'success');
+      this.refresh();
+    }, 800);
   },
 
   disconnectSlack() {
-    this.state.slack.connected = false;
-    Modal.closeAll();
-    Toast.show('Slack workspace disconnected', 'info');
-    if (App.currentScreen === 'connectors') App.refresh();
+    this._connections.slack.status = 'available';
+    this._connections.slack.statusLabel = 'Available · Not Connected';
+    this._connections.slack.meta = [
+      { label: 'Channels', value: '#pmo-alerts, #project-alpha' },
+      { label: 'AI Interaction', value: 'Enabled' }
+    ];
+    Toast.show('Slack disconnected', 'info');
+    this.refresh();
   },
 
-  // Sync All Sources
-  syncAllSources(btnEl) {
-    if (btnEl) {
-      btnEl.disabled = true;
-      btnEl.innerHTML = `<span class="animate-spin" style="display:inline-block;animation:spin 1s linear infinite;">⟳</span> Syncing...`;
-    }
+  testSlackMessage() {
+    Toast.show('Posting test message to Slack channel #pmo-alerts...', 'info');
     setTimeout(() => {
-      this.state.sheets.lastSynced = 'Just now';
-      if (btnEl) {
-        btnEl.disabled = false;
-        btnEl.innerHTML = `${Icons.refresh || ''} <span>Sync All Sources</span>`;
-      }
-      Toast.show('All active connectors and knowledge repositories synchronized', 'success');
-      if (App.currentScreen === 'connectors') App.refresh();
-    }, 1000);
+      Toast.show('Slack message delivered successfully!', 'success');
+    }, 600);
+  },
+
+  openFilePreviewModal(fileId) {
+    const file = this._filesList.find(f => f.id === fileId);
+    if (!file) return;
+
+    const body = `
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--color-bg-page);border-radius:var(--radius-md);margin-bottom:18px;border:1px solid var(--color-border)">
+        <span class="file-type-icon ${file.type}" style="width:40px;height:40px;font-size:18px;display:flex;align-items:center;justify-content:center;border-radius:8px">
+          ${this._getFileIcon(file.type)}
+        </span>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--color-text-primary)">${file.name}</div>
+          <div style="font-size:12.5px;color:var(--color-text-muted)">${file.category} · ${file.size} · Uploaded ${Utils.timeAgo(file.uploadedAt)}</div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px">
+        Knowledge Layer Vector Breakdown
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+        <div style="padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)">
+          <div style="font-size:11px;color:var(--color-text-muted)">Vector Chunks</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-primary)">${file.chunks} Chunks</div>
+        </div>
+        <div style="padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)">
+          <div style="font-size:11px;color:var(--color-text-muted)">Embedding Dimension</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-ai)">1536 dim</div>
+        </div>
+        <div style="padding:10px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md)">
+          <div style="font-size:11px;color:var(--color-text-muted)">RAG Query Status</div>
+          <div style="font-size:16px;font-weight:700;color:var(--color-primary)">Ready</div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px">
+        Extracted Context Excerpt
+      </div>
+      <div style="padding:12px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;color:var(--color-text-secondary);max-height:140px;overflow-y:auto;line-height:1.6">
+        [Chunk #1]: Project Charter — EPC Phase 2 Delivery Scope, Milestone Targets, Resource Allocation Matrices, Retention Security Clauses, and Guarantee Schedules. Synchronized with Knowledge Graph node #KN-${file.id.toUpperCase()}.
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
+      <button class="btn btn-primary" onclick="ConnectorsScreen.reindexFile('${file.id}');Modal.closeAll();">${Icons.refresh} Re-index</button>
+    `;
+
+    Modal.open(`Document Details — ${file.name}`, body, footer, { large: true });
+  },
+
+  openPipelineLogsModal() {
+    const logs = [
+      { time: 'Just now', source: 'Firebase Cloud Messaging', event: 'Push notification ping dispatched', status: '200 OK' },
+      { time: '2m ago', source: 'Internal Webhooks', event: 'Dispatched task.status_changed to endpoint', status: '200 OK' },
+      { time: '18m ago', source: 'Google Sheets', event: 'Ingested 1,420 rows from PMO Master Register', status: 'Success' },
+      { time: '1h ago', source: 'Document Repository', event: 'Parsed & vectorized Hintonn_EPC_Project_Charter_v2.4.pdf', status: 'Indexed' }
+    ];
+
+    const body = `
+      <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:14px">
+        Real-time execution log of inbound connector ingestion and outbound event signals.
+      </div>
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden">
+        <table class="connector-files-table" style="font-size:12.5px">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Connector</th>
+              <th>Event Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${logs.map(l => `
+              <tr>
+                <td style="color:var(--color-text-muted);font-family:var(--font-mono)">${l.time}</td>
+                <td style="font-weight:600">${l.source}</td>
+                <td>${l.event}</td>
+                <td><span class="badge badge-primary" style="font-size:10px">${l.status}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    const footer = `<button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>`;
+    Modal.open('Integration Pipeline Execution Logs', body, footer, { large: true });
   }
 };

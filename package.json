@@ -4,6 +4,8 @@
   "description": "",
   "main": "firebase-seed.js",
   "scripts": {
+    "start": "npx serve . -l 5000",
+    "dev": "npx serve . -l 5000",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

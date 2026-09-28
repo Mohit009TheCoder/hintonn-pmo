@@ -335,6 +335,32 @@ const FirebaseAuth = {
       if (typeof Store._save === 'function') Store._save();
     }
 
+    // ── Ensure approved user has a member record in Store ──
+    // Without this, non-admin users can't be assigned tasks and see nothing.
+    if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function' && !isAdmin) {
+      const members = Store.getMembers();
+      const existingMember = members.find(m =>
+        m.id === localUser.memberId ||
+        (m.email && m.email.toLowerCase() === (localUser.email || '').toLowerCase())
+      );
+      if (!existingMember) {
+        Store.createMember({
+          id: localUser.memberId,
+          name: localUser.name,
+          role: 'AI Developer',
+          designation: 'AI Developer',
+          email: localUser.email,
+          initials: initials,
+          color: localUser.color || '#2563EB'
+        });
+      } else {
+        // Sync memberId if member was found by email but has different ID
+        localUser.memberId = existingMember.id;
+        try { localStorage.setItem('hintonn-current-user', JSON.stringify(localUser)); } catch (e) {}
+        if (typeof Auth !== 'undefined') Auth.currentUser = localUser;
+      }
+    }
+
     try {
       const userRef = this._db.collection('users').doc(user.uid);
       const doc = await userRef.get();

@@ -11,20 +11,27 @@ const ProjectsScreen = {
     let allProjects = Store.getProjects();
     let projects = allProjects;
 
-    // Strict Privacy: AI Developers only see projects containing tasks assigned to them
+    // Strict Privacy: AI Developers only see projects containing tasks assigned to them OR where they are a member
     if (isDeveloper) {
       const allTasks = Store.getTasks();
-      const myTasks = allTasks.filter(task => 
+      const myTasks = allTasks.filter(task =>
         task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
+        (userMemberId && task.assigneeId === userMemberId)
       );
-      const myProjectIds = new Set(myTasks.map(t => t.projectId));
+      const myTaskProjectIds = new Set(myTasks.map(t => t.projectId));
+
+      // Also include projects where user is a listed member
+      const myMemberProjectIds = new Set(
+        allProjects.filter(p =>
+          Array.isArray(p.memberIds) && (
+            p.memberIds.includes(userMemberId) ||
+            p.memberIds.includes(currentUser.id)
+          )
+        ).map(p => p.id)
+      );
+
+      // Union of task projects + member projects
+      const myProjectIds = new Set([...myTaskProjectIds, ...myMemberProjectIds]);
       projects = projects.filter(p => myProjectIds.has(p.id));
     }
 

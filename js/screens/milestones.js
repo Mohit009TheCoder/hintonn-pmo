@@ -13,17 +13,21 @@ const MilestonesScreen = {
     // Strict Privacy: Filter milestones to projects containing tasks assigned to AI Developer
     if (isDeveloper) {
       const allTasks = Store.getTasks();
-      const myTasks = allTasks.filter(task => 
+      const myTasks = allTasks.filter(task =>
         task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
+        (userMemberId && task.assigneeId === userMemberId)
       );
       const myProjectIds = new Set(myTasks.map(t => t.projectId));
+
+      // Also include projects where user is a member
+      allProjects = allProjects || Store.getProjects();
+      allProjects.filter(p =>
+        Array.isArray(p.memberIds) && (
+          p.memberIds.includes(userMemberId) ||
+          p.memberIds.includes(currentUser.id)
+        )
+      ).forEach(p => myProjectIds.add(p.id));
+
       milestones = milestones.filter(m => myProjectIds.has(m.projectId));
     }
 

@@ -11,15 +11,9 @@ const IssuesScreen = {
     let issues = allIssues;
 
     if (isDeveloper) {
-      issues = issues.filter(issue => 
+      issues = issues.filter(issue =>
         issue.assigneeId === currentUser.id ||
-        (userMemberId && issue.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && issue.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && issue.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && issue.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && issue.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && issue.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && issue.assigneeId === 'hirvi')
+        (userMemberId && issue.assigneeId === userMemberId)
       );
     }
 

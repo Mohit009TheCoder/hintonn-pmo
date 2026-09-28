@@ -137,6 +137,30 @@ const Auth = {
               Store._data.settings.currentUser = match.memberId || 'm1';
             }
             try { localStorage.setItem('hintonn-current-user', JSON.stringify(match)); } catch (e) {}
+
+            // ── Ensure non-admin user has a member record in Store ──
+            if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function' && match.role !== 'Admin') {
+              const members = Store.getMembers();
+              const existingMember = members.find(m =>
+                m.id === match.memberId ||
+                (m.email && m.email.toLowerCase() === (match.email || '').toLowerCase())
+              );
+              if (!existingMember) {
+                Store.createMember({
+                  id: match.memberId || ('m_' + Date.now()),
+                  name: match.name,
+                  role: 'AI Developer',
+                  designation: 'AI Developer',
+                  email: match.email,
+                  initials: match.initials || match.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+                  color: match.color || '#2563EB'
+                });
+              } else if (existingMember.id !== match.memberId) {
+                // Sync memberId if found by email but has different ID
+                match.memberId = existingMember.id;
+                try { localStorage.setItem('hintonn-current-user', JSON.stringify(match)); } catch (e) {}
+              }
+            }
           }
         } else {
           this.currentUser = null;

@@ -14,15 +14,9 @@ const TasksScreen = {
 
     // Strict Individual Task Privacy for AI Developers
     if (isDeveloper) {
-      tasks = tasks.filter(task => 
+      tasks = tasks.filter(task =>
         task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
+        (userMemberId && task.assigneeId === userMemberId)
       );
     }
 

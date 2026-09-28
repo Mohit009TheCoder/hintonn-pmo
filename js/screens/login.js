@@ -120,7 +120,7 @@ const LoginScreen = {
               <label for="login-id">Email Address</label>
             </div>
             <div class="login-input-wrap">
-              <input type="email" id="login-id" class="login-input" placeholder="e.g. mohitsjain12104@gmail.com" autocomplete="username" required oninput="LoginScreen.clearError()" />
+              <input type="email" id="login-id" class="login-input" placeholder="e.g. mohithintonn@gmail.com" autocomplete="username" required oninput="LoginScreen.clearError()" />
             </div>
           </div>
 
@@ -564,8 +564,8 @@ const LoginScreen = {
   demoSwitchToAdmin(reqId) {
     const adminUser = Auth.users.find(u => u.loginId === 'Mohit' || u.role === 'Admin') || {
       id: 'mohit', memberId: 'm3', loginId: 'Mohit', password: 'Mohit@123',
-      name: 'Mohit Jain', role: 'Admin', email: 'mohitsjain12104@gmail.com',
-      googleEmail: 'mohitsjain12104@gmail.com', initials: 'MJ', color: '#4F46E5', approved: true
+      name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com',
+      googleEmail: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5', approved: true
     };
 
     Auth.currentUser = adminUser;

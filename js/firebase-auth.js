@@ -1,6 +1,6 @@
 // ─── Firebase Auth & Firestore Backend ───
 // Google Sign-In + Email/Password. No phone/mobile login.
-// Admin = mohitsjain12104@gmail.com ONLY.
+// Admin = mohithintonn@gmail.com ONLY.
 
 const FirebaseAuth = {
   _auth: null,
@@ -119,8 +119,8 @@ const FirebaseAuth = {
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
     const emailLower = (user.email || '').toLowerCase();
 
-    // ─── Admin check — only mohitsjain12104@gmail.com ───
-    const ADMIN_EMAILS = ['mohitsjain12104@gmail.com'];
+    // ─── Admin check — only mohithintonn@gmail.com ───
+    const ADMIN_EMAILS = ['mohithintonn@gmail.com'];
     const isAdmin = ADMIN_EMAILS.includes(emailLower);
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
 
@@ -229,7 +229,7 @@ const FirebaseAuth = {
       const userRef = this._db.collection('users').doc(user.uid);
       const name = (extra && extra.name) || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
       const emailLower = (user.email || '').toLowerCase();
-      const ADMIN_EMAILS = ['mohitsjain12104@gmail.com'];
+      const ADMIN_EMAILS = ['mohithintonn@gmail.com'];
       const isAdmin = ADMIN_EMAILS.includes(emailLower);
 
       await userRef.set({

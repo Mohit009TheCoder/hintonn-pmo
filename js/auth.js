@@ -1,6 +1,6 @@
 // ─── Hintonn PM Authentication & Session Management ───
 // Google OAuth + Email/Password login. No phone/mobile login.
-// Admin = mohitsjain12104@gmail.com ONLY.
+// Admin = mohithintonn@gmail.com ONLY.
 const Auth = {
   // Pre-configured User Database (existing users are pre-approved)
   users: [],
@@ -8,7 +8,7 @@ const Auth = {
   currentUser: null,
 
   // ─── Admin email whitelist — ONLY this email gets Admin role ───
-  _ADMIN_EMAILS: ['mohitsjain12104@gmail.com'],
+  _ADMIN_EMAILS: ['mohithintonn@gmail.com'],
 
   // RBAC Permission Matrix based on Role
   permissions: {

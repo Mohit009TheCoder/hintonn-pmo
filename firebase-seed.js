@@ -173,7 +173,7 @@ async function main() {
   // 15. USERS (auth records)
   // ═══════════════════════════════════════════════
   const users = [
-    { uid: 'seed_mohit2', name: 'Mohit Jain', email: 'mohitsjain12104@gmail.com', photoURL: null, role: 'Admin', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
+    { uid: 'seed_mohit2', name: 'Mohit Jain', email: 'mohithintonn@gmail.com', photoURL: null, role: 'Admin', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
   ];
   await seedCollection('users', users);
 

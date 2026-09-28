@@ -1,12 +1,24 @@
 // ─── Hintonn PM Authentication & Session Management ───
+// Google-only login. Admin = mohitsjain12104@gmail.com ONLY.
 const Auth = {
   // Pre-configured User Database (existing users are pre-approved)
   users: [
     {
+      id: 'mohit',
+      memberId: 'm3',
+      loginId: 'Mohit',
+      name: 'Mohit Jain',
+      role: 'Admin',
+      email: 'mohitsjain12104@gmail.com',
+      googleEmail: 'mohitsjain12104@gmail.com',
+      initials: 'MJ',
+      color: '#4F46E5',
+      approved: true
+    },
+    {
       id: 'ayush',
       memberId: 'm1',
       loginId: 'Ayush',
-      password: 'ayush@123',
       name: 'Ayush Desai',
       role: 'AI Developer',
       email: 'ayush@hintonn.com',
@@ -19,7 +31,6 @@ const Auth = {
       id: 'preet',
       memberId: 'm2',
       loginId: 'Preet',
-      password: 'preet@123',
       name: 'Preet Bhavsar',
       role: 'AI Developer',
       email: 'preet@hintonn.com',
@@ -29,23 +40,9 @@ const Auth = {
       approved: true
     },
     {
-      id: 'mohit',
-      memberId: 'm3',
-      loginId: 'Mohit',
-      password: 'Mohit@123',
-      name: 'Mohit Jain',
-      role: 'Admin',
-      email: 'mohit@hintonn.com',
-      googleEmail: 'mohithintonn@gmail.com',
-      initials: 'MJ',
-      color: '#4F46E5',
-      approved: true
-    },
-    {
       id: 'hirvi',
       memberId: 'm4',
       loginId: 'Hirvi',
-      password: 'hirvi@123',
       name: 'Hirvi Sanghavi',
       role: 'AI Developer',
       email: 'hirvi@hintonn.com',
@@ -56,47 +53,10 @@ const Auth = {
     }
   ],
 
-  // Google OAuth Pre-loaded Account Profiles
-  googleAccounts: [
-    {
-      email: 'ayushhintonn@gmail.com',
-      primaryEmail: 'ayush@hintonn.com',
-      name: 'Ayush Desai',
-      role: 'AI Developer',
-      avatar: 'AD',
-      color: '#2563EB',
-      description: 'AI Core Engineering & Task Allocation'
-    },
-    {
-      email: 'preethintonn@gmail.com',
-      primaryEmail: 'preet@hintonn.com',
-      name: 'Preet Bhavsar',
-      role: 'AI Developer',
-      avatar: 'PB',
-      color: '#7C3AED',
-      description: 'AI Core Engineering & Task Allocation'
-    },
-    {
-      email: 'mohithintonn@gmail.com',
-      primaryEmail: 'mohit@hintonn.com',
-      name: 'Mohit Jain',
-      role: 'Admin',
-      avatar: 'MJ',
-      color: '#4F46E5',
-      description: 'Executive Portfolio & Full PMO Control'
-    },
-    {
-      email: 'hirvihintonn@gmail.com',
-      primaryEmail: 'hirvi@hintonn.com',
-      name: 'Hirvi Sanghavi',
-      role: 'AI Developer',
-      avatar: 'HS',
-      color: '#1D4ED8',
-      description: 'LoRA Research & Telemetry Automation'
-    }
-  ],
-
   currentUser: null,
+
+  // ─── Admin email whitelist — ONLY this email gets Admin role ───
+  _ADMIN_EMAILS: ['mohitsjain12104@gmail.com'],
 
   // RBAC Permission Matrix based on Role
   permissions: {
@@ -134,7 +94,6 @@ const Auth = {
   hasAccess(module) {
     if (!this.currentUser) return false;
     
-    // Map existing system roles to the Matrix Role codes
     const roleMap = {
       'Admin': 'ADMIN',
       'AI Developer': 'DEV',
@@ -147,26 +106,19 @@ const Auth = {
     const userRoleCode = roleMap[this.currentUser.role] || 'DEV';
     const allowedRoles = this.permissions[module];
     
-    // If module isn't strictly defined, allow access by default
     if (!allowedRoles) return true;
-    
     return allowedRoles.includes(userRoleCode);
   },
 
-  // ─── Force Admin role for known admin emails/IDs ───
+  // ─── Enforce Admin role for the single admin email ───
   _enforceAdminRole(user) {
     if (!user) return user;
-    const adminEmails = ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'];
-    const adminIds = ['mohit', 'm3'];
-    const isAdmin =
-      (user.email && adminEmails.includes(user.email.toLowerCase())) ||
-      (user.googleEmail && adminEmails.includes(user.googleEmail.toLowerCase())) ||
-      (user.id && adminIds.includes(user.id.toLowerCase())) ||
-      (user.memberId && adminIds.includes(user.memberId.toLowerCase())) ||
-      (user.loginId && adminEmails.includes(user.loginId.toLowerCase()));
+    const emailLower = (user.email || '').toLowerCase();
+    const googleEmailLower = (user.googleEmail || '').toLowerCase();
+    const isAdmin = this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower);
     if (isAdmin) {
       user.role = 'Admin';
-      user.approved = true; // Admins are always approved
+      user.approved = true;
       user.title = user.title || 'Executive PMO & Lead';
     }
     return user;
@@ -174,10 +126,9 @@ const Auth = {
 
   init() {
     try {
-      // Version-based cache bust: clear stale localStorage on code update
-      const AUTH_VERSION = 'v3-admin-approval';
+      // Version-based cache bust
+      const AUTH_VERSION = 'v4-google-only';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
-        // Migrate existing users: add approved=true for all existing users
         const savedUsers = localStorage.getItem('hintonn-users-db');
         if (savedUsers) {
           try {
@@ -189,18 +140,15 @@ const Auth = {
         localStorage.setItem('hintonn-auth-version', AUTH_VERSION);
       }
 
-      // Load user database from localStorage (persisted across sessions)
+      // Load user database from localStorage
       const savedUsers = localStorage.getItem('hintonn-users-db');
       if (savedUsers) {
         try {
           const parsed = JSON.parse(savedUsers);
-          // Merge saved users into Auth.users (avoid duplicates)
           parsed.forEach(saved => {
             const exists = this.users.find(u => u.id === saved.id || (u.email && saved.email && u.email.toLowerCase() === saved.email.toLowerCase()));
             if (exists) {
-              // Update existing user's approval status and other fields
               if (saved.approved !== undefined) exists.approved = saved.approved;
-              if (saved.password && saved.password !== exists.password) exists.password = saved.password;
             } else {
               this.users.push(saved);
             }
@@ -211,7 +159,6 @@ const Auth = {
       const saved = localStorage.getItem('hintonn-current-user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Find existing or restore saved user session
         let match = this.users.find(u => 
           u.id === parsed.id || 
           (u.email && parsed.email && u.email.toLowerCase() === parsed.email.toLowerCase()) ||
@@ -225,7 +172,6 @@ const Auth = {
 
         if (match) {
           this._enforceAdminRole(match);
-          // Check if user is approved — force logout if not
           if (match.approved === false) {
             this.currentUser = null;
             localStorage.removeItem('hintonn-current-user');
@@ -255,51 +201,7 @@ const Auth = {
     } catch(e) {}
   },
 
-  login(loginIdOrEmail, password) {
-    const raw = (loginIdOrEmail || '').trim().toLowerCase();
-    const rawPass = password || '';
-
-    // Match by Login ID or Email
-    const user = this.users.find(u => 
-      u.loginId.toLowerCase() === raw || 
-      (u.email && u.email.toLowerCase() === raw) ||
-      (u.googleEmail && u.googleEmail.toLowerCase() === raw)
-    );
-
-    if (!user) {
-      return { success: false, error: 'Invalid Login ID or password.' };
-    }
-
-    // Match Password with strict case sensitivity
-    if (user.password !== rawPass) {
-      return { success: false, error: 'Invalid Login ID or password.' };
-    }
-
-    // ─── ADMIN APPROVAL GATE ───
-    this._enforceAdminRole(user);
-    if (user.approved === false) {
-      return { 
-        success: false, 
-        error: 'Your account is pending admin approval. Please wait for an administrator to approve your access. You will be notified once approved.',
-        pendingApproval: true 
-      };
-    }
-
-    this.currentUser = user;
-    try {
-      localStorage.setItem('hintonn-current-user', JSON.stringify(user));
-    } catch (e) {}
-
-    // Synchronize with Store
-    if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
-      Store._data.settings.currentUser = user.memberId;
-      if (typeof Store._save === 'function') Store._save();
-    }
-
-    return { success: true, user };
-  },
-
-  // Google OAuth Login
+  // ─── Google OAuth Login (the ONLY login method) ───
   googleLogin(email) {
     const raw = (email || '').trim().toLowerCase();
     let user = this.users.find(u => 
@@ -323,7 +225,6 @@ const Auth = {
         loginId: raw.split('@')[0],
         email: raw,
         googleEmail: raw,
-        password: '',
         name: namePart || 'Google User',
         role: 'AI Developer',
         avatar: initials,
@@ -342,7 +243,6 @@ const Auth = {
     if (user) {
       this._enforceAdminRole(user);
 
-      // ─── ADMIN APPROVAL GATE ───
       if (user.approved === false) {
         return { 
           success: false, 
@@ -358,70 +258,12 @@ const Auth = {
 
       if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
         Store._data.settings.currentUser = user.memberId;
-        if (typeof Store._save === 'function') Store._save();
       }
 
       return { success: true, user };
     }
 
     return { success: false, error: 'Google account not registered with Hintonn PMO.' };
-  },
-
-  // ─── Sign Up / Request Access (creates PENDING user, not auto-approved) ───
-  signUp(name, email, password) {
-    const cleanName = (name || '').trim();
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPass = password || '';
-
-    // Check for existing account
-    const existing = this.users.find(u => 
-      (u.email && u.email.toLowerCase() === cleanEmail) ||
-      (u.googleEmail && u.googleEmail.toLowerCase() === cleanEmail)
-    );
-
-    if (existing) {
-      // If they already have an account, check approval status
-      if (existing.approved === false) {
-        return { success: false, error: 'An account with this email already exists and is pending admin approval. Please wait for approval.', pendingApproval: true };
-      }
-      return { success: false, error: 'An account with this email address already exists and has access.' };
-    }
-
-    const initials = cleanName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'UD';
-    const newId = 'user_' + Date.now();
-    const newMemberId = 'm_' + Date.now();
-    const colors = ['#2563EB', '#7C3AED', '#4F46E5', '#1D4ED8', '#059669', '#D97706'];
-    const chosenColor = colors[this.users.length % colors.length];
-
-    // ─── PENDING — NOT AUTO-APPROVED ───
-    const newUser = {
-      id: newId,
-      memberId: newMemberId,
-      loginId: cleanName.split(' ')[0] || cleanName,
-      password: cleanPass,
-      name: cleanName,
-      role: 'AI Developer',
-      email: cleanEmail,
-      googleEmail: cleanEmail,
-      initials: initials,
-      color: chosenColor,
-      approved: false, // ← Requires admin approval
-      requestDate: new Date().toISOString(),
-      requestSource: 'Sign Up'
-    };
-
-    this.users.push(newUser);
-    this._saveUserDb();
-
-    // Notify admin about pending request
-    this._notifyAdminOfPendingRequest(newUser);
-
-    return { 
-      success: true, 
-      user: newUser, 
-      pendingApproval: true,
-      message: 'Your access request has been submitted. An administrator will review and approve your account. You will be able to login once approved.'
-    };
   },
 
   // ─── Admin: Approve a pending user ───
@@ -476,7 +318,6 @@ const Auth = {
     user.rejectedDate = new Date().toISOString();
     this._saveUserDb();
 
-    // Add notification for admin
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({
         type: 'user-approval',
@@ -492,15 +333,16 @@ const Auth = {
     const user = this.users.find(u => u.id === userId);
     if (!user) return { success: false, error: 'User not found.' };
 
-    // Don't allow removing core admin
-    if (user.id === 'mohit' || user.memberId === 'm3') {
+    // Don't allow removing the admin
+    const adminEmail = (user.email || '').toLowerCase();
+    const adminGoogleEmail = (user.googleEmail || '').toLowerCase();
+    if (this._ADMIN_EMAILS.includes(adminEmail) || this._ADMIN_EMAILS.includes(adminGoogleEmail)) {
       return { success: false, error: 'Cannot remove the primary admin account.' };
     }
 
     this.users = this.users.filter(u => u.id !== userId);
     this._saveUserDb();
 
-    // Also remove from Store members
     if (user.memberId && typeof Store !== 'undefined') {
       Store.deleteMember(user.memberId);
     }
@@ -541,11 +383,10 @@ const Auth = {
     }
   },
 
-  // ─── Admin: Add user directly (pre-approved) ───
-  adminAddUser(name, email, role, password) {
+  // ─── Admin: Add user directly (pre-approved, Google account) ───
+  adminAddUser(name, email, role) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPass = password || 'user@123';
     const cleanRole = role || 'AI Developer';
 
     // Check for duplicates
@@ -567,7 +408,6 @@ const Auth = {
       id: newId,
       memberId: newMemberId,
       loginId: cleanName.split(' ')[0] || cleanName,
-      password: cleanPass,
       name: cleanName,
       role: cleanRole,
       email: cleanEmail,
@@ -611,32 +451,6 @@ const Auth = {
     return { success: true, user: newUser };
   },
 
-  // Forgot Password
-  forgotPassword(email) {
-    const raw = (email || '').trim().toLowerCase();
-    const user = this.users.find(u => 
-      (u.email && u.email.toLowerCase() === raw) ||
-      (u.googleEmail && u.googleEmail.toLowerCase() === raw)
-    );
-    return { success: true, userExists: !!user };
-  },
-
-  // Reset Password
-  resetPassword(email, newPassword) {
-    const raw = (email || '').trim().toLowerCase();
-    const user = this.users.find(u => 
-      (u.email && u.email.toLowerCase() === raw) ||
-      (u.googleEmail && u.googleEmail.toLowerCase() === raw)
-    );
-
-    if (user) {
-      user.password = newPassword;
-      this._saveUserDb();
-      return { success: true };
-    }
-    return { success: false, error: 'User not found.' };
-  },
-
   logout() {
     this.currentUser = null;
     try {
@@ -647,7 +461,6 @@ const Auth = {
       FirebaseAuth.signOut().catch(() => {});
     }
 
-    // Redirect to Login
     window.location.hash = '#login';
     if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') {
       App.handleRoute();

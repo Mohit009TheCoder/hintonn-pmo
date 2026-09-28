@@ -179,6 +179,7 @@ async function main() {
   // ═══════════════════════════════════════════════
   const users = [
     { uid: 'seed_mohit', name: 'Mohit Jain', email: 'mohithintonn@gmail.com', photoURL: null, role: 'Admin', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
+    { uid: 'seed_mohit2', name: 'Mohit Jain', email: 'mohitsjain12104@gmail.com', photoURL: null, role: 'Admin', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
     { uid: 'seed_ayush', name: 'Ayush Desai', email: 'ayushhintonn@gmail.com', photoURL: null, role: 'AI Developer', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
     { uid: 'seed_preet', name: 'Preet Bhavsar', email: 'preethintonn@gmail.com', photoURL: null, role: 'AI Developer', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },
     { uid: 'seed_hirvi', name: 'Hirvi Sanghavi', email: 'hirvihintonn@gmail.com', photoURL: null, role: 'AI Developer', isActive: true, provider: 'google', createdAt: FieldValue.serverTimestamp(), lastLogin: FieldValue.serverTimestamp() },

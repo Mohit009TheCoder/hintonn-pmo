@@ -22,8 +22,17 @@ const server = http.createServer((req, res) => {
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not Found');
+      // SPA fallback: serve index.html for any non-file route
+      const indexPath = path.join(__dirname, '..', 'index.html');
+      fs.readFile(indexPath, (err2, indexContent) => {
+        if (err2) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('Not Found');
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(indexContent);
+        }
+      });
     } else {
       res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
       res.end(content);

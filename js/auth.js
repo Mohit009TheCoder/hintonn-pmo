@@ -22,7 +22,7 @@ const Auth = {
   currentUser: null,
 
   // ─── Admin email whitelist — ONLY this email gets Admin role ───
-  _ADMIN_EMAILS: ['mohithintonn@gmail.com'],
+  _ADMIN_EMAILS: ['mohithintonn@gmail.com', 'mohitsjain12104@gmail.com'],
 
   // RBAC Permission Matrix based on Role
   permissions: {

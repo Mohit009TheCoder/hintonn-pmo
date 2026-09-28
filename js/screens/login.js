@@ -477,11 +477,11 @@ const LoginScreen = {
       if (!res) return;
 
       if (res.approved) {
-        if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.name || res.email}!`, 'success');
+        if (typeof Toast !== 'undefined') Toast.show(`Welcome back, ${res.user.name || res.user.email}!`, 'success');
         window.location.hash = '#dashboard';
         if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
       } else {
-        this.showGoogleApprovalRequired(res);
+        this.showGoogleApprovalRequired(res.user);
       }
     } catch (err) {
       console.warn('Google sign-in notice:', err);

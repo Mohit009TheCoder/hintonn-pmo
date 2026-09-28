@@ -1036,10 +1036,7 @@ const Store = {
   // ─── Seed Data ───
   _seedData() {
     const members = [
-      { id: 'm1', name: 'Ayush Desai', role: 'AI Developer', designation: 'AI Core Engineering', color: '#2563EB', email: 'ayush@hintonn.com', initials: 'AD', activeTasks: 4, completedTasks: 12, hoursLogged: 186 },
-      { id: 'm2', name: 'Preet Bhavsar', role: 'AI Developer', designation: 'AI Core Engineering', color: '#7C3AED', email: 'preet@hintonn.com', initials: 'PB', activeTasks: 3, completedTasks: 9, hoursLogged: 142 },
-      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohit@hintonn.com', initials: 'MJ', activeTasks: 0, completedTasks: 28, hoursLogged: 310 },
-      { id: 'm4', name: 'Hirvi Sanghavi', role: 'AI Developer', designation: 'LoRA Research & Telemetry', color: '#1D4ED8', email: 'hirvi@hintonn.com', initials: 'HS', activeTasks: 5, completedTasks: 7, hoursLogged: 124 },
+      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
     ];
 
     const projects = [];

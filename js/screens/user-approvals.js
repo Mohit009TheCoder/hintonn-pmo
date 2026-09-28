@@ -1,6 +1,6 @@
 // ─── User Approvals Screen (Admin Only) ───
 const UserApprovalsScreen = {
-  _filter: 'all', // 'all' | 'pending' | 'approved' | 'rejected'
+  _filter: 'all', // 'all' | 'pending' | 'approved' | 'revoked' | 'rejected'
 
   setFilter(filter) {
     this._filter = filter;
@@ -9,7 +9,7 @@ const UserApprovalsScreen = {
 
   refresh() {
     const content = document.getElementById('page-content');
-    if (content && typeof App !== 'undefined' && App.currentScreen === 'user-approvals') {
+    if (content) {
       content.innerHTML = this.render();
     }
   },
@@ -17,17 +17,232 @@ const UserApprovalsScreen = {
   approveUser(userId) {
     const res = Auth.approveUser(userId);
     if (res.success) {
-      Toast.show(`✅ User approved! They can now log in.`, 'success');
+      Toast.show('User access approved successfully.', 'success');
       this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
     } else {
       Toast.show(res.error || 'Failed to approve user.', 'error');
+    }
+  },
+
+  promptRejectUserAccess(userId, userName, userEmail) {
+    if (!userName || !userEmail) {
+      const user = (typeof Auth !== 'undefined' && Auth.users) ? Auth.users.find(u => u.id === userId) : null;
+      if (user) {
+        userName = user.name;
+        userEmail = user.email || user.googleEmail;
+      }
+    }
+    userName = userName || 'User';
+    userEmail = userEmail || 'Account';
+
+    const bodyHtml = `
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:4px 0;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#DC2626;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:14px;color:var(--color-text-primary);line-height:1.6;margin:0 0 8px 0;">
+            You are about to reject the access request for <strong>${userName}</strong> (${userEmail}).
+          </p>
+          <p style="font-size:13px;color:var(--color-text-muted);line-height:1.5;margin:0;">
+            This user will not be granted access to the Hintonn PMO workspace.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-danger" style="background:#DC2626;color:#FFF;border-color:#DC2626;font-weight:600;" onclick="UserApprovalsScreen.confirmRejectUserAccess('${userId}')">Reject Request</button>
+    `;
+
+    Modal.open('Reject Access Request?', bodyHtml, footerHtml);
+  },
+
+  confirmRejectUserAccess(userId) {
+    Modal.closeAll();
+    const res = Auth.rejectUser(userId);
+    if (res.success) {
+      Toast.show('Access request rejected.', 'success');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to reject user.', 'error');
+    }
+  },
+
+  promptRevokeUserAccess(userId, userName, userEmail) {
+    if (!userName || !userEmail) {
+      const user = (typeof Auth !== 'undefined' && Auth.users) ? Auth.users.find(u => u.id === userId) : null;
+      if (user) {
+        userName = user.name;
+        userEmail = user.email || user.googleEmail;
+      }
+    }
+    userName = userName || 'User';
+    userEmail = userEmail || 'Account';
+
+    const bodyHtml = `
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:4px 0;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#DC2626;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:14px;color:var(--color-text-primary);line-height:1.6;margin:0 0 8px 0;">
+            You are about to revoke access for <strong>${userName}</strong> (${userEmail}).
+          </p>
+          <p style="font-size:13px;color:var(--color-text-muted);line-height:1.5;margin:0;">
+            Once revoked, this user will no longer have active access to the application until administrator approval is granted again.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-danger" style="background:#DC2626;color:#FFF;border-color:#DC2626;font-weight:600;" onclick="UserApprovalsScreen.confirmRevokeUserAccess('${userId}')">Revoke Access</button>
+    `;
+
+    Modal.open('Revoke Access?', bodyHtml, footerHtml);
+  },
+
+  confirmRevokeUserAccess(userId) {
+    Modal.closeAll();
+    const res = Auth.revokeUser(userId);
+    if (res.success) {
+      Toast.show('Access revoked successfully.', 'success');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to revoke access.', 'error');
+    }
+  },
+
+  promptRejectGoogleAccess(reqId, userName, userEmail) {
+    if (!userName || !userEmail) {
+      const requests = (typeof Auth !== 'undefined' && Auth.getGoogleApprovalRequests) ? Auth.getGoogleApprovalRequests() : [];
+      const req = requests.find(r => r.id === reqId) || ((typeof Auth !== 'undefined' && Auth.users) ? Auth.users.find(u => u.id === reqId || u.email === reqId) : null);
+      if (req) {
+        userName = req.name;
+        userEmail = req.email || req.googleEmail;
+      }
+    }
+    userName = userName || 'User';
+    userEmail = userEmail || 'Google Account';
+
+    const bodyHtml = `
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:4px 0;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#DC2626;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:14px;color:var(--color-text-primary);line-height:1.6;margin:0 0 8px 0;">
+            You are about to reject the access request for <strong>${userName}</strong> (${userEmail}).
+          </p>
+          <p style="font-size:13px;color:var(--color-text-muted);line-height:1.5;margin:0;">
+            This user will not be granted access to the Hintonn PMO workspace.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-danger" style="background:#DC2626;color:#FFF;border-color:#DC2626;font-weight:600;" onclick="UserApprovalsScreen.confirmRejectGoogleAccess('${reqId}')">Reject Request</button>
+    `;
+
+    Modal.open('Reject Access Request?', bodyHtml, footerHtml);
+  },
+
+  confirmRejectGoogleAccess(reqId) {
+    Modal.closeAll();
+    const res = Auth.rejectGoogleRequest(reqId);
+    if (res.success) {
+      Toast.show('Access request rejected.', 'success');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to reject request.', 'error');
+    }
+  },
+
+  promptRevokeGoogleAccess(reqId, userName, userEmail) {
+    if (!userName || !userEmail) {
+      const requests = (typeof Auth !== 'undefined' && Auth.getGoogleApprovalRequests) ? Auth.getGoogleApprovalRequests() : [];
+      const req = requests.find(r => r.id === reqId) || ((typeof Auth !== 'undefined' && Auth.users) ? Auth.users.find(u => u.id === reqId || u.email === reqId) : null);
+      if (req) {
+        userName = req.name;
+        userEmail = req.email || req.googleEmail;
+      }
+    }
+    userName = userName || 'User';
+    userEmail = userEmail || 'Google Account';
+
+    const bodyHtml = `
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:4px 0;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#DC2626;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:14px;color:var(--color-text-primary);line-height:1.6;margin:0 0 8px 0;">
+            You are about to revoke access for <strong>${userName}</strong> (${userEmail}).
+          </p>
+          <p style="font-size:13px;color:var(--color-text-muted);line-height:1.5;margin:0;">
+            Once revoked, this user's Google account access will be deactivated in the application until administrator approval is granted again.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-danger" style="background:#DC2626;color:#FFF;border-color:#DC2626;font-weight:600;" onclick="UserApprovalsScreen.confirmRevokeGoogleAccess('${reqId}')">Revoke Access</button>
+    `;
+
+    Modal.open('Revoke Access?', bodyHtml, footerHtml);
+  },
+
+  confirmRevokeGoogleAccess(reqId) {
+    Modal.closeAll();
+    const res = Auth.revokeGoogleRequest(reqId);
+    if (res.success) {
+      Toast.show('Access revoked successfully.', 'success');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to revoke access.', 'error');
     }
   },
 
   rejectUser(userId) {
     const res = Auth.rejectUser(userId);
     if (res.success) {
-      Toast.show(`User access rejected.`, 'success');
+      Toast.show('Access request rejected.', 'success');
       this.refresh();
     } else {
       Toast.show(res.error || 'Failed to reject user.', 'error');
@@ -113,7 +328,7 @@ const UserApprovalsScreen = {
   approveGoogleRequest(reqId) {
     const res = Auth.approveGoogleRequest(reqId);
     if (res.success) {
-      Toast.show(`✅ Google access approved for ${res.request.name}!`, 'success');
+      Toast.show('Google access approved successfully.', 'success');
       this.refresh();
       if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
         App.updateNotifDot();
@@ -124,16 +339,11 @@ const UserApprovalsScreen = {
   },
 
   rejectGoogleRequest(reqId) {
-    const res = Auth.rejectGoogleRequest(reqId);
-    if (res.success) {
-      Toast.show(`Google access request rejected for ${res.request.name}.`, 'info');
-      this.refresh();
-      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
-        App.updateNotifDot();
-      }
-    } else {
-      Toast.show(res.error || 'Failed to reject request.', 'error');
-    }
+    const reqs = Auth.getGoogleApprovalRequests();
+    const req = reqs.find(r => r.id === reqId);
+    const name = req ? req.name : 'User';
+    const email = req ? req.email : 'Google Account';
+    this.promptRejectGoogleAccess(reqId, name, email);
   },
 
   render() {
@@ -148,27 +358,33 @@ const UserApprovalsScreen = {
     }
 
     const allUsers = Auth.getAllUsersWithStatus();
-    const pending = allUsers.filter(u => !u.approved && !u.rejected);
-    const approved = allUsers.filter(u => u.approved);
-    const rejected = allUsers.filter(u => u.rejected);
+    const pending = allUsers.filter(u => !u.approved && !u.rejected && !u.revoked);
+    const approved = allUsers.filter(u => u.approved && !u.revoked);
+    const revoked = allUsers.filter(u => u.revoked);
+    const rejected = allUsers.filter(u => u.rejected && !u.revoked);
 
     const googleRequests = Auth.getGoogleApprovalRequests();
     const pendingGoogle = googleRequests.filter(r => r.status === 'pending');
     const approvedGoogle = googleRequests.filter(r => r.status === 'approved');
+    const revokedGoogle = googleRequests.filter(r => r.status === 'revoked');
     const rejectedGoogle = googleRequests.filter(r => r.status === 'rejected');
 
     const totalPendingCount = pending.length + pendingGoogle.length;
+    const totalApprovedCount = approved.length + approvedGoogle.length;
+    const totalRevokedCount = revoked.length + revokedGoogle.length;
+    const totalRejectedCount = rejected.length + rejectedGoogle.length;
 
     let filtered = allUsers;
     if (this._filter === 'pending') filtered = pending;
     else if (this._filter === 'approved') filtered = approved;
+    else if (this._filter === 'revoked') filtered = revoked;
     else if (this._filter === 'rejected') filtered = rejected;
 
     return `
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div class="page-header-left">
           <h1>User Approvals & Access Control</h1>
-          <p>${totalPendingCount} pending authorization · ${approved.length + approvedGoogle.length} approved accounts</p>
+          <p>${totalPendingCount} pending authorization · ${totalApprovedCount} active approved accounts · ${totalRevokedCount} revoked</p>
         </div>
         <div class="page-header-right">
           <button type="button" class="btn btn-primary" onclick="UserApprovalsScreen.openAddUserModal()" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
@@ -179,7 +395,7 @@ const UserApprovalsScreen = {
       </div>
 
       <!-- Filter Tabs -->
-      <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:4px;width:fit-content;">
+      <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:4px;width:fit-content;flex-wrap:wrap;">
         <button type="button" onclick="UserApprovalsScreen.setFilter('all')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'all' ? 'background:var(--color-surface);color:var(--color-text-primary);box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
           All (${allUsers.length + googleRequests.length})
         </button>
@@ -187,17 +403,22 @@ const UserApprovalsScreen = {
           ⏳ Pending (${totalPendingCount})
         </button>
         <button type="button" onclick="UserApprovalsScreen.setFilter('approved')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'approved' ? 'background:#EFF6FF;color:#1D4ED8;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          ✅ Approved (${approved.length + approvedGoogle.length})
+          ✅ Approved (${totalApprovedCount})
         </button>
-        ${(rejected.length > 0 || rejectedGoogle.length > 0) ? `
-        <button type="button" onclick="UserApprovalsScreen.setFilter('rejected')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'rejected' ? 'background:#FEF2F2;color:#DC2626;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          ❌ Rejected (${rejected.length + rejectedGoogle.length})
+        ${totalRevokedCount > 0 ? `
+        <button type="button" onclick="UserApprovalsScreen.setFilter('revoked')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'revoked' ? 'background:#FEF2F2;color:#DC2626;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
+          🚫 Revoked (${totalRevokedCount})
+        </button>
+        ` : ''}
+        ${totalRejectedCount > 0 ? `
+        <button type="button" onclick="UserApprovalsScreen.setFilter('rejected')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'rejected' ? 'background:#F8FAFC;color:#64748B;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
+          ❌ Rejected (${totalRejectedCount})
         </button>
         ` : ''}
       </div>
 
       <!-- Google Login Approval Requests Section -->
-      ${(googleRequests.length > 0 && (this._filter === 'all' || (this._filter === 'pending' && pendingGoogle.length > 0) || (this._filter === 'approved' && approvedGoogle.length > 0) || (this._filter === 'rejected' && rejectedGoogle.length > 0))) ? `
+      ${(googleRequests.length > 0 && (this._filter === 'all' || (this._filter === 'pending' && pendingGoogle.length > 0) || (this._filter === 'approved' && approvedGoogle.length > 0) || (this._filter === 'revoked' && revokedGoogle.length > 0) || (this._filter === 'rejected' && rejectedGoogle.length > 0))) ? `
       <div style="margin-bottom:28px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0;">
@@ -231,7 +452,7 @@ const UserApprovalsScreen = {
       </div>
       ` : ''}
 
-      <!-- All/Approved/Rejected Users List -->
+      <!-- All/Approved/Revoked/Rejected Users List -->
       ${filtered.length > 0 ? `
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${filtered.map(u => this._renderUserRow(u)).join('')}
@@ -254,14 +475,29 @@ const UserApprovalsScreen = {
   _renderGoogleRequestCard(r) {
     const isPending = r.status === 'pending';
     const isApproved = r.status === 'approved';
+    const isRevoked = r.status === 'revoked';
     const isRejected = r.status === 'rejected';
 
-    const statusBg = isApproved ? '#DCFCE7' : (isRejected ? '#FEE2E2' : '#FEF3C7');
-    const statusColor = isApproved ? '#166534' : (isRejected ? '#991B1B' : '#92400E');
-    const statusText = isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Pending Review');
+    let statusBg = '#FEF3C7';
+    let statusColor = '#92400E';
+    let statusText = 'Pending Review';
+
+    if (isApproved) {
+      statusBg = '#DCFCE7';
+      statusColor = '#166534';
+      statusText = 'Approved';
+    } else if (isRevoked) {
+      statusBg = '#FEF2F2';
+      statusColor = '#DC2626';
+      statusText = 'Access Revoked';
+    } else if (isRejected) {
+      statusBg = '#FEE2E2';
+      statusColor = '#991B1B';
+      statusText = 'Rejected';
+    }
 
     return `
-      <div style="background:${isPending ? '#F0F7FF' : 'var(--color-surface)'};border:1px solid ${isPending ? '#BFDBFE' : 'var(--color-border)'};border-radius:var(--radius-md);padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-xs);">
+      <div style="background:${isPending ? '#F0F7FF' : 'var(--color-surface)'};border:1px solid ${isPending ? '#BFDBFE' : (isRevoked ? '#FECACA' : 'var(--color-border)')};border-radius:var(--radius-md);padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-xs);">
         <div style="width:44px;height:44px;border-radius:50%;background:${r.color || '#2563EB'};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
           ${r.avatar || 'GU'}
         </div>
@@ -277,28 +513,45 @@ const UserApprovalsScreen = {
             </span>
           </div>
           <div style="font-size:13px;color:var(--color-text-muted);">${r.email} · <span style="color:var(--color-text-primary);font-weight:500;">${r.department || 'Commercial PMO'}</span></div>
-          <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:4px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <span>Requested: <strong>${Utils.timeAgo(r.requestedAt)}</strong></span>
-            ${r.reviewedBy ? `<span>Reviewed by: <strong>${r.reviewedBy}</strong></span>` : ''}
+            ${r.reviewedBy && !isRevoked ? `<span>Approved by: <strong>${r.reviewedBy}</strong></span>` : ''}
+            ${isRevoked && r.revokedAt ? `<span style="color:#DC2626;">Revoked: <strong>${Utils.timeAgo(r.revokedAt)}</strong> by <strong>${r.revokedBy || 'Mohit Jain (Admin)'}</strong></span>` : ''}
           </div>
         </div>
 
-        <div style="display:flex;gap:8px;flex-shrink:0;">
-            ${!isApproved ? `
+        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
+            ${isPending ? `
               <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;cursor:pointer;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
                 Accept
               </button>
-            ` : ''}
-            ${!isRejected ? `
-              <button type="button" onclick="UserApprovalsScreen.rejectGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:6px;cursor:pointer;">
+              <button type="button" onclick="UserApprovalsScreen.promptRejectGoogleAccess('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:6px;cursor:pointer;">
                 Reject
               </button>
             ` : ''}
+
             ${isApproved ? `
-              <span style="font-size:12px;font-weight:600;color:${statusColor};padding:6px 12px;border-radius:6px;background:${statusBg};">
+              <span style="font-size:12px;font-weight:600;color:#166534;padding:6px 12px;border-radius:6px;background:#DCFCE7;">
                 ✓ Access Granted
               </span>
+              <button type="button" onclick="UserApprovalsScreen.promptRevokeGoogleAccess('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:6px;cursor:pointer;" title="Revoke access for this account">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Revoke Access
+              </button>
+            ` : ''}
+
+            ${isRevoked ? `
+              <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;cursor:pointer;" title="Re-grant access">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>
+                Re-grant Access
+              </button>
+            ` : ''}
+
+            ${isRejected ? `
+              <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;cursor:pointer;" title="Grant access">
+                Accept
+              </button>
             ` : ''}
         </div>
       </div>
@@ -327,7 +580,7 @@ const UserApprovalsScreen = {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
             Approve
           </button>
-          <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" style="padding:8px 12px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 150ms;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+          <button type="button" onclick="UserApprovalsScreen.promptRejectUserAccess('${u.id}')" style="padding:8px 12px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 150ms;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
             Reject
           </button>
         </div>
@@ -336,47 +589,87 @@ const UserApprovalsScreen = {
   },
 
   _renderUserRow(u) {
-    const statusColor = u.approved ? '#16A34A' : (u.rejected ? '#DC2626' : '#F59E0B');
-    const statusBg = u.approved ? '#DCFCE7' : (u.rejected ? '#FEE2E2' : '#FEF3C7');
-    const statusText = u.approved ? 'Approved' : (u.rejected ? 'Rejected' : 'Pending');
-    const statusIcon = u.approved ? '✅' : (u.rejected ? '❌' : '⏳');
+    const isRevoked = u.revoked === true;
+    const isApproved = u.approved && !isRevoked;
+    const isRejected = u.rejected === true && !isRevoked;
+    const isPending = !isApproved && !isRevoked && !isRejected;
+
+    let statusColor = '#F59E0B';
+    let statusBg = '#FEF3C7';
+    let statusText = 'Pending';
+    let statusIcon = '⏳';
+
+    if (isApproved) {
+      statusColor = '#16A34A';
+      statusBg = '#DCFCE7';
+      statusText = 'Approved';
+      statusIcon = '✅';
+    } else if (isRevoked) {
+      statusColor = '#DC2626';
+      statusBg = '#FEF2F2';
+      statusText = 'Revoked';
+      statusIcon = '🚫';
+    } else if (isRejected) {
+      statusColor = '#DC2626';
+      statusBg = '#FEE2E2';
+      statusText = 'Rejected';
+      statusIcon = '❌';
+    }
+
     const isCore = u.id === 'mohit' || u.memberId === 'm3' || u.id === 'ayush' || u.memberId === 'm1';
 
     return `
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);transition:border-color 150ms;" onmouseover="this.style.borderColor='var(--color-primary-200)'" onmouseout="this.style.borderColor='var(--color-border)'">
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--color-surface);border:1px solid ${isRevoked ? '#FECACA' : 'var(--color-border)'};border-radius:var(--radius-md);transition:border-color 150ms;" onmouseover="this.style.borderColor='var(--color-primary-200)'" onmouseout="this.style.borderColor='${isRevoked ? '#FECACA' : 'var(--color-border)'}'">
         <div class="avatar avatar-md" style="background:${u.color || '#94A3B8'};font-weight:700;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;">${u.initials || '??'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:14px;font-weight:700;color:var(--color-text-primary);">${u.name}</span>
             ${isCore ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 6px;border-radius:var(--radius-pill);font-weight:600;">Core</span>' : ''}
+            <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:var(--radius-pill);background:${statusBg};color:${statusColor};">
+              ${statusIcon} ${statusText}
+            </span>
           </div>
           <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:1px;">${u.email} · ${u.role}</div>
-          ${u.requestDate ? `<div style="font-size:11px;color:var(--color-text-disabled);margin-top:1px;">Requested ${Utils.timeAgo(u.requestDate)} via ${u.requestSource || 'pre-configured'}</div>` : ''}
+          <div style="font-size:11px;color:var(--color-text-disabled);margin-top:1px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            ${u.requestDate ? `<span>Requested ${Utils.timeAgo(u.requestDate)} via ${u.requestSource || 'pre-configured'}</span>` : ''}
+            ${isRevoked && u.revokedAt ? `<span style="color:#DC2626;">Revoked ${Utils.timeAgo(u.revokedAt)} by ${u.revokedBy || 'Mohit Jain (Admin)'}</span>` : ''}
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
           ${!isCore ? `
-            <div style="display:flex;gap:4px;">
-              ${!u.approved ? `
+            <div style="display:flex;gap:6px;align-items:center;">
+              ${isApproved ? `
+                <button type="button" onclick="UserApprovalsScreen.promptRevokeUserAccess('${u.id}')" title="Revoke access" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#DC2626;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  Revoke Access
+                </button>
+              ` : ''}
+
+              ${isRevoked ? `
+                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Re-grant Access" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+                  Re-grant Access
+                </button>
+              ` : ''}
+
+              ${isPending ? `
                 <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Approve" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
                   Approve
                 </button>
-              ` : `
-                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Mark as Approved" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
-                  Approved
-                </button>
-              `}
-              ${!u.rejected ? `
-                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Reject" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
+                <button type="button" onclick="UserApprovalsScreen.promptRejectUserAccess('${u.id}')" title="Reject" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
                   Reject
                 </button>
-              ` : `
-                <button type="button" onclick="UserApprovalsScreen.rejectUser('${u.id}')" title="Mark as Rejected" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #FECACA;background:#FEF2F2;color:#991B1B;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FEF2F2'">
-                  Rejected
+              ` : ''}
+
+              ${isRejected ? `
+                <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}')" title="Grant Access" style="padding:6px 10px;border-radius:var(--radius-sm);border:1px solid #86EFAC;background:#DCFCE7;color:#166534;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.2s;" onmouseover="this.style.background='#BBF7D0'" onmouseout="this.style.background='#DCFCE7'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+                  Accept
                 </button>
-              `}
-              <button type="button" onclick="UserApprovalsScreen.removeUser('${u.id}','${u.name.replace(/'/g, "\\'")}')" title="Remove user" style="padding:6px 8px;border-radius:var(--radius-sm);border:1px solid #E5E7EB;background:var(--color-surface);color:var(--color-text-muted);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;transition:background 0.2s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='var(--color-surface)'">
+              ` : ''}
+
+              <button type="button" onclick="UserApprovalsScreen.removeUser('${u.id}')" title="Remove user" style="padding:6px 8px;border-radius:var(--radius-sm);border:1px solid #E5E7EB;background:var(--color-surface);color:var(--color-text-muted);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;transition:background 0.2s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='var(--color-surface)'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
             </div>
@@ -390,3 +683,5 @@ const UserApprovalsScreen = {
     `;
   }
 };
+
+window.UserApprovalsScreen = UserApprovalsScreen;

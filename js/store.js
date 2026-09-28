@@ -588,6 +588,14 @@ const Store = {
   getNotifications() {
     const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     let notifs = this._data.notifications.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const isAdmin = user && user.role === 'Admin';
+
+    // Admin-only notification types — non-admin users should never see these
+    if (user && !isAdmin) {
+      const adminOnlyTypes = ['user-approval'];
+      notifs = notifs.filter(n => !adminOnlyTypes.includes(n.type));
+    }
+
     if (user && user.role === 'AI Developer') {
       const userMemberId = user.memberId || (user.id === 'preet' ? 'm2' : user.id === 'mohit' ? 'm3' : user.id === 'hirvi' ? 'm4' : '');
       const myTasks = this.getTasks().filter(t => 

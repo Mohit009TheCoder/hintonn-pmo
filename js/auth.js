@@ -73,46 +73,19 @@ const Auth = {
     const googleEmailLower = (user.googleEmail || '').toLowerCase();
     
     const isAdmin = this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower);
-    const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
-    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || PRE_APPROVED_EMAILS.includes(googleEmailLower);
 
     if (isAdmin) {
       user.role = 'Admin';
       user.approved = true;
       user.title = user.title || 'Executive PMO & Lead';
-    } else if (isPreApproved) {
-      user.approved = true;
     }
     return user;
   },
 
   init() {
     try {
-      const AUTH_VERSION = 'v7-preapproved-fix';
+      const AUTH_VERSION = 'v8-revoke-fix';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
-        const savedUsers = localStorage.getItem('hintonn-users-db');
-        if (savedUsers) {
-          try {
-            const parsed = JSON.parse(savedUsers);
-            parsed.forEach(u => {
-              if (u.approved === undefined) u.approved = true;
-              // Force admin emails to always be approved
-              const uEmail = (u.email || '').toLowerCase();
-              const uGEmail = (u.googleEmail || '').toLowerCase();
-              const isAdmin = this._ADMIN_EMAILS.includes(uEmail) || this._ADMIN_EMAILS.includes(uGEmail);
-              const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com'];
-              const isPreApproved = PRE_APPROVED_EMAILS.includes(uEmail) || PRE_APPROVED_EMAILS.includes(uGEmail);
-
-              if (isAdmin) {
-                u.approved = true;
-                u.role = 'Admin';
-              } else if (isPreApproved) {
-                u.approved = true;
-              }
-            });
-            localStorage.setItem('hintonn-users-db', JSON.stringify(parsed));
-          } catch(e) {}
-        }
         localStorage.setItem('hintonn-auth-version', AUTH_VERSION);
       }
 
@@ -124,8 +97,15 @@ const Auth = {
             const exists = this.users.find(u => u.id === saved.id || (u.email && saved.email && u.email.toLowerCase() === saved.email.toLowerCase()));
             if (exists) {
               if (saved.approved !== undefined) exists.approved = saved.approved;
+              if (saved.rejected !== undefined) exists.rejected = saved.rejected;
+              if (saved.revoked !== undefined) exists.revoked = saved.revoked;
+              if (saved.revokedAt !== undefined) exists.revokedAt = saved.revokedAt;
+              if (saved.revokedBy !== undefined) exists.revokedBy = saved.revokedBy;
+              if (saved.reviewedBy !== undefined) exists.reviewedBy = saved.reviewedBy;
+              if (saved.reviewedAt !== undefined) exists.reviewedAt = saved.reviewedAt;
+              if (saved.approvedDate !== undefined) exists.approvedDate = saved.approvedDate;
+              if (saved.rejectedDate !== undefined) exists.rejectedDate = saved.rejectedDate;
               if (saved.password && saved.password !== exists.password) exists.password = saved.password;
-              // Force admin emails to always be approved
               this._enforceAdminRole(exists);
             } else {
               this.users.push(saved);
@@ -250,9 +230,11 @@ const Auth = {
       department: u.department || 'Commercial PMO & Project Delivery',
       reason: 'Google Single Sign-On Access Request',
       requestedAt: u.requestDate || new Date().toISOString(),
-      status: u.approved ? 'approved' : (u.rejected ? 'rejected' : 'pending'),
+      status: u.revoked ? 'revoked' : (u.approved ? 'approved' : (u.rejected ? 'rejected' : 'pending')),
       reviewedBy: u.reviewedBy || null,
-      reviewedAt: u.reviewedAt || null
+      reviewedAt: u.reviewedAt || null,
+      revokedBy: u.revokedBy || null,
+      revokedAt: u.revokedAt || null
     }));
   },
 
@@ -271,6 +253,7 @@ const Auth = {
       user.requestDate = new Date().toISOString();
       user.approved = false;
       user.rejected = false;
+      user.revoked = false;
       user.requestSource = 'Google OAuth';
     } else {
       user = {
@@ -287,7 +270,8 @@ const Auth = {
         requestDate: new Date().toISOString(),
         requestSource: 'Google OAuth',
         approved: false,
-        rejected: false
+        rejected: false,
+        revoked: false
       };
       this.users.push(user);
     }
@@ -321,18 +305,19 @@ const Auth = {
   },
 
   approveGoogleRequest(reqId) {
-    const requests = this.getGoogleApprovalRequests();
-    const req = requests.find(r => r.id === reqId);
-    if (!req) return { success: false, error: 'Request not found' };
-
-    req.status = 'approved';
-    req.reviewedBy = 'Mohit Jain (Admin)';
-    req.reviewedAt = new Date().toISOString();
-    this._saveGoogleRequests(requests);
-
-    // Also ensure this user exists in user database as approved
-    let user = this.users.find(u => u.email && u.email.toLowerCase() === req.email.toLowerCase());
+    let user = this.users.find(u => u.id === reqId || (u.email && u.email.toLowerCase() === reqId.toLowerCase()));
     if (!user) {
+      const requests = this.getGoogleApprovalRequests();
+      const req = requests.find(r => r.id === reqId);
+      if (req) {
+        user = this.users.find(u => u.email && u.email.toLowerCase() === req.email.toLowerCase());
+      }
+    }
+
+    if (!user) {
+      const requests = this.getGoogleApprovalRequests();
+      const req = requests.find(r => r.id === reqId);
+      if (!req) return { success: false, error: 'Request not found' };
       const loginId = req.name.split(' ')[0] || 'User';
       user = {
         id: 'goog_' + Date.now().toString(36),
@@ -345,34 +330,109 @@ const Auth = {
         googleEmail: req.email,
         initials: req.avatar || 'GU',
         color: req.color || '#2563EB',
-        approved: true
+        approved: true,
+        rejected: false,
+        revoked: false
       };
       this.users.push(user);
-      this._saveUserDb();
     } else {
       user.approved = true;
       user.rejected = false;
-      this._saveUserDb();
+      user.revoked = false;
+      user.revokedAt = null;
+      user.revokedBy = null;
+      user.approvedDate = new Date().toISOString();
+      user.reviewedBy = 'Mohit Jain (Admin)';
+      user.reviewedAt = new Date().toISOString();
     }
+    this._saveUserDb();
     
-    this._syncApprovalToFirebase(req.email, true);
+    this._syncApprovalToFirebase(user.email, true);
 
-    return { success: true, request: req, user };
+    return { 
+      success: true, 
+      request: {
+        id: user.id,
+        name: user.name,
+        email: user.email || user.googleEmail,
+        status: 'approved',
+        reviewedBy: 'Mohit Jain (Admin)',
+        reviewedAt: new Date().toISOString()
+      }, 
+      user 
+    };
+  },
+
+  revokeGoogleRequest(reqId) {
+    let user = this.users.find(u => u.id === reqId || (u.email && u.email.toLowerCase() === reqId.toLowerCase()));
+    if (!user) {
+      const requests = this.getGoogleApprovalRequests();
+      const req = requests.find(r => r.id === reqId);
+      if (req) {
+        user = this.users.find(u => u.email && u.email.toLowerCase() === req.email.toLowerCase());
+      }
+    }
+    if (!user) return { success: false, error: 'Request not found' };
+
+    user.approved = false;
+    user.rejected = false;
+    user.revoked = true;
+    user.revokedAt = new Date().toISOString();
+    user.revokedBy = (this.currentUser && this.currentUser.name) || 'Mohit Jain (Admin)';
+    this._saveUserDb();
+
+    if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
+      Store.addNotification({ 
+        type: 'user-approval', 
+        text: `🚫 Access revoked for <strong>${user.name}</strong> (${user.email || user.googleEmail}).` 
+      });
+    }
+
+    return { 
+      success: true, 
+      request: {
+        id: user.id,
+        name: user.name,
+        email: user.email || user.googleEmail,
+        status: 'revoked',
+        revokedAt: user.revokedAt,
+        revokedBy: user.revokedBy
+      },
+      user 
+    };
   },
 
   rejectGoogleRequest(reqId) {
-    const requests = this.getGoogleApprovalRequests();
-    const req = requests.find(r => r.id === reqId);
-    if (!req) return { success: false, error: 'Request not found' };
+    let user = this.users.find(u => u.id === reqId || (u.email && u.email.toLowerCase() === reqId.toLowerCase()));
+    if (!user) {
+      const requests = this.getGoogleApprovalRequests();
+      const req = requests.find(r => r.id === reqId);
+      if (req) {
+        user = this.users.find(u => u.email && u.email.toLowerCase() === req.email.toLowerCase());
+      }
+    }
+    if (!user) return { success: false, error: 'Request not found' };
 
-    req.status = 'rejected';
-    req.reviewedBy = 'Mohit Jain (Admin)';
-    req.reviewedAt = new Date().toISOString();
-    this._saveGoogleRequests(requests);
+    user.approved = false;
+    user.rejected = true;
+    user.revoked = false;
+    user.reviewedBy = 'Mohit Jain (Admin)';
+    user.reviewedAt = new Date().toISOString();
+    this._saveUserDb();
 
-    this._syncApprovalToFirebase(req.email, false, true);
+    this._syncApprovalToFirebase(user.email, false, true);
 
-    return { success: true, request: req };
+    return { 
+      success: true, 
+      request: {
+        id: user.id,
+        name: user.name,
+        email: user.email || user.googleEmail,
+        status: 'rejected',
+        reviewedBy: 'Mohit Jain (Admin)',
+        reviewedAt: new Date().toISOString()
+      } 
+    };
   },
 
   loginWithApprovedGoogle(reqId) {
@@ -545,6 +605,10 @@ const Auth = {
     const user = this.users.find(u => u.id === userId);
     if (!user) return { success: false, error: 'User not found.' };
     user.approved = true;
+    user.rejected = false;
+    user.revoked = false;
+    user.revokedAt = null;
+    user.revokedBy = null;
     user.approvedDate = new Date().toISOString();
     this._saveUserDb();
 
@@ -583,6 +647,32 @@ const Auth = {
     return { success: true };
   },
 
+  revokeUser(userId) {
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return { success: false, error: 'User not found.' };
+    const adminEmail = (user.email || '').toLowerCase();
+    const adminGoogleEmail = (user.googleEmail || '').toLowerCase();
+    if (this._ADMIN_EMAILS.includes(adminEmail) || this._ADMIN_EMAILS.includes(adminGoogleEmail)) {
+      return { success: false, error: 'Cannot revoke access for the primary administrator.' };
+    }
+
+    user.approved = false;
+    user.rejected = false;
+    user.revoked = true;
+    user.revokedAt = new Date().toISOString();
+    user.revokedBy = (this.currentUser && this.currentUser.name) || 'Mohit Jain (Admin)';
+    this._saveUserDb();
+
+    if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
+      Store.addNotification({ 
+        type: 'user-approval', 
+        text: `🚫 Access revoked for <strong>${user.name}</strong> (${user.email || user.googleEmail}).` 
+      });
+    }
+
+    return { success: true, user };
+  },
+
   removeUser(userId) {
     const user = this.users.find(u => u.id === userId);
     if (!user) return { success: false, error: 'User not found.' };
@@ -598,7 +688,7 @@ const Auth = {
   },
 
   getPendingUsers() {
-    return this.users.filter(u => u.approved === false && u.rejected !== true);
+    return this.users.filter(u => u.approved === false && u.rejected !== true && u.revoked !== true);
   },
 
   getAllUsersWithStatus() {
@@ -606,9 +696,16 @@ const Auth = {
       id: u.id, name: u.name, email: u.email || u.googleEmail,
       role: u.role || 'AI Developer',
       initials: u.initials || u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
-      color: u.color || '#94A3B8', approved: u.approved !== false, rejected: u.rejected === true,
-      requestDate: u.requestDate || '', approvedDate: u.approvedDate || '',
-      requestSource: u.requestSource || 'Pre-configured', loginId: u.loginId || ''
+      color: u.color || '#94A3B8', 
+      approved: u.approved !== false && !u.revoked, 
+      rejected: u.rejected === true,
+      revoked: u.revoked === true,
+      requestDate: u.requestDate || '', 
+      approvedDate: u.approvedDate || '',
+      revokedAt: u.revokedAt || '', 
+      revokedBy: u.revokedBy || '',
+      requestSource: u.requestSource || 'Pre-configured', 
+      loginId: u.loginId || ''
     }));
   },
 

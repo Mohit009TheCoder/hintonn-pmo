@@ -3,6 +3,7 @@ const Modal = {
   _stack: [],
 
   open(title, bodyHtml, footerHtml, opts = {}) {
+    this.closeAll();
     const id = 'modal-' + Date.now();
     const size = opts.large ? 'modal-lg' : '';
     const overlay = document.createElement('div');
@@ -30,7 +31,11 @@ const Modal = {
     if (el) { el.remove(); this._stack = this._stack.filter(s => s !== id); }
   },
 
-  closeAll() { this._stack.forEach(id => { const el = document.getElementById(id); if(el) el.remove(); }); this._stack = []; },
+  closeAll() { 
+    this._stack.forEach(id => { const el = document.getElementById(id); if(el) el.remove(); }); 
+    this._stack = []; 
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+  },
 
   confirm(title, message, onConfirm, opts = {}) {
     // Close any existing modals first to prevent stacking

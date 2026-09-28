@@ -640,27 +640,33 @@ const LoginScreen = {
     }
 
     try {
-      const user = await FirebaseAuth.signInGoogle();
-      if (user) {
-        // Check if user is approved
-        const authUser = Auth.users.find(u => 
-          (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
-          (u.googleEmail && user.email && u.googleEmail.toLowerCase() === user.email.toLowerCase())
-        );
-        
-        if (authUser && authUser.approved === false) {
-          // Show pending approval screen
-          Auth.logout();
-          this._showPendingApprovalScreen(authUser.name, authUser.email);
-          return;
-        }
-
+      const result = await FirebaseAuth.signInGoogle();
+      if (result) {
+        // Approved user — proceed to dashboard
         if (typeof Toast !== 'undefined') {
-          Toast.show(`Welcome back, ${user.displayName || user.email}!`, 'success');
+          Toast.show(`Welcome back, ${result.displayName || result.email}!`, 'success');
         }
         window.location.hash = '#dashboard';
         if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') {
           App.handleRoute();
+        }
+      } else {
+        // User was blocked — either pending approval or error
+        // Check if there's a pending user from the Google sign-in
+        const firebaseUser = FirebaseAuth.getCurrentUser ? FirebaseAuth.getCurrentUser() : null;
+        const userEmail = firebaseUser ? firebaseUser.email : '';
+        
+        // Look up the pending user
+        const pendingUser = userEmail ? Auth.users.find(u => 
+          (u.email && u.email.toLowerCase() === userEmail.toLowerCase()) ||
+          (u.googleEmail && u.googleEmail.toLowerCase() === userEmail.toLowerCase())
+        ) : null;
+        
+        if (pendingUser && pendingUser.approved === false) {
+          // Show pending approval screen
+          this._showPendingApprovalScreen(pendingUser.name, pendingUser.email || userEmail);
+        } else {
+          this.showError('Your account is pending admin approval. Please wait for an administrator to approve your access.');
         }
       }
     } catch (err) {

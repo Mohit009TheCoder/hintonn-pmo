@@ -38,8 +38,8 @@ const FirebaseAuth = {
     this._ensureInit();
     try {
       const userCredential = await this._auth.signInWithEmailAndPassword(email, password);
-      await this._saveOrUpdateUserSession(userCredential.user, 'password');
-      return userCredential.user;
+      const savedUser = await this._saveOrUpdateUserSession(userCredential.user, 'password');
+      return savedUser || null;
     } catch (err) {
       throw this._mapAuthError(err);
     }
@@ -69,8 +69,9 @@ const FirebaseAuth = {
     try {
       const result = await this._auth.signInWithPopup(provider);
       if (result && result.user) {
-        await this._saveOrUpdateUserSession(result.user, 'google');
-        return result.user;
+        const savedUser = await this._saveOrUpdateUserSession(result.user, 'google');
+        // If _saveOrUpdateUserSession returns null, user is blocked (pending approval)
+        return savedUser || null;
       }
     } catch (err) {
       if (err.code === 'auth/popup-blocked') {
@@ -88,8 +89,8 @@ const FirebaseAuth = {
     try {
       const result = await this._auth.getRedirectResult();
       if (result && result.user) {
-        await this._saveOrUpdateUserSession(result.user, 'google');
-        return result.user;
+        const savedUser = await this._saveOrUpdateUserSession(result.user, 'google');
+        return savedUser || null;
       }
     } catch (err) {
       console.error('Google redirect error:', err.code, err.message);
@@ -120,13 +121,52 @@ const FirebaseAuth = {
 
   // ─── Firestore: Save / Update User Session & Sync with Local Auth ───
   async _saveOrUpdateUserSession(user, providerType) {
-    if (!user) return;
+    if (!user) return null;
     const defaultName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
     const emailLower = (user.email || '').toLowerCase();
     const isAdminEmail = emailLower === 'mohithintonn@gmail.com' || emailLower === 'mohitsjain12104@gmail.com';
     const isAdminName = defaultName.toLowerCase().includes('mohit') && defaultName.toLowerCase().includes('jain');
     const isAdmin = isAdminEmail || isAdminName;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+
+    // ─── ADMIN APPROVAL GATE: Check if user is approved ───
+    if (typeof Auth !== 'undefined') {
+      const existingUser = Auth.users.find(u => 
+        (u.email && u.email.toLowerCase() === emailLower) ||
+        (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
+      );
+      
+      if (existingUser && existingUser.approved === false) {
+        // User exists but not approved — block login
+        console.warn('[Auth] Google login blocked: user not approved:', emailLower);
+        return null;
+      }
+      
+      if (!existingUser && !isAdmin) {
+        // New Google user — create as PENDING (requires admin approval)
+        const localUser = {
+          id: user.uid,
+          memberId: 'm_' + user.uid.slice(0, 6),
+          loginId: (user.email ? user.email.split('@')[0] : defaultName),
+          email: user.email || '',
+          googleEmail: user.email || '',
+          name: defaultName,
+          role: 'AI Developer',
+          avatar: initials,
+          initials: initials,
+          color: '#2563EB',
+          title: 'AI Developer',
+          photoURL: user.photoURL || null,
+          approved: false,
+          requestDate: new Date().toISOString(),
+          requestSource: 'Google OAuth'
+        };
+        Auth.users.push(localUser);
+        Auth._saveUserDb();
+        Auth._notifyAdminOfPendingRequest(localUser);
+        return null; // Block — user needs approval
+      }
+    }
 
     // 1. Immediately sync session to localStorage so UI and route guards recognize user
     const localUser = {
@@ -141,7 +181,8 @@ const FirebaseAuth = {
       initials: initials,
       color: '#2563EB',
       title: isAdminEmail ? 'Executive PMO & Lead' : 'AI Developer',
-      photoURL: user.photoURL || null
+      photoURL: user.photoURL || null,
+      approved: true // Approved users pass through
     };
 
     try {

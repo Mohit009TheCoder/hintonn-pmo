@@ -91,9 +91,15 @@ const Sidebar = {
       html += '</div>';
     });
 
-    // Render Settings & Connectors based on RBAC access
+    // Render Settings, Connectors & Admin section based on RBAC access
     if (typeof Auth !== 'undefined' && Auth.hasAccess('settings')) {
       html += `<div class="sidebar-section" style="margin-top:auto; padding-top: 12px; border-top: 1px solid var(--color-border-subtle);">
+        <div class="sidebar-section-label">Administration</div>
+        <a href="#user-approvals" class="sidebar-item ${current === 'user-approvals' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
+          ${Icons.users || Icons.hexagonSm}
+          <span>User Approvals</span>
+          ${typeof Auth !== 'undefined' && Auth.getPendingUsers && Auth.getPendingUsers().length > 0 ? `<span class="badge-count" style="background:#F59E0B;color:#fff;">${Auth.getPendingUsers().length}</span>` : ''}
+        </a>
         <a href="#connectors" class="sidebar-item ${current === 'connectors' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons.plug || Icons.settings}
           <span>Connectors</span>

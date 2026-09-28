@@ -123,13 +123,17 @@ const TeamScreen = {
     // Use Store.createMember to sync to Firebase
     Store.createMember({ id: newId, name, role: designation, designation, email, initials, color: chosenColor });
 
-    // Also add to Auth users for login
+    // Also add to Auth users for login (pre-approved by admin)
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       Auth.users.push({
         id: 'user_' + Date.now(), memberId: newId, loginId: name.split(' ')[0] || name,
         password: 'user@123', name, role: designation, designation, title: designation,
-        email, initials, color: chosenColor
+        email, initials, color: chosenColor,
+        approved: true, // Admin-added member is pre-approved
+        approvedDate: new Date().toISOString(),
+        requestSource: 'Admin Team Add'
       });
+      Auth._saveUserDb();
     }
     Toast.show(`Added ${name} (${designation}) to team.`, 'success');
     Modal.closeAll();

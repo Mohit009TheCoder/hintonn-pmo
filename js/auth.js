@@ -3,60 +3,7 @@
 // Admin = mohitsjain12104@gmail.com ONLY.
 const Auth = {
   // Pre-configured User Database (existing users are pre-approved)
-  users: [
-    {
-      id: 'mohit',
-      memberId: 'm3',
-      loginId: 'Mohit',
-      password: 'Mohit@123',
-      name: 'Mohit Jain',
-      role: 'Admin',
-      email: 'mohitsjain12104@gmail.com',
-      googleEmail: 'mohitsjain12104@gmail.com',
-      initials: 'MJ',
-      color: '#4F46E5',
-      approved: true
-    },
-    {
-      id: 'ayush',
-      memberId: 'm1',
-      loginId: 'Ayush',
-      password: 'ayush@123',
-      name: 'Ayush Desai',
-      role: 'AI Developer',
-      email: 'ayush@hintonn.com',
-      googleEmail: 'ayushhintonn@gmail.com',
-      initials: 'AD',
-      color: '#2563EB',
-      approved: true
-    },
-    {
-      id: 'preet',
-      memberId: 'm2',
-      loginId: 'Preet',
-      password: 'preet@123',
-      name: 'Preet Bhavsar',
-      role: 'AI Developer',
-      email: 'preet@hintonn.com',
-      googleEmail: 'preethintonn@gmail.com',
-      initials: 'PB',
-      color: '#7C3AED',
-      approved: true
-    },
-    {
-      id: 'hirvi',
-      memberId: 'm4',
-      loginId: 'Hirvi',
-      password: 'hirvi@123',
-      name: 'Hirvi Sanghavi',
-      role: 'AI Developer',
-      email: 'hirvi@hintonn.com',
-      googleEmail: 'hirvihintonn@gmail.com',
-      initials: 'HS',
-      color: '#1D4ED8',
-      approved: true
-    }
-  ],
+  users: [],
 
   currentUser: null,
 

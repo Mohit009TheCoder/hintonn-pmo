@@ -12,12 +12,7 @@ const Store = {
       localStorage.setItem('hintonn_cleared_v1', 'true');
     }
 
-    const defaultMembers = [
-      { id: 'm1', name: 'Ayush Desai', role: 'AI Developer', color: '#2563EB', email: 'ayush@hintonn.com', initials: 'AD' },
-      { id: 'm2', name: 'Preet Bhavsar', role: 'AI Developer', color: '#7C3AED', email: 'preet@hintonn.com', initials: 'PB' },
-      { id: 'm3', name: 'Mohit Jain', role: 'Admin', color: '#4F46E5', email: 'mohit@hintonn.com', initials: 'MJ' },
-      { id: 'm4', name: 'Hirvi Sanghavi', role: 'AI Developer', color: '#1D4ED8', email: 'hirvi@hintonn.com', initials: 'HS' },
-    ];
+    const defaultMembers = [];
 
     const saved = localStorage.getItem('hintonn-pm');
     if (saved) {

@@ -110,11 +110,44 @@ const UserApprovalsScreen = {
     }
   },
 
+  approveGoogleRequest(reqId) {
+    const res = Auth.approveGoogleRequest(reqId);
+    if (res.success) {
+      Toast.show(`✅ Google access approved for ${res.request.name}!`, 'success');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to approve request.', 'error');
+    }
+  },
+
+  rejectGoogleRequest(reqId) {
+    const res = Auth.rejectGoogleRequest(reqId);
+    if (res.success) {
+      Toast.show(`Google access request rejected for ${res.request.name}.`, 'info');
+      this.refresh();
+      if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+        App.updateNotifDot();
+      }
+    } else {
+      Toast.show(res.error || 'Failed to reject request.', 'error');
+    }
+  },
+
   render() {
     const allUsers = Auth.getAllUsersWithStatus();
     const pending = allUsers.filter(u => !u.approved && !u.rejected);
     const approved = allUsers.filter(u => u.approved);
     const rejected = allUsers.filter(u => u.rejected);
+
+    const googleRequests = Auth.getGoogleApprovalRequests();
+    const pendingGoogle = googleRequests.filter(r => r.status === 'pending');
+    const approvedGoogle = googleRequests.filter(r => r.status === 'approved');
+    const rejectedGoogle = googleRequests.filter(r => r.status === 'rejected');
+
+    const totalPendingCount = pending.length + pendingGoogle.length;
 
     let filtered = allUsers;
     if (this._filter === 'pending') filtered = pending;
@@ -124,8 +157,8 @@ const UserApprovalsScreen = {
     return `
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div class="page-header-left">
-          <h1>User Approvals</h1>
-          <p>${pending.length} pending · ${approved.length} approved${rejected.length > 0 ? ` · ${rejected.length} rejected` : ''}</p>
+          <h1>User Approvals & Access Control</h1>
+          <p>${totalPendingCount} pending authorization · ${approved.length + approvedGoogle.length} approved accounts</p>
         </div>
         <div class="page-header-right">
           <button type="button" class="btn btn-primary" onclick="UserApprovalsScreen.openAddUserModal()" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
@@ -138,27 +171,48 @@ const UserApprovalsScreen = {
       <!-- Filter Tabs -->
       <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:4px;width:fit-content;">
         <button type="button" onclick="UserApprovalsScreen.setFilter('all')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'all' ? 'background:var(--color-surface);color:var(--color-text-primary);box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          All (${allUsers.length})
+          All (${allUsers.length + googleRequests.length})
         </button>
         <button type="button" onclick="UserApprovalsScreen.setFilter('pending')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'pending' ? 'background:#FFF7ED;color:#C2410C;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          ⏳ Pending (${pending.length})
+          ⏳ Pending (${totalPendingCount})
         </button>
         <button type="button" onclick="UserApprovalsScreen.setFilter('approved')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'approved' ? 'background:#EFF6FF;color:#1D4ED8;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          ✅ Approved (${approved.length})
+          ✅ Approved (${approved.length + approvedGoogle.length})
         </button>
-        ${rejected.length > 0 ? `
+        ${(rejected.length > 0 || rejectedGoogle.length > 0) ? `
         <button type="button" onclick="UserApprovalsScreen.setFilter('rejected')" style="padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 150ms;${this._filter === 'rejected' ? 'background:#FEF2F2;color:#DC2626;box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
-          ❌ Rejected (${rejected.length})
+          ❌ Rejected (${rejected.length + rejectedGoogle.length})
         </button>
         ` : ''}
       </div>
 
-      <!-- Pending Requests Section -->
+      <!-- Google Login Approval Requests Section -->
+      ${(googleRequests.length > 0 && (this._filter === 'all' || (this._filter === 'pending' && pendingGoogle.length > 0) || (this._filter === 'approved' && approvedGoogle.length > 0) || (this._filter === 'rejected' && rejectedGoogle.length > 0))) ? `
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink:0;">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+          </svg>
+          <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0;">Google Single Sign-On Access Requests</h3>
+          ${pendingGoogle.length > 0 ? `<span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">${pendingGoogle.length} Pending</span>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${googleRequests
+            .filter(r => this._filter === 'all' || r.status === this._filter)
+            .map(r => this._renderGoogleRequestCard(r)).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Pending Standard Requests Section -->
       ${pending.length > 0 && (this._filter === 'all' || this._filter === 'pending') ? `
       <div style="margin-bottom:28px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           <div style="width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulse 2s infinite;"></div>
-          <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0;">Pending Approval Requests</h3>
+          <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0;">Pending Workspace Accounts</h3>
           <span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">${pending.length}</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
@@ -184,6 +238,57 @@ const UserApprovalsScreen = {
       <style>
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
       </style>
+    `;
+  },
+
+  _renderGoogleRequestCard(r) {
+    const isPending = r.status === 'pending';
+    const isApproved = r.status === 'approved';
+    const isRejected = r.status === 'rejected';
+
+    const statusBg = isApproved ? '#DCFCE7' : (isRejected ? '#FEE2E2' : '#FEF3C7');
+    const statusColor = isApproved ? '#166534' : (isRejected ? '#991B1B' : '#92400E');
+    const statusText = isApproved ? 'Approved' : (isRejected ? 'Rejected' : 'Pending Review');
+
+    return `
+      <div style="background:${isPending ? '#F0F7FF' : 'var(--color-surface)'};border:1px solid ${isPending ? '#BFDBFE' : 'var(--color-border)'};border-radius:var(--radius-md);padding:18px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow-xs);">
+        <div style="width:44px;height:44px;border-radius:50%;background:${r.color || '#2563EB'};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
+          ${r.avatar || 'GU'}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+            <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${r.name}</span>
+            <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+              Google SSO
+            </span>
+            <span style="background:${statusBg};color:${statusColor};font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);">
+              ${statusText}
+            </span>
+          </div>
+          <div style="font-size:13px;color:var(--color-text-muted);">${r.email} · <span style="color:var(--color-text-primary);font-weight:500;">${r.department || 'Commercial PMO'}</span></div>
+          <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:4px;display:flex;align-items:center;gap:12px;">
+            <span>Requested: <strong>${Utils.timeAgo(r.requestedAt)}</strong></span>
+            ${r.reviewedBy ? `<span>Reviewed by: <strong>${r.reviewedBy}</strong></span>` : ''}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          ${isPending ? `
+            <button type="button" onclick="UserApprovalsScreen.approveGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#059669;color:#FFFFFF;border:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;cursor:pointer;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+              Accept
+            </button>
+            <button type="button" onclick="UserApprovalsScreen.rejectGoogleRequest('${r.id}')" class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:6px;cursor:pointer;">
+              Reject
+            </button>
+          ` : `
+            <span style="font-size:12px;font-weight:600;color:${statusColor};padding:6px 12px;border-radius:6px;background:${statusBg};">
+              ${isApproved ? '✓ Access Granted' : '✕ Request Rejected'}
+            </span>
+          `}
+        </div>
+      </div>
     `;
   },
 

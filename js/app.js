@@ -304,7 +304,6 @@ const App = {
       connectors: () => ConnectorsScreen.render(),
       notifications: () => NotificationsScreen.render(),
       settings: () => SettingsScreen.render(),
-      connectors: () => ConnectorsScreen.render(),
       'user-approvals': () => UserApprovalsScreen.render(),
       billing: () => BillingScreen.render(),
       invoices: () => BillingScreen.render(),
@@ -399,21 +398,94 @@ const App = {
   renderNotifications() {
     const list = document.getElementById('notification-list');
     if (!list) return;
+
+    const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = user && user.role === 'Admin';
+    let googleHtml = '';
+
+    if (isAdmin && typeof Auth !== 'undefined' && Auth.getGoogleApprovalRequests) {
+      const googleRequests = Auth.getGoogleApprovalRequests();
+      const pendingGoogle = googleRequests.filter(r => r.status === 'pending');
+      if (pendingGoogle.length > 0) {
+        googleHtml = `
+          <div style="background:#F0F7FF;border-bottom:1px solid #BFDBFE;padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#1E40AF;text-transform:uppercase;letter-spacing:0.04em;">
+                <svg width="13" height="13" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                Google Login Approval (${pendingGoogle.length})
+              </div>
+              <a href="#user-approvals" onclick="App.closeNotifications();" style="font-size:11.5px;color:#2563EB;font-weight:600;text-decoration:none;">View All</a>
+            </div>
+            ${pendingGoogle.map(r => `
+              <div style="background:#FFFFFF;border:1px solid #DBEAFE;border-radius:6px;padding:10px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <div style="width:26px;height:26px;border-radius:50%;background:${r.color || '#2563EB'};color:#FFF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.avatar || 'GU'}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.name}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.email}</div>
+                  </div>
+                  <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:10px;">Pending</span>
+                </div>
+                <div style="font-size:11.5px;color:var(--color-text-secondary);margin-bottom:8px;">${r.department || 'Commercial PMO & Project Delivery'}</div>
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                  <button type="button" onclick="App.handleGoogleApproval('${r.id}', true)" style="padding:4px 10px;background:#059669;color:#FFF;border:none;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                    ✓ Accept
+                  </button>
+                  <button type="button" onclick="App.handleGoogleApproval('${r.id}', false)" style="padding:4px 8px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;">
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+
     const notifications = Store.getNotifications();
-    list.innerHTML = notifications.map(n => `
+    const standardHtml = notifications.map(n => `
       <div class="notification-item ${n.read?'':'unread'}" onclick="Store.markRead('${n.id}');App.renderNotifications();App.updateNotifDot()">
         ${!n.read ? '<div class="notification-dot"></div>' : '<div style="width:8px"></div>'}
         <div class="notification-content">
           <div class="notification-text">${n.text}</div>
           <div class="notification-time">${Utils.timeAgo(n.createdAt)}</div>
         </div>
-      </div>`).join('') || '<div style="padding:32px;text-align:center;color:var(--color-text-muted);font-size:13px">No notifications</div>';
+      </div>`).join('') || (!googleHtml ? '<div style="padding:32px;text-align:center;color:var(--color-text-muted);font-size:13px">No notifications</div>' : '');
+
+    list.innerHTML = googleHtml + standardHtml;
     this.updateNotifDot();
+  },
+
+  handleGoogleApproval(reqId, isApprove) {
+    if (typeof Auth === 'undefined') return;
+    if (isApprove) {
+      const res = Auth.approveGoogleRequest(reqId);
+      if (res.success && typeof Toast !== 'undefined') {
+        Toast.show(`✅ Approved Google login for ${res.request.name}!`, 'success');
+      }
+    } else {
+      const res = Auth.rejectGoogleRequest(reqId);
+      if (res.success && typeof Toast !== 'undefined') {
+        Toast.show(`Google login request rejected for ${res.request.name}.`, 'info');
+      }
+    }
+    this.renderNotifications();
+    this.updateNotifDot();
+    if (this.currentScreen === 'user-approvals' && typeof UserApprovalsScreen !== 'undefined') {
+      UserApprovalsScreen.refresh();
+    }
   },
 
   updateNotifDot() {
     const dot = document.getElementById('notif-dot');
-    const count = Store.getUnreadCount();
+    let count = Store.getUnreadCount();
+
+    const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = user && user.role === 'Admin';
+    if (isAdmin && typeof Auth !== 'undefined' && Auth.getPendingGoogleRequests) {
+      count += Auth.getPendingGoogleRequests().length;
+    }
+
     if (dot) {
       if (count > 0) {
         dot.classList.remove('hidden');

@@ -138,8 +138,9 @@ const FirebaseAuth = {
       }
       
       if (existingUser && existingUser.approved === false && !isAdmin) {
-        console.warn('[Auth] login blocked: user not approved:', emailLower);
-        return null;
+        // User exists but not approved — return status for UI
+        console.warn('[Auth] Google login requires approval:', emailLower);
+        return { approved: false, pending: true, user: existingUser };
       }
       
       if (!existingUser && !isAdmin) {
@@ -162,8 +163,10 @@ const FirebaseAuth = {
         };
         Auth.users.push(localUser);
         Auth._saveUserDb();
-        Auth._notifyAdminOfPendingRequest(localUser);
-        return null;
+        if (typeof Auth._notifyAdminOfPendingRequest === 'function') {
+          Auth._notifyAdminOfPendingRequest(localUser);
+        }
+        return { approved: false, pending: true, user: localUser };
       }
     }
 
@@ -218,6 +221,7 @@ const FirebaseAuth = {
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);
     }
+    return { approved: true, user: localUser };
   },
 
   async _createUserDocument(user, providerType, extra) {

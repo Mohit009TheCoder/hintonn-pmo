@@ -278,13 +278,13 @@ const Auth = {
     };
   },
 
-  _syncApprovalToFirebase(email, isApproved) {
+  _syncApprovalToFirebase(email, isApproved, isRejected = false) {
     if (typeof firebase !== 'undefined' && firebase.firestore && email) {
       try {
         firebase.firestore().collection('users').where('email', '==', email).get().then(snap => {
           if (!snap.empty) {
             snap.docs.forEach(doc => {
-              doc.ref.set({ isActive: isApproved, isRejected: !isApproved }, { merge: true }).catch(()=>{});
+              doc.ref.set({ isActive: isApproved, isRejected: isRejected }, { merge: true }).catch(()=>{});
             });
           }
         }).catch(()=>{});
@@ -342,7 +342,7 @@ const Auth = {
     req.reviewedAt = new Date().toISOString();
     this._saveGoogleRequests(requests);
 
-    this._syncApprovalToFirebase(req.email, false);
+    this._syncApprovalToFirebase(req.email, false, true);
 
     return { success: true, request: req };
   },
@@ -530,7 +530,7 @@ const Auth = {
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
       Store.addNotification({ type: 'user-approval', text: `❌ Access rejected for <strong>${user.name}</strong> (${user.email}).` });
     }
-    this._syncApprovalToFirebase(user.email, false);
+    this._syncApprovalToFirebase(user.email, false, true);
     return { success: true };
   },
 

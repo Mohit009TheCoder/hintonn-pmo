@@ -5,27 +5,37 @@ const ProjectsScreen = {
 
   _getFilteredProjects() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     let allProjects = Store.getProjects();
     let projects = allProjects;
 
-    // Strict Privacy: AI Developers only see projects containing tasks assigned to them OR where they are a member
-    if (isDeveloper) {
+    // Strict RBAC: Non-admin users only see projects where they are listed as an active team member or have tasks
+    if (isStandardUser) {
       const allTasks = Store.getTasks();
       const myTasks = allTasks.filter(task =>
-        task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId)
+        task.assigneeId === currentUser?.id ||
+        (userMemberId && task.assigneeId === userMemberId) ||
+        (currentUser?.id === 'preet' && task.assigneeId === 'm2') ||
+        (currentUser?.id === 'mohit' && task.assigneeId === 'm3') ||
+        (currentUser?.id === 'hirvi' && task.assigneeId === 'm4') ||
+        (currentUser?.memberId === 'm2' && task.assigneeId === 'preet') ||
+        (currentUser?.memberId === 'm3' && task.assigneeId === 'mohit') ||
+        (currentUser?.memberId === 'm4' && task.assigneeId === 'hirvi')
       );
       const myTaskProjectIds = new Set(myTasks.map(t => t.projectId));
 
-      // Also include projects where user is a listed member
+      // Also include projects where user is a listed team member
       const myMemberProjectIds = new Set(
         allProjects.filter(p =>
           Array.isArray(p.memberIds) && (
             p.memberIds.includes(userMemberId) ||
-            p.memberIds.includes(currentUser.id)
+            p.memberIds.includes(currentUser?.id) ||
+            (currentUser?.id === 'preet' && p.memberIds.includes('m2')) ||
+            (currentUser?.id === 'mohit' && p.memberIds.includes('m3')) ||
+            (currentUser?.id === 'hirvi' && p.memberIds.includes('m4'))
           )
         ).map(p => p.id)
       );
@@ -54,12 +64,12 @@ const ProjectsScreen = {
 
   render() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
     const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
     const allProjects = Store.getProjects();
     const projects = this._getFilteredProjects();
 
-    const subtitle = isDeveloper
+    const subtitle = isStandardUser
       ? `${projects.length} assigned projects · ${projects.filter(p=>p.status==='active').length} active`
       : `${allProjects.length} projects total · ${allProjects.filter(p=>p.status==='active').length} active`;
 
@@ -162,11 +172,12 @@ const ProjectsScreen = {
     const projects = this._getFilteredProjects();
     const allProjects = Store.getProjects();
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
 
     const subtitleEl = document.getElementById('projects-subtitle');
     if (subtitleEl) {
-      subtitleEl.textContent = isDeveloper
+      subtitleEl.textContent = isStandardUser
         ? `${projects.length} assigned projects · ${projects.filter(p=>p.status==='active').length} active`
         : `${allProjects.length} projects total · ${allProjects.filter(p=>p.status==='active').length} active`;
     }

@@ -11,11 +11,11 @@ const ConnectorsScreen = {
       id: 'firebase',
       category: 'notifications',
       name: 'Internal Notifications',
-      service: 'Firebase Cloud Messaging',
-      icon: 'firebase',
+      service: '',
+      icon: 'inbox',
       status: 'connected',
       statusLabel: 'Active · Real-time Push',
-      description: 'Push critical project notifications, milestone alerts, and high-priority commercial triggers via Firebase Cloud Messaging.',
+      description: 'Push critical project notifications, milestone alerts, and high-priority commercial triggers across team channels.',
       meta: [
         { label: 'Endpoints', value: '3 Active Channels' },
         { label: 'Latency', value: '38ms' },
@@ -164,8 +164,19 @@ const ConnectorsScreen = {
   ],
 
   render() {
-    const activeCount = Object.values(this._connections).filter(c => c.status === 'connected').length;
-    const availableCount = Object.values(this._connections).filter(c => c.status !== 'connected').length;
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+
+    // If non-admin is somehow on webhooks tab, fallback to 'all'
+    if (!isAdmin && this._tab === 'webhooks') {
+      this._tab = 'all';
+    }
+
+    const connectionsList = isAdmin
+      ? Object.values(this._connections)
+      : Object.values(this._connections).filter(c => c.id !== 'webhooks');
+    const totalConnectorsCount = connectionsList.length;
+    const activeCount = connectionsList.filter(c => c.status === 'connected').length;
     const totalFiles = this._filesList.length;
 
     return `
@@ -200,7 +211,7 @@ const ConnectorsScreen = {
             </div>
             <div class="kpi-info">
               <div class="kpi-label">Active Connections</div>
-              <div class="kpi-value">${activeCount} <span class="kpi-subtext">of 6 connected</span></div>
+              <div class="kpi-value">${activeCount} <span class="kpi-subtext">of ${totalConnectorsCount} connected</span></div>
             </div>
           </div>
           <div class="connector-kpi-card">
@@ -236,17 +247,19 @@ const ConnectorsScreen = {
         <div class="connectors-toolbar">
           <div class="connectors-tabs">
             <button class="connector-tab-btn ${this._tab === 'all' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('all')">
-              All Connectors (${Object.keys(this._connections).length})
-            </button>
-            <button class="connector-tab-btn ${this._tab === 'notifications' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('notifications')">
-              Notifications (1)
-            </button>
-            <button class="connector-tab-btn ${this._tab === 'webhooks' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('webhooks')">
-              Webhooks (1)
+              All Connectors (${totalConnectorsCount})
             </button>
             <button class="connector-tab-btn ${this._tab === 'datasources' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('datasources')">
               Data Sources (4)
             </button>
+            <button class="connector-tab-btn ${this._tab === 'notifications' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('notifications')">
+              Notifications (1)
+            </button>
+            ${isAdmin ? `
+              <button class="connector-tab-btn ${this._tab === 'webhooks' ? 'active' : ''}" onclick="ConnectorsScreen.setTab('webhooks')">
+                Webhooks (1)
+              </button>
+            ` : ''}
           </div>
           <div class="connectors-search-box">
             ${Icons.search}
@@ -260,26 +273,29 @@ const ConnectorsScreen = {
           </div>
         </div>
 
-        <!-- Section 1: Notifications -->
-        ${this._shouldShowSection('notifications') ? this._renderNotificationsSection() : ''}
+        <!-- Section 1: Data Sources -->
+        ${this._shouldShowSection('datasources') ? this._renderDataSourcesSection('01') : ''}
 
-        <!-- Section 2: Webhooks -->
-        ${this._shouldShowSection('webhooks') ? this._renderWebhooksSection() : ''}
+        <!-- Section 2: Notifications -->
+        ${this._shouldShowSection('notifications') ? this._renderNotificationsSection('02') : ''}
 
-        <!-- Section 3: Data Sources -->
-        ${this._shouldShowSection('datasources') ? this._renderDataSourcesSection() : ''}
+        <!-- Section 3: Webhooks (Admin Only) -->
+        ${isAdmin && this._shouldShowSection('webhooks') ? this._renderWebhooksSection('03') : ''}
 
         <!-- Files Upload & Document Manager Section -->
-        ${this._shouldShowFilesArea() ? this._renderFilesUploadSection() : ''}
+        ${this._shouldShowFilesArea() ? this._renderFilesUploadSection(isAdmin ? '04' : '03') : ''}
 
         <!-- Knowledge Layer Architecture Pipeline Section -->
-        ${this._renderKnowledgeLayerSection()}
+        ${this._renderKnowledgeLayerSection(isAdmin)}
 
       </div>
     `;
   },
 
   _shouldShowSection(sectionName) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (sectionName === 'webhooks' && !isAdmin) return false;
     if (this._tab !== 'all' && this._tab !== sectionName) return false;
     if (!this._searchQuery) return true;
     const query = this._searchQuery.toLowerCase();
@@ -288,7 +304,7 @@ const ConnectorsScreen = {
       return this._matchesSearch(this._connections.firebase, query);
     }
     if (sectionName === 'webhooks') {
-      return this._matchesSearch(this._connections.webhooks, query);
+      return isAdmin && this._matchesSearch(this._connections.webhooks, query);
     }
     if (sectionName === 'datasources') {
       return ['sheets', 'jira', 'slack', 'files'].some(k => this._matchesSearch(this._connections[k], query));
@@ -297,7 +313,9 @@ const ConnectorsScreen = {
   },
 
   _shouldShowFilesArea() {
-    if (this._tab === 'notifications' || this._tab === 'webhooks') return false;
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (this._tab === 'notifications' || (isAdmin && this._tab === 'webhooks')) return false;
     if (!this._searchQuery) return true;
     const query = this._searchQuery.toLowerCase();
     if (this._matchesSearch(this._connections.files, query)) return true;
@@ -311,13 +329,13 @@ const ConnectorsScreen = {
       item.description.toLowerCase().includes(query);
   },
 
-  _renderNotificationsSection() {
+  _renderNotificationsSection(sectionNumber = '02') {
     const fcm = this._connections.firebase;
     return `
       <div class="connector-group-section">
         <div class="connector-group-header">
           <div class="group-title-wrap">
-            <div class="group-indicator-pill">01</div>
+            <div class="group-indicator-pill">${sectionNumber}</div>
             <div>
               <h2 class="group-title">Notifications</h2>
               <p class="group-subtitle">Outbound notification dispatch and team push alerts</p>
@@ -340,13 +358,13 @@ const ConnectorsScreen = {
     `;
   },
 
-  _renderWebhooksSection() {
+  _renderWebhooksSection(sectionNumber = '03') {
     const wh = this._connections.webhooks;
     return `
       <div class="connector-group-section">
         <div class="connector-group-header">
           <div class="group-title-wrap">
-            <div class="group-indicator-pill">02</div>
+            <div class="group-indicator-pill">${sectionNumber}</div>
             <div>
               <h2 class="group-title">Webhooks</h2>
               <p class="group-subtitle">Event streaming and real-time payload integration for PMS lifecycle events</p>
@@ -369,7 +387,7 @@ const ConnectorsScreen = {
     `;
   },
 
-  _renderDataSourcesSection() {
+  _renderDataSourcesSection(sectionNumber = '01') {
     const sheets = this._connections.sheets;
     const jira = this._connections.jira;
     const slack = this._connections.slack;
@@ -379,7 +397,7 @@ const ConnectorsScreen = {
       <div class="connector-group-section">
         <div class="connector-group-header">
           <div class="group-title-wrap">
-            <div class="group-indicator-pill">03</div>
+            <div class="group-indicator-pill">${sectionNumber}</div>
             <div>
               <h2 class="group-title">Data Sources</h2>
               <p class="group-subtitle">Connect external project management repositories, spreadsheets, chat tools, and files</p>
@@ -459,7 +477,7 @@ const ConnectorsScreen = {
             ${iconSvg}
           </div>
           <div class="connector-header-text">
-            <div class="connector-service-tag">${connector.service}</div>
+            ${connector.service ? `<div class="connector-service-tag">${connector.service}</div>` : ''}
             <h3 class="connector-card-title">${connector.name}</h3>
           </div>
           <div class="connector-status-badge ${isConnected ? 'status-connected' : 'status-available'}">
@@ -500,12 +518,12 @@ const ConnectorsScreen = {
     `;
   },
 
-  _renderFilesUploadSection() {
+  _renderFilesUploadSection(sectionNumber = '04') {
     return `
       <div class="connector-group-section" id="files-upload-section">
         <div class="connector-group-header">
           <div class="group-title-wrap">
-            <div class="group-indicator-pill">04</div>
+            <div class="group-indicator-pill">${sectionNumber}</div>
             <div>
               <h2 class="group-title">Document Repository & File Ingestion</h2>
               <p class="group-subtitle">Upload project deliverables, specifications, contracts, and matrices to feed the AI Knowledge Layer</p>
@@ -656,7 +674,12 @@ const ConnectorsScreen = {
     }
   },
 
-  _renderKnowledgeLayerSection() {
+  _renderKnowledgeLayerSection(isAdmin = true) {
+    const sourcesDetail = isAdmin
+      ? 'FCM · Webhooks · Google Sheets · Jira · Slack · Files'
+      : 'FCM · Google Sheets · Jira · Slack · Files';
+    const streamCount = isAdmin ? '6 Data Streams' : '5 Data Streams';
+
     return `
       <div class="knowledge-layer-section">
         <div class="knowledge-layer-card">
@@ -685,10 +708,10 @@ const ConnectorsScreen = {
               <div class="flow-step-content">
                 <div class="flow-step-tag">Step 1</div>
                 <div class="flow-step-name">Connected Sources</div>
-                <div class="flow-step-detail">FCM · Webhooks · Google Sheets · Jira · Slack · Files</div>
+                <div class="flow-step-detail">${sourcesDetail}</div>
               </div>
               <div class="flow-step-status">
-                <span class="flow-status-dot"></span> 6 Data Streams
+                <span class="flow-status-dot"></span> ${streamCount}
               </div>
             </div>
 
@@ -951,11 +974,11 @@ const ConnectorsScreen = {
     const fcm = this._connections.firebase;
     const body = `
       <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
-        Configure Firebase Cloud Messaging (FCM) credentials and topic subscription rules for instant push notifications to project managers and AI developers.
+        Configure internal notification channels and topic subscription rules for instant push notifications to project managers and AI developers.
       </div>
 
       <div class="form-group">
-        <label class="form-label">FCM Project Service Account / API Key</label>
+        <label class="form-label">Project Service Account / API Key</label>
         <input type="password" class="form-input" id="fcm-key" value="${fcm.serverKey}" placeholder="AIzaSy...">
         <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">Key is encrypted with AES-256 in memory</div>
       </div>
@@ -983,7 +1006,7 @@ const ConnectorsScreen = {
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">Connection Health Status</div>
-            <div style="font-size:12px;color:var(--color-text-muted)">3 Mobile & Web endpoints receiving FCM signals</div>
+            <div style="font-size:12px;color:var(--color-text-muted)">3 Mobile & Web endpoints receiving notification signals</div>
           </div>
           <span class="badge badge-primary" style="font-size:11px">Connected</span>
         </div>
@@ -993,22 +1016,27 @@ const ConnectorsScreen = {
     const footer = `
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
       <button class="btn btn-secondary" onclick="ConnectorsScreen.testFCMPush();Modal.closeAll();">${Icons.zap} Send Test Signal</button>
-      <button class="btn btn-primary" onclick="Toast.show('FCM Notification settings updated', 'success');Modal.closeAll();">Save Changes</button>
+      <button class="btn btn-primary" onclick="Toast.show('Notification settings updated', 'success');Modal.closeAll();">Save Changes</button>
     `;
 
-    Modal.open('Internal Notifications — Firebase Cloud Messaging', body, footer, { large: true });
+    Modal.open('Internal Notifications — Dispatch Settings', body, footer, { large: true });
   },
 
   testFCMPush() {
-    Toast.show('Pushing test FCM notification to subscribed devices...', 'info');
+    Toast.show('Pushing test notification to subscribed devices...', 'info');
     setTimeout(() => {
-      Store._addNotification('system', 'FCM Test Alert: Real-time messaging signal verified successfully');
-      Toast.show('Firebase Cloud Messaging test push received!', 'success');
+      Store._addNotification('system', 'System Test Alert: Real-time messaging signal verified successfully');
+      Toast.show('Test push notification received!', 'success');
       App.updateNotifDot();
     }, 600);
   },
 
   openWebhookModal() {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (!currentUser || currentUser.role !== 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Only administrators can configure webhooks.', 'error');
+      return;
+    }
     const wh = this._connections.webhooks;
     const body = `
       <div style="font-size:13.5px;color:var(--color-text-secondary);margin-bottom:18px;line-height:1.5">
@@ -1057,6 +1085,11 @@ const ConnectorsScreen = {
   },
 
   testWebhookEvent() {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (!currentUser || currentUser.role !== 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Only administrators can test webhooks.', 'error');
+      return;
+    }
     Toast.show('Dispatching simulated event payload: "task.status_changed"...', 'info');
     setTimeout(() => {
       Toast.show('HTTP 200 OK — Webhook endpoint responded in 42ms', 'success');

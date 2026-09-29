@@ -20,6 +20,9 @@ const Auth = {
   ],
 
   currentUser: null,
+  getCurrentUser() {
+    return this.currentUser;
+  },
 
   // ─── Admin email whitelist — ONLY this email gets Admin role ───
   _ADMIN_EMAILS: ['mohithintonn@gmail.com'],

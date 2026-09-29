@@ -30,12 +30,18 @@ const Store = {
       if (!this._data.settings) this._data.settings = {};
       this._data.settings.currentUser = 'm2';
 
-      // Ensure tasks have start dates and valid developer assignees (Admin m1 excluded from tasks)
+      // Ensure tasks have start dates, valid assignees, and subtasks array (Admin m1 excluded from tasks)
       if (this._data.tasks) {
         this._data.tasks.forEach(t => {
           if (t.assigneeId === 'm5' || t.assigneeId === 'm1') t.assigneeId = 'm3';
           if (!t.startDate) {
             t.startDate = t.createdAt ? t.createdAt.split('T')[0] : (t.dueDate || '2026-08-01');
+          }
+          if (!Array.isArray(t.subtasks)) {
+            t.subtasks = [];
+          }
+          if (!Array.isArray(t.assigneeIds)) {
+            t.assigneeIds = t.assigneeId ? [t.assigneeId] : [];
           }
         });
       }
@@ -129,6 +135,10 @@ const Store = {
 
         if (remoteItems.length > 0) {
           if (colName === 'tasks') {
+            remoteItems.forEach(t => {
+              if (!Array.isArray(t.subtasks)) t.subtasks = [];
+              if (!Array.isArray(t.assigneeIds)) t.assigneeIds = t.assigneeId ? [t.assigneeId] : [];
+            });
             remoteItems.sort((a, b) => (a.order || 0) - (b.order || 0));
           } else if (colName === 'activities' || colName === 'comments') {
             remoteItems.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -242,24 +252,54 @@ const Store = {
   getTasks(projectId) { return projectId ? this._data.tasks.filter(t => t.projectId === projectId) : this._data.tasks; },
   getTask(id) { return this._data.tasks.find(t => t.id === id); },
   createTask(d) {
-    let assigneeId = d.assigneeId || '';
-    // Ayush Desai (Admin) can never be assigned a task
-    if (assigneeId === 'm1' || (assigneeId && this.getMember(assigneeId)?.role === 'Admin')) {
-      assigneeId = '';
+    let assigneeIds = [];
+    if (Array.isArray(d.assigneeIds)) {
+      assigneeIds = d.assigneeIds.slice();
+    } else if (d.assigneeId) {
+      assigneeIds = [d.assigneeId];
     }
-    const t = { id: this._genId(), projectId: d.projectId, title: d.title, description: d.description||'',
-      status: d.status||'todo', priority: d.priority||'medium', assigneeId: assigneeId,
+    // Ayush Desai (Admin) can never be assigned a task
+    assigneeIds = assigneeIds.filter(id => id && id !== 'm1' && this.getMember(id)?.role !== 'Admin');
+    assigneeIds = [...new Set(assigneeIds)];
+    const assigneeId = assigneeIds[0] || '';
+
+    const isPersonal = Boolean(d.isPersonal || d.type === 'personal' || !d.projectId);
+    const completed = Boolean(d.completed || d.status === 'done');
+    const subtasks = Array.isArray(d.subtasks)
+      ? d.subtasks.map((st, idx) => ({
+          id: st.id || ('st-' + Date.now().toString(36) + '-' + idx),
+          title: typeof st === 'string' ? st : (st.title || ''),
+          completed: Boolean(st.completed)
+        }))
+      : [];
+
+    const authUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const creatorId = d.creatorId || (authUser ? (authUser.id || authUser.memberId || '') : '');
+    const createdBy = d.createdBy || (authUser ? (authUser.name || '') : '');
+
+    const t = { id: this._genId(), projectId: d.projectId || '', title: d.title, description: d.description||'',
+      isPersonal: isPersonal,
+      completed: completed,
+      status: d.status || (completed ? 'done' : 'todo'), priority: d.priority||'medium',
+      assigneeId: assigneeId,
+      assigneeIds: assigneeIds,
+      creatorId: creatorId,
+      createdBy: createdBy,
+      subtasks: subtasks,
       startDate: d.startDate || new Date().toISOString().split('T')[0],
       dueDate: d.dueDate||'', tags: d.tags||[], order: this._data.tasks.filter(x=>x.projectId===d.projectId).length,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.tasks.push(t);
-    const proj = this.getProject(t.projectId);
-    if (proj) {
-      proj.taskIds.push(t.id);
-      this._recalcProgress(t.projectId);
-      this._syncToFirestore('projects', proj.id, proj);
+    if (t.projectId) {
+      const proj = this.getProject(t.projectId);
+      if (proj) {
+        if (!Array.isArray(proj.taskIds)) proj.taskIds = [];
+        proj.taskIds.push(t.id);
+        this._recalcProgress(t.projectId);
+        this._syncToFirestore('projects', proj.id, proj);
+      }
     }
-    this._addActivity('task', `Created task <strong>${t.title}</strong>${proj ? ` in ${proj.name}` : ''}`);
+    this._addActivity('task', `Created ${isPersonal ? 'personal ' : ''}task <strong>${t.title}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('tasks', t.id, t);
     return t;
@@ -268,9 +308,33 @@ const Store = {
     const t = this.getTask(id); if (!t) return null;
     const oldStatus = t.status;
     const updateData = { ...d };
-    // Ayush Desai (Admin) can never be assigned a task
-    if (updateData.assigneeId === 'm1' || (updateData.assigneeId && this.getMember(updateData.assigneeId)?.role === 'Admin')) {
-      delete updateData.assigneeId;
+
+    // Multi-assignee synchronization
+    if (updateData.assigneeIds !== undefined || updateData.assigneeId !== undefined) {
+      let rawAssignees = [];
+      if (Array.isArray(updateData.assigneeIds)) {
+        rawAssignees = updateData.assigneeIds.slice();
+      } else if (updateData.assigneeId) {
+        rawAssignees = [updateData.assigneeId];
+      }
+      let cleanedAssignees = rawAssignees.filter(mid => mid && mid !== 'm1' && this.getMember(mid)?.role !== 'Admin');
+      cleanedAssignees = [...new Set(cleanedAssignees)];
+      updateData.assigneeIds = cleanedAssignees;
+      updateData.assigneeId = cleanedAssignees[0] || '';
+    }
+
+    if (updateData.completed !== undefined) {
+      updateData.completed = Boolean(updateData.completed);
+      if (t.isPersonal && !updateData.status) {
+        updateData.status = updateData.completed ? 'done' : 'todo';
+      }
+    }
+    if (Array.isArray(updateData.subtasks)) {
+      updateData.subtasks = updateData.subtasks.map((st, idx) => ({
+        id: st.id || ('st-' + Date.now().toString(36) + '-' + idx),
+        title: typeof st === 'string' ? st : (st.title || ''),
+        completed: Boolean(st.completed)
+      }));
     }
     Object.assign(t, updateData, { updatedAt: new Date().toISOString() });
     if (d.status && d.status !== oldStatus) {
@@ -282,6 +346,47 @@ const Store = {
       if (proj) this._syncToFirestore('projects', proj.id, proj);
     }
     this._save(); this._notify();
+    this._syncToFirestore('tasks', t.id, t);
+    return t;
+  },
+  toggleSubtask(taskId, subtaskId, completed) {
+    const t = this.getTask(taskId);
+    if (!t) return null;
+    if (!Array.isArray(t.subtasks)) t.subtasks = [];
+    const st = t.subtasks.find(s => s.id === subtaskId);
+    if (st) {
+      st.completed = completed !== undefined ? Boolean(completed) : !st.completed;
+      t.updatedAt = new Date().toISOString();
+      this._save();
+      this._notify();
+      this._syncToFirestore('tasks', t.id, t);
+    }
+    return t;
+  },
+  addSubtask(taskId, title) {
+    const t = this.getTask(taskId);
+    if (!t) return null;
+    if (!Array.isArray(t.subtasks)) t.subtasks = [];
+    const newSt = {
+      id: 'st-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+      title: (title || '').trim(),
+      completed: false
+    };
+    t.subtasks.push(newSt);
+    t.updatedAt = new Date().toISOString();
+    this._save();
+    this._notify();
+    this._syncToFirestore('tasks', t.id, t);
+    return newSt;
+  },
+  deleteSubtask(taskId, subtaskId) {
+    const t = this.getTask(taskId);
+    if (!t) return null;
+    if (!Array.isArray(t.subtasks)) t.subtasks = [];
+    t.subtasks = t.subtasks.filter(s => s.id !== subtaskId);
+    t.updatedAt = new Date().toISOString();
+    this._save();
+    this._notify();
     this._syncToFirestore('tasks', t.id, t);
     return t;
   },
@@ -744,7 +849,7 @@ const Store = {
   // Progress calc
   _recalcProgress(projectId) {
     const proj = this.getProject(projectId); if (!proj) return;
-    const tasks = this.getTasks(projectId);
+    const tasks = this.getTasks(projectId).filter(t => !t.isPersonal);
     if (tasks.length === 0) { proj.progress = 0; return; }
     proj.progress = Math.round((tasks.filter(t => t.status === 'done').length / tasks.length) * 100);
   },

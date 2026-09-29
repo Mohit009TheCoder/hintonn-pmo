@@ -22,6 +22,29 @@ const TeamScreen = {
     this.refresh();
   },
 
+  toggleCardMenu(memberId) {
+    const menu = document.getElementById(`team-card-menu-${memberId}`);
+    if (!menu) return;
+    const isShowing = menu.style.display === 'block';
+    this.closeAllCardMenus();
+    if (!isShowing) {
+      menu.style.display = 'block';
+      const closeHandler = (e) => {
+        if (!e.target.closest(`#team-card-btn-${memberId}`) && !e.target.closest(`#team-card-menu-${memberId}`)) {
+          this.closeAllCardMenus();
+          document.removeEventListener('click', closeHandler);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeHandler), 0);
+    }
+  },
+
+  closeAllCardMenus() {
+    document.querySelectorAll('.team-card-menu-dropdown').forEach(el => {
+      el.style.display = 'none';
+    });
+  },
+
   refresh() {
     const content = document.getElementById('page-content');
     if (content && typeof App !== 'undefined' && App.currentScreen === 'team') {
@@ -632,32 +655,47 @@ const TeamScreen = {
           return `<div class="section-card team-card" style="padding:0;overflow:hidden;border:1px solid var(--color-border);border-radius:var(--radius-lg);">
             <!-- Card Header -->
             <div style="padding:20px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-              <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
-                <div class="avatar avatar-xl" style="background:${m.color};font-weight:700;font-size:18px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;">${initials}</div>
-                <div style="min-width:0;flex:1;overflow:hidden;">
-                  <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:8px;" title="${m.name}">
-                    ${m.name}
+              <div style="display:flex;align-items:flex-start;gap:14px;min-width:0;flex:1;">
+                <div class="avatar avatar-xl" style="background:${m.color};font-weight:700;font-size:18px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-top:2px;">${initials}</div>
+                <div style="min-width:0;flex:1;width:100%;">
+                  <div class="team-member-name" style="font-size:16px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);white-space:normal;overflow:visible;text-overflow:unset;word-break:break-word;display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.3;" title="${m.name}">
+                    <span>${m.name}</span>
                     ${isYou ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 7px;border-radius:var(--radius-pill);font-weight:600;flex-shrink:0;">You</span>' : ''}
                   </div>
-                  <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:1px;font-weight:500;" title="${designationText}">${designationText}</div>
-                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:1px;" title="${m.email}">${m.email}</div>
+                  <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:3px;font-weight:500;white-space:normal;word-break:break-word;" title="${designationText}">${designationText}</div>
+                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;white-space:normal;word-break:break-word;" title="${m.email}">${m.email}</div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-                <button type="button" class="btn btn-ghost btn-xs" onclick="TeamScreen.openMemberProfile('${m.id}')" title="View full work profile" style="font-size:11px;color:var(--color-primary-700);font-weight:600;padding:3px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);display:inline-flex;align-items:center;gap:4px;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  Profile
+              <div class="team-card-actions" style="position:relative;flex-shrink:0;margin-left:8px;">
+                <button type="button" class="btn btn-ghost btn-xs team-card-menu-btn" 
+                  id="team-card-btn-${m.id}" 
+                  onclick="event.stopPropagation();TeamScreen.toggleCardMenu('${m.id}')" 
+                  title="Member options"
+                  aria-label="Member options"
+                  style="width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm, 6px);border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;transition:all 120ms;">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
                 </button>
-                ${isAdmin ? `
-                  <button type="button" class="btn btn-ghost btn-xs" onclick="TeamScreen.openEditRoleModal('${m.id}')" title="Edit Role" style="font-size:11px;color:var(--color-text-muted);padding:3px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);display:inline-flex;align-items:center;gap:4px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    Role
+                <div id="team-card-menu-${m.id}" class="team-card-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--color-surface,#FFF);border:1px solid var(--color-border,#E5E7EB);border-radius:var(--radius-md, 8px);box-shadow:var(--shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1));z-index:50;min-width:130px;overflow:hidden;padding:4px 0;">
+                  <button type="button" class="team-menu-item" onclick="TeamScreen.closeAllCardMenus();TeamScreen.openMemberProfile('${m.id}')" style="width:100%;padding:8px 12px;border:none;background:transparent;color:var(--color-text-primary,#111827);font-size:13px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 120ms;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="color:var(--color-primary,#2563EB);"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span>Profile</span>
                   </button>
-                  <button type="button" class="btn btn-ghost btn-xs" onclick="TeamScreen.openRemoveMemberModal('${m.id}')" title="Remove member" style="font-size:11px;color:#DC2626;padding:3px 8px;border:1px solid #FECACA;border-radius:var(--radius-sm);background:#FEF2F2;display:inline-flex;align-items:center;gap:4px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Remove
-                  </button>
-                ` : ''}
+                  ${isAdmin ? `
+                    <button type="button" class="team-menu-item" onclick="TeamScreen.closeAllCardMenus();TeamScreen.openEditRoleModal('${m.id}')" style="width:100%;padding:8px 12px;border:none;background:transparent;color:var(--color-text-primary,#111827);font-size:13px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 120ms;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="color:var(--color-text-muted,#64748B);"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                      <span>Role</span>
+                    </button>
+                    <div style="height:1px;background:var(--color-border,#E5E7EB);margin:4px 0;"></div>
+                    <button type="button" class="team-menu-item" onclick="TeamScreen.closeAllCardMenus();TeamScreen.openRemoveMemberModal('${m.id}')" style="width:100%;padding:8px 12px;border:none;background:transparent;color:#DC2626;font-size:13px;font-weight:500;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 120ms;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <span>Remove</span>
+                    </button>
+                  ` : ''}
+                </div>
               </div>
             </div>
 

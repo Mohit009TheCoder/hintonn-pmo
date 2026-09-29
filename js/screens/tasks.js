@@ -1,43 +1,94 @@
-// ─── Tasks Screen ───
+// ─── Tasks Screen (Bifurcated Kanban: Assigned Project Tasks vs Personal Tasks & Shared Project Collaboration) ───
 const TasksScreen = {
   _view: 'kanban',
   _filter: { project: '', status: '', priority: '', assignee: '', search: '' },
   _dragTask: null,
+  _modalSubtasks: [],
+
+  _isUserTask(t, currentUser) {
+    if (!t || !currentUser) return false;
+    const userMemberId = currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '');
+    const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0
+      ? t.assigneeIds
+      : (t.assigneeId ? [t.assigneeId] : []);
+
+    return ids.some(id =>
+      id === currentUser.id ||
+      (userMemberId && id === userMemberId) ||
+      (currentUser.id === 'preet' && id === 'm2') ||
+      (currentUser.id === 'mohit' && id === 'm3') ||
+      (currentUser.id === 'hirvi' && id === 'm4') ||
+      (currentUser.memberId === 'm2' && id === 'preet') ||
+      (currentUser.memberId === 'm3' && id === 'mohit') ||
+      (currentUser.memberId === 'm4' && id === 'hirvi')
+    );
+  },
+
+  _isUserCollaboratorOnProject(projectId, currentUser) {
+    if (!projectId || !currentUser) return false;
+    if (currentUser.role === 'Admin') return true;
+    const project = Store.getProject(projectId);
+    if (!project) return false;
+    const userMemberId = currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '');
+    return Array.isArray(project.memberIds) && (
+      project.memberIds.includes(userMemberId) ||
+      project.memberIds.includes(currentUser.id) ||
+      (currentUser.id === 'preet' && project.memberIds.includes('m2')) ||
+      (currentUser.id === 'mohit' && project.memberIds.includes('m3')) ||
+      (currentUser.id === 'hirvi' && project.memberIds.includes('m4'))
+    );
+  },
 
   _getFilteredTasks() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
-    const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
+    const isStandardUser = !isAdmin;
 
     let tasks = Store.getTasks();
 
-    // Strict Individual Task Privacy for AI Developers
-    if (isDeveloper) {
-      tasks = tasks.filter(task =>
-        task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId)
-      );
+    if (isAdmin) {
+      tasks = tasks.filter(t => !t.isPersonal);
+    } else if (isStandardUser) {
+      if (this._filter.project) {
+        // Shared Project Visibility: Any user assigned to this project can view all tasks in this project
+        const isMember = this._isUserCollaboratorOnProject(this._filter.project, currentUser);
+        tasks = tasks.filter(t => 
+          (t.projectId === this._filter.project && isMember) || 
+          (t.isPersonal && this._isUserTask(t, currentUser))
+        );
+      } else {
+        // "All Projects" view: show tasks assigned to user + tasks from shared projects they belong to + user's personal tasks
+        tasks = tasks.filter(t => 
+          (t.isPersonal && this._isUserTask(t, currentUser)) ||
+          this._isUserTask(t, currentUser) ||
+          (t.projectId && this._isUserCollaboratorOnProject(t.projectId, currentUser))
+        );
+      }
     }
 
-    if (this._filter.project) tasks = tasks.filter(t => t.projectId === this._filter.project);
+    if (this._filter.project) tasks = tasks.filter(t => t.projectId === this._filter.project || (!isAdmin && t.isPersonal));
     if (this._filter.status) tasks = tasks.filter(t => t.status === this._filter.status);
     if (this._filter.priority) tasks = tasks.filter(t => t.priority === this._filter.priority);
-    if (isAdmin && this._filter.assignee) tasks = tasks.filter(t => t.assigneeId === this._filter.assignee);
+    if (isAdmin && this._filter.assignee) {
+      tasks = tasks.filter(t => {
+        const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        return ids.includes(this._filter.assignee);
+      });
+    }
 
-    // Standardized real-time case-insensitive substring search: title, description, project.name, assignee.name
+    // Real-time search: title, description, project.name, assignee.name
     if (this._filter.search) {
       const q = this._filter.search.toLowerCase().trim();
       tasks = tasks.filter(t => {
         const proj = Store.getProject(t.projectId);
-        const m = Store.getMember(t.assigneeId);
+        const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        const assigneeNames = ids.map(id => Store.getMember(id)?.name?.toLowerCase() || '').join(' ');
         const projName = proj ? proj.name.toLowerCase() : '';
-        const assigneeName = m ? m.name.toLowerCase() : '';
         return (
           (t.title && t.title.toLowerCase().includes(q)) ||
           (t.description && t.description.toLowerCase().includes(q)) ||
           projName.includes(q) ||
-          assigneeName.includes(q)
+          assigneeNames.includes(q)
         );
       });
     }
@@ -48,16 +99,31 @@ const TasksScreen = {
   render() {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isStandardUser = !isAdmin;
+    const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
-    const allTasks = Store.getTasks();
+    const allTasks = isAdmin ? Store.getTasks().filter(t => !t.isPersonal) : Store.getTasks();
     const tasks = this._getFilteredTasks();
 
-    const projects = Store.getProjects();
+    const allProjects = Store.getProjects();
+    const projects = isStandardUser
+      ? allProjects.filter(p =>
+          Array.isArray(p.memberIds) && (
+            p.memberIds.includes(userMemberId) ||
+            p.memberIds.includes(currentUser?.id) ||
+            (currentUser?.id === 'preet' && p.memberIds.includes('m2')) ||
+            (currentUser?.id === 'mohit' && p.memberIds.includes('m3')) ||
+            (currentUser?.id === 'hirvi' && p.memberIds.includes('m4'))
+          )
+        )
+      : allProjects;
+
     const assignees = Store.getAssignees();
 
-    const subtitle = isDeveloper
-      ? `${tasks.length} tasks assigned to you · ${tasks.filter(t=>t.status==='done').length} completed`
+    const subtitle = isStandardUser
+      ? (this._filter.project
+          ? `${tasks.filter(t=>!t.isPersonal).length} project tasks · ${tasks.filter(t=>t.status==='done').length} completed`
+          : `${tasks.length} tasks (${tasks.filter(t=>!t.isPersonal).length} assigned, ${tasks.filter(t=>t.isPersonal).length} personal) · ${tasks.filter(t=>t.status==='done').length} completed`)
       : `${allTasks.length} total · ${allTasks.filter(t=>t.status==='done').length} completed`;
 
     return `
@@ -71,10 +137,11 @@ const TasksScreen = {
             <button id="tasks-view-board-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('kanban')" style="${this._view==='kanban'?'background:var(--color-surface-subtle)':''}">Board</button>
             <button id="tasks-view-list-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('list')" style="${this._view==='list'?'background:var(--color-surface-subtle)':''}">List</button>
           </div>
-          ${isAdmin ? `<button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>` : ''}
+          <button id="tasks-create-btn" class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} Create Task</button>
         </div>
       </div>
 
+      <!-- Restored Clean Filter Bar -->
       <div class="filter-bar" id="tasks-filter-bar">
         <div class="search-input-wrap">
           <span class="search-icon">${Icons.search}</span>
@@ -83,16 +150,19 @@ const TasksScreen = {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <select class="form-select" id="task-filter-project" style="width:140px" onchange="TasksScreen.handleFilterChange('project', this.value)">
+        
+        <select class="form-select" id="task-filter-project" style="width:160px" onchange="TasksScreen.handleFilterChange('project', this.value)">
           <option value="">All Projects</option>
           ${projects.map(p => `<option value="${p.id}" ${this._filter.project===p.id?'selected':''}>${p.name}</option>`).join('')}
         </select>
+        
         <select class="form-select" id="task-filter-priority" style="width:120px" onchange="TasksScreen.handleFilterChange('priority', this.value)">
           <option value="">All Priority</option>
           <option value="high" ${this._filter.priority==='high'?'selected':''}>High</option>
           <option value="medium" ${this._filter.priority==='medium'?'selected':''}>Medium</option>
           <option value="low" ${this._filter.priority==='low'?'selected':''}>Low</option>
         </select>
+        
         <select class="form-select" id="task-filter-status" style="width:130px" onchange="TasksScreen.handleFilterChange('status', this.value)">
           <option value="">All Status</option>
           <option value="todo" ${this._filter.status==='todo'?'selected':''}>To Do</option>
@@ -100,6 +170,7 @@ const TasksScreen = {
           <option value="review" ${this._filter.status==='review'?'selected':''}>Review</option>
           <option value="done" ${this._filter.status==='done'?'selected':''}>Done</option>
         </select>
+        
         ${isAdmin ? `
         <select class="form-select" id="task-filter-assignee" style="width:140px" onchange="TasksScreen.handleFilterChange('assignee', this.value)">
           <option value="">All Assignees</option>
@@ -152,14 +223,17 @@ const TasksScreen = {
 
   updateTasksContainer() {
     const tasks = this._getFilteredTasks();
-    const allTasks = Store.getTasks();
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
+    const allTasks = isAdmin ? Store.getTasks().filter(t => !t.isPersonal) : Store.getTasks();
 
     const subtitleEl = document.getElementById('tasks-subtitle');
     if (subtitleEl) {
-      subtitleEl.textContent = isDeveloper
-        ? `${tasks.length} tasks assigned to you · ${tasks.filter(t=>t.status==='done').length} completed`
+      subtitleEl.textContent = isStandardUser
+        ? (this._filter.project
+            ? `${tasks.filter(t=>!t.isPersonal).length} project tasks · ${tasks.filter(t=>t.status==='done').length} completed`
+            : `${tasks.length} tasks (${tasks.filter(t=>!t.isPersonal).length} assigned, ${tasks.filter(t=>t.isPersonal).length} personal) · ${tasks.filter(t=>t.status==='done').length} completed`)
         : `${allTasks.length} total · ${allTasks.filter(t=>t.status==='done').length} completed`;
     }
 
@@ -169,12 +243,6 @@ const TasksScreen = {
     } else {
       this.refresh();
       return;
-    }
-
-    // Ensure search input focus is never lost
-    const searchInput = document.getElementById('task-search-input');
-    if (searchInput && document.activeElement !== searchInput && this._filter.search) {
-      // Keep focus intact
     }
   },
 
@@ -197,85 +265,398 @@ const TasksScreen = {
         <div class="empty-state">
           <div class="empty-state-icon">${Icons.checkSquare}</div>
           <h3>No tasks found</h3>
-          <p>${this._filter.project || this._filter.priority || this._filter.status || (isAdmin && this._filter.assignee) ? 'Try adjusting your filters.' : (isAdmin ? 'Create your first task to get started.' : 'No tasks are assigned to you yet.')}</p>
-          ${isAdmin ? `<button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} New Task</button>` : ''}
+          <p>${this._filter.project || this._filter.priority || this._filter.status || this._filter.assignee ? 'Try adjusting your filters.' : 'Create your first task to get started.'}</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+            <button class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} Create Project Task</button>
+            ${!isAdmin ? `<button class="btn btn-secondary" onclick="TasksScreen.openAddPersonalTaskModal('todo')">${Icons.plus} Add Personal Task</button>` : ''}
+          </div>
         </div>
       `;
     }
     return this._view === 'kanban' ? this._renderKanban(tasks) : this._renderList(tasks);
   },
 
+  // ─── Bifurcated Kanban Column Rendering (Assigned to Me, Shared Work, Personal Tasks in To Do) ───
   _renderKanban(tasks) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
     const columns = [
       { status: 'todo', label: 'To Do', color: 'var(--color-text-disabled)' },
       { status: 'in-progress', label: 'In Progress', color: 'var(--color-primary)' },
       { status: 'review', label: 'Review', color: 'var(--color-ai)' },
       { status: 'done', label: 'Done', color: 'var(--color-success-500)' }
     ];
-    return `<div class="kanban">${columns.map(col => {
-      const colTasks = tasks.filter(t => t.status === col.status);
-      return `<div class="kanban-column">
-        <div class="kanban-column-header">
-          <span style="width:10px;height:10px;border-radius:50%;background:${col.color}"></span>
-          <span class="kanban-column-title">${col.label}</span>
-          <span class="kanban-column-count">${colTasks.length}</span>
-        </div>
-        <div class="kanban-cards" data-status="${col.status}"
-          ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'${col.status}')" ondragleave="TasksScreen.onDragLeave(event)">
-          ${colTasks.sort((a,b)=>a.order-b.order).map(t => this._renderKanbanCard(t)).join('')}
-        </div>
-      </div>`;
-    }).join('')}</div>`;
+
+    // All personal tasks are localized and anchored inside "To Do" (Standard User Only)
+    const personalTasks = isAdmin ? [] : tasks.filter(t => t.isPersonal);
+
+    return `
+      <div class="kanban">
+        ${columns.map(col => {
+          // Official project tasks for this specific column
+          const projectTasks = tasks.filter(t => !t.isPersonal && t.status === col.status);
+          const colTotalCount = (!isAdmin && col.status === 'todo') ? (projectTasks.length + personalTasks.length) : projectTasks.length;
+
+          // "To Do" Column: Three clean sections (Assigned to Me, Project Tasks / Shared Work, Personal Tasks for standard users)
+          if (col.status === 'todo') {
+            const assignedTasks = projectTasks.filter(t => this._isUserTask(t, currentUser));
+            const sharedTasks = projectTasks.filter(t => !this._isUserTask(t, currentUser));
+
+            return `
+              <div class="kanban-bifurcated-column">
+                
+                <!-- Main Column Status Header -->
+                <div class="kanban-column-top-header">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:10px;height:10px;border-radius:50%;background:${col.color};display:inline-block;"></span>
+                    <span class="kanban-column-title" style="font-size:14px;font-weight:700;">${col.label}</span>
+                  </div>
+                  <span class="kanban-column-count">${colTotalCount}</span>
+                </div>
+
+                <!-- TOP SUB-SECTION: Assigned to Me -->
+                <div class="kanban-subcolumn-section">
+                  <div class="kanban-subcolumn-header">
+                    <span class="kanban-subcolumn-title">
+                      <svg style="width:12px;height:12px;color:var(--color-primary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      ASSIGNED TO ME
+                    </span>
+                    <span class="kanban-subcolumn-badge">${assignedTasks.length}</span>
+                  </div>
+                  
+                  <div class="kanban-subcolumn-cards" data-status="todo" data-section="assigned"
+                    ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'todo')" ondragleave="TasksScreen.onDragLeave(event)">
+                    ${assignedTasks.length === 0 ? `
+                      <div class="kanban-subcolumn-empty">No assigned tasks</div>
+                    ` : assignedTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
+                  </div>
+                </div>
+
+                <!-- MIDDLE SUB-SECTION: Project Tasks / Shared Work -->
+                <div class="kanban-subcolumn-section" style="border-top:1px solid var(--color-border);padding-top:10px;">
+                  <div class="kanban-subcolumn-header">
+                    <span class="kanban-subcolumn-title" style="color:var(--color-text-secondary);">
+                      <svg style="width:12px;height:12px;color:var(--color-text-secondary);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      PROJECT TASKS / SHARED WORK
+                    </span>
+                    <span class="kanban-subcolumn-badge">${sharedTasks.length}</span>
+                  </div>
+                  
+                  <div class="kanban-subcolumn-cards" data-status="todo" data-section="shared"
+                    ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'todo')" ondragleave="TasksScreen.onDragLeave(event)">
+                    ${sharedTasks.length === 0 ? `
+                      <div class="kanban-subcolumn-empty">No shared project tasks</div>
+                    ` : sharedTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
+                  </div>
+                </div>
+
+                <!-- BOTTOM SUB-SECTION: Personal Tasks (Standard User Role Only) -->
+                ${!isAdmin ? `
+                <div class="kanban-subcolumn-section" style="border-top:1px dashed var(--color-border);padding-top:10px;">
+                  <div class="kanban-subcolumn-header">
+                    <span class="kanban-subcolumn-title" style="color:#7E22CE;">
+                      <svg style="width:12px;height:12px;color:#8B2CF5;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      PERSONAL TASKS
+                    </span>
+                    <button type="button" class="btn btn-ghost btn-xs add-personal-btn" onclick="TasksScreen.promptAddPersonalTask()" title="Add personal task" style="color:var(--color-primary);font-weight:600;padding:1px 6px;height:22px;border:1px solid var(--color-border);background:var(--color-surface);border-radius:4px;">
+                      ${Icons.plus} Add
+                    </button>
+                  </div>
+
+                  <div class="kanban-subcolumn-cards personal-subcolumn-cards" data-status="todo" data-section="personal">
+                    ${personalTasks.length === 0 ? `
+                      <div class="kanban-subcolumn-empty" style="cursor:pointer;" onclick="TasksScreen.promptAddPersonalTask()">
+                        + Add Personal Task
+                      </div>
+                    ` : personalTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderPersonalTaskCard(t)).join('')}
+                  </div>
+                </div>
+                ` : ''}
+
+              </div>
+            `;
+          }
+
+          // "In Progress", "Review", "Done" Columns: Clean Single Layout (All project tasks directly under header)
+          return `
+            <div class="kanban-column">
+              
+              <!-- Main Column Status Header -->
+              <div class="kanban-column-top-header" style="margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="width:10px;height:10px;border-radius:50%;background:${col.color};display:inline-block;"></span>
+                  <span class="kanban-column-title" style="font-size:14px;font-weight:700;">${col.label}</span>
+                </div>
+                <span class="kanban-column-count">${projectTasks.length}</span>
+              </div>
+
+              <!-- Direct Full-Height Cards Container for Project Tasks -->
+              <div class="kanban-cards kanban-full-cards" data-status="${col.status}"
+                ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'${col.status}')" ondragleave="TasksScreen.onDragLeave(event)">
+                ${projectTasks.length === 0 ? `
+                  <div class="kanban-subcolumn-empty" style="margin-top:4px;">No tasks in ${col.label.toLowerCase()}</div>
+                ` : projectTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
+              </div>
+
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   },
 
+  // ─── Project Task Kanban Card (with Overlapping Avatar Stack [PB][MJ][HS]) ───
   _renderKanbanCard(t) {
-    const m = Store.getMember(t.assigneeId);
     const proj = Store.getProject(t.projectId);
     const isOverdue = Utils.isOverdue(t.dueDate) && t.status !== 'done';
-    return `<div class="kanban-card" draggable="true" data-task-id="${t.id}"
-      ondragstart="TasksScreen.onDragStart(event,'${t.id}')" ondragend="TasksScreen.onDragEnd(event)"
-      onclick="TasksScreen.openDetailModal('${t.id}')">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <span class="badge badge-${t.priority}" style="font-size:10px;padding:1px 6px">${Utils.humanize(t.priority)}</span>
-        ${proj ? `<span style="font-size:10px;color:var(--color-text-disabled)">${Utils.truncate(proj.name, 20)}</span>` : ''}
-      </div>
-      <div class="kanban-card-title">${t.title}</div>
-      <div class="kanban-card-meta">
-        <div class="kanban-card-assignee">
-          ${m ? `<div class="avatar" style="background:${m.color};width:22px;height:22px;font-size:9px">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span>${m.name.split(' ')[0]}</span>` : ''}
+    const subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const totalSt = subtasks.length;
+    const completedSt = subtasks.filter(s => s.completed).length;
+    const allCompleted = totalSt > 0 && completedSt === totalSt;
+
+    const assigneeIds = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0
+      ? t.assigneeIds
+      : (t.assigneeId ? [t.assigneeId] : []);
+    const members = assigneeIds.map(id => Store.getMember(id)).filter(Boolean);
+
+    let assigneeMarkup = '';
+    if (members.length === 0) {
+      assigneeMarkup = `<span style="font-size:11px;color:var(--color-text-disabled);">Unassigned</span>`;
+    } else if (members.length === 1) {
+      const m = members[0];
+      const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+      const memberColor = m.color || '#2563EB';
+      assigneeMarkup = `
+        <div class="avatar avatar-badge" style="background:${memberColor};width:24px;height:24px;font-size:10px;font-weight:700;color:#FFFFFF;border:1.5px solid #FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.1);display:inline-flex;align-items:center;justify-content:center;border-radius:50%;" title="Assigned to ${m.name}">
+          ${initials}
         </div>
-        ${t.dueDate ? `<div class="kanban-card-due ${isOverdue?'overdue':''}">${Icons.clock} ${Utils.formatDate(t.dueDate)}</div>` : ''}
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-primary);">${m.name.split(' ')[0]}</span>
+      `;
+    } else {
+      // Overlapping Avatar Stack [PB][MJ][HS] for multi-assignee tasks
+      assigneeMarkup = `
+        <div class="avatar-stack" title="Assigned to: ${members.map(m=>m.name).join(', ')}">
+          ${members.map((mem, idx) => {
+            const initials = mem.initials || mem.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+            const color = mem.color || '#2563EB';
+            return `
+              <div class="avatar avatar-stack-item" style="background:${color};width:24px;height:24px;font-size:9.5px;font-weight:700;color:#FFFFFF;border:2px solid var(--color-surface, #FFFFFF);box-shadow:0 1px 2px rgba(0,0,0,0.12);display:inline-flex;align-items:center;justify-content:center;border-radius:50%;margin-left:${idx === 0 ? '0' : '-8px'};position:relative;z-index:${idx + 1};" title="${mem.name}">
+                ${initials}
+              </div>
+            `;
+          }).join('')}
+          <span style="font-size:11.5px;font-weight:600;color:var(--color-text-primary);margin-left:6px;">
+            ${members.map(m=>m.name.split(' ')[0]).join('+')}
+          </span>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="kanban-card" draggable="true" data-task-id="${t.id}"
+        ondragstart="TasksScreen.onDragStart(event,'${t.id}')" ondragend="TasksScreen.onDragEnd(event)"
+        onclick="TasksScreen.openDetailModal('${t.id}')">
+        
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span class="badge badge-${t.priority}" style="font-size:10px;padding:1px 6px">${Utils.humanize(t.priority)}</span>
+          ${proj ? `<span style="font-size:11px;font-weight:500;color:var(--color-primary);">${Utils.truncate(proj.name, 18)}</span>` : ''}
+        </div>
+
+        <div class="kanban-card-title">${Utils.escapeHtml(t.title)}</div>
+
+        <div class="kanban-card-meta" style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+          
+          <!-- Assignee Avatar Stack / Single Avatar Badge -->
+          <div class="kanban-card-assignee" style="display:flex;align-items:center;gap:6px;">
+            ${assigneeMarkup}
+          </div>
+
+          <!-- Subtasks Badge & Due Date -->
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${totalSt > 0 ? `
+              <div class="kanban-card-subtask-badge" title="${completedSt} of ${totalSt} subtasks completed" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:${allCompleted ? 'var(--color-success-50, #f0fdf4)' : 'var(--color-surface-subtle, #f1f5f9)'};border:1px solid ${allCompleted ? 'var(--color-success-200, #bbf7d0)' : 'var(--color-border)'};color:${allCompleted ? 'var(--color-success-600, #16a34a)' : 'var(--color-text-muted)'};line-height:1;">
+                <span style="font-size:11px;display:inline-block;">☑</span>
+                <span>${completedSt}/${totalSt}</span>
+              </div>
+            ` : ''}
+            ${t.dueDate ? `<div class="kanban-card-due ${isOverdue?'overdue':''}">${Icons.clock} ${Utils.formatDate(t.dueDate)}</div>` : ''}
+          </div>
+
+        </div>
       </div>
-    </div>`;
+    `;
   },
 
+  // ─── Personal Task Kanban Card (Anchored inside To Do with Checkbox) ───
+  _renderPersonalTaskCard(t) {
+    const isDone = Boolean(t.completed || t.status === 'done');
+    const isOverdue = Utils.isOverdue(t.dueDate) && !isDone;
+    const subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const totalSt = subtasks.length;
+    const completedSt = subtasks.filter(s => s.completed).length;
+    const allCompleted = totalSt > 0 && completedSt === totalSt;
+
+    return `
+      <div class="kanban-card personal-task-card ${isDone ? 'is-completed' : ''}" data-task-id="${t.id}"
+        onclick="TasksScreen.openDetailModal('${t.id}')">
+        
+        <!-- Main Row: Checkbox + Title on the left, Priority badge + Delete icon on the right -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">
+            <button type="button" class="personal-task-checkbox ${isDone ? 'checked' : ''}" 
+              onclick="event.stopPropagation();TasksScreen.togglePersonalTaskComplete(event, '${t.id}')"
+              title="${isDone ? 'Mark as incomplete' : 'Mark as complete'}"
+              style="width:18px;height:18px;min-width:18px;min-height:18px;border-radius:4px;border:1.5px solid ${isDone ? '#2563EB' : 'var(--color-border)'};background:${isDone ? '#2563EB' : '#FFFFFF'};display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;margin-top:2px;transition:all 0.15s ease;flex-shrink:0;">
+              ${isDone ? `<svg style="width:12px;height:12px;color:#FFFFFF;stroke-width:3;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+            </button>
+            <div class="kanban-card-title personal-task-title ${isDone ? 'is-completed' : ''}" style="font-weight:600;font-size:13px;line-height:1.35;flex:1;margin-bottom:0;word-break:break-word;${isDone ? 'text-decoration:line-through;opacity:0.65;color:var(--color-text-muted);' : 'color:var(--color-text-primary);'}">
+              ${Utils.escapeHtml(t.title)}
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-top:1px;">
+            <span class="badge badge-${t.priority || 'medium'}" style="font-size:10px;padding:1px 6px">${Utils.humanize(t.priority || 'medium')}</span>
+            <button type="button" onclick="event.stopPropagation();TasksScreen.deletePersonalTask('${t.id}')" title="Delete personal task" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);padding:0 2px;display:flex;align-items:center;">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Meta Row: Self-managed + Due Date at the bottom -->
+        <div class="kanban-card-meta" style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;${isDone ? 'opacity:0.65;' : ''}">
+          <div style="font-size:11px;color:${isDone ? 'var(--color-text-muted)' : '#7E22CE'};font-weight:600;display:flex;align-items:center;gap:4px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:${isDone ? 'var(--color-text-disabled)' : '#8B2CF5'};display:inline-block;"></span>
+            ${isDone ? 'Completed' : 'Self-managed'}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${totalSt > 0 ? `
+              <div class="kanban-card-subtask-badge" title="${completedSt} of ${totalSt} subtasks completed" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:${allCompleted ? 'var(--color-success-50, #f0fdf4)' : 'var(--color-surface-subtle, #f1f5f9)'};border:1px solid ${allCompleted ? 'var(--color-success-200, #bbf7d0)' : 'var(--color-border)'};color:${allCompleted ? 'var(--color-success-600, #16a34a)' : 'var(--color-text-muted)'};line-height:1;">
+                <span style="font-size:11px;display:inline-block;">☑</span>
+                <span>${completedSt}/${totalSt}</span>
+              </div>
+            ` : ''}
+            ${t.dueDate ? `<div class="kanban-card-due ${isOverdue?'overdue':''}">${Icons.clock} ${Utils.formatDate(t.dueDate)}</div>` : ''}
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  // ─── List View Rendering ───
   _renderList(tasks) {
-    return `<div class="section-card"><div class="section-card-body no-pad"><div class="table-wrap"><table class="table">
-      <thead><tr><th></th><th>Task</th><th>Project</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
-      <tbody>${tasks.sort((a,b)=>a.order-b.order).map(t => {
-        const m = Store.getMember(t.assigneeId);
-        const proj = Store.getProject(t.projectId);
-        const isOverdue = Utils.isOverdue(t.dueDate) && t.status !== 'done';
-        return `<tr>
-          <td><span class="priority-dot priority-${t.priority}"></span></td>
-          <td><span class="task-title" onclick="TasksScreen.openDetailModal('${t.id}')">${t.title}</span></td>
-          <td style="font-size:12px;color:var(--color-text-muted)">${proj ? proj.name : '—'}</td>
-          <td>${m ? `<div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span style="font-size:12px">${m.name}</span></div>` : '<span style="color:var(--color-text-disabled);font-size:12px">—</span>'}</td>
-          <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
-          <td>
-            <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
-              ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${t.status===s?'selected':''}>${Utils.humanize(s)}</option>`).join('')}
-            </select>
-          </td>
-          <td style="font-size:12px;color:${isOverdue?'var(--color-error-500)':'var(--color-text-muted)'}">${t.dueDate ? Utils.formatDate(t.dueDate) : '—'}</td>
-          <td><button class="btn btn-ghost btn-sm btn-icon" onclick="TasksScreen.openDetailModal('${t.id}')">${Icons.edit}</button></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div></div></div>`;
+    return `
+      <div class="section-card">
+        <div class="section-card-body no-pad">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Task</th>
+                  <th>Scope</th>
+                  <th>Assignee</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Subtasks</th>
+                  <th>Due</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => {
+                  const assigneeIds = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+                  const members = assigneeIds.map(id => Store.getMember(id)).filter(Boolean);
+                  const m = members[0];
+                  const proj = Store.getProject(t.projectId);
+                  const isDone = Boolean(t.completed || t.status === 'done');
+                  const isOverdue = Utils.isOverdue(t.dueDate) && !isDone;
+                  const subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+                  const totalSt = subtasks.length;
+                  const completedSt = subtasks.filter(s => s.completed).length;
+                  const allCompleted = totalSt > 0 && completedSt === totalSt;
+
+                  return `
+                    <tr class="${t.isPersonal && isDone ? 'task-row-completed' : ''}">
+                      <td>
+                        ${t.isPersonal ? `
+                          <button type="button" class="personal-task-checkbox ${isDone ? 'checked' : ''}" 
+                            onclick="event.stopPropagation();TasksScreen.togglePersonalTaskComplete(event, '${t.id}')"
+                            title="${isDone ? 'Mark as incomplete' : 'Mark as complete'}"
+                            style="width:16px;height:16px;min-width:16px;min-height:16px;border-radius:4px;border:1.5px solid ${isDone ? '#2563EB' : 'var(--color-border)'};background:${isDone ? '#2563EB' : '#FFFFFF'};display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:all 0.15s ease;">
+                            ${isDone ? `<svg style="width:10px;height:10px;color:#FFFFFF;stroke-width:3;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+                          </button>
+                        ` : `
+                          <span class="priority-dot priority-${t.priority}"></span>
+                        `}
+                      </td>
+                      <td>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                          <span class="task-title" onclick="TasksScreen.openDetailModal('${t.id}')" style="${t.isPersonal && isDone ? 'text-decoration:line-through;opacity:0.65;color:var(--color-text-muted);' : ''}">${Utils.escapeHtml(t.title)}</span>
+                        </div>
+                      </td>
+                      <td>
+                        ${t.isPersonal ? `
+                          <span class="personal-task-tag">Personal</span>
+                        ` : `
+                          <span style="font-size:12px;color:var(--color-text-muted);">${proj ? proj.name : '—'}</span>
+                        `}
+                      </td>
+                      <td>
+                        ${t.isPersonal ? `
+                          <span style="font-size:12px;color:#7E22CE;font-weight:600;">You (Personal)</span>
+                        ` : (members.length > 1 ? `
+                          <div style="display:flex;align-items:center;gap:6px;">
+                            <div class="avatar-stack">
+                              ${members.map((mem, idx) => {
+                                const initials = mem.initials || mem.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+                                return `<div class="avatar avatar-stack-item" style="background:${mem.color};width:24px;height:24px;font-size:9.5px;font-weight:700;color:#FFFFFF;border:2px solid var(--color-surface,#FFF);display:inline-flex;align-items:center;justify-content:center;border-radius:50%;margin-left:${idx===0?'0':'-8px'};position:relative;z-index:${idx+1};" title="${mem.name}">${initials}</div>`;
+                              }).join('')}
+                            </div>
+                            <span style="font-size:12px;font-weight:500;">${members.map(mem=>mem.name.split(' ')[0]).join('+')}</span>
+                          </div>
+                        ` : (members.length === 1 ? `
+                          <div style="display:flex;align-items:center;gap:6px;">
+                            <div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+                            <span style="font-size:12px;font-weight:500;">${m.name}</span>
+                          </div>
+                        ` : '<span style="color:var(--color-text-disabled);font-size:12px">—</span>'))}
+                      </td>
+                      <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
+                      <td>
+                        <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
+                          ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${(isDone && s==='done') || t.status===s ? 'selected' : ''}>${Utils.humanize(s)}</option>`).join('')}
+                        </select>
+                      </td>
+                      <td>
+                        ${totalSt > 0 ? `
+                          <span class="badge" style="font-size:11px;font-weight:600;padding:2px 6px;background:${allCompleted ? 'var(--color-success-50, #f0fdf4)' : 'var(--color-surface-subtle, #f1f5f9)'};border:1px solid ${allCompleted ? 'var(--color-success-200, #bbf7d0)' : 'var(--color-border)'};color:${allCompleted ? 'var(--color-success-600, #16a34a)' : 'var(--color-text-muted)'};">
+                            ☑ ${completedSt}/${totalSt}
+                          </span>
+                        ` : '<span style="color:var(--color-text-disabled);font-size:12px">—</span>'}
+                      </td>
+                      <td style="font-size:12px;color:${isOverdue?'var(--color-error-500)':'var(--color-text-muted)'}">${t.dueDate ? Utils.formatDate(t.dueDate) : '—'}</td>
+                      <td>
+                        <button class="btn btn-ghost btn-sm btn-icon" onclick="TasksScreen.openDetailModal('${t.id}')">${Icons.edit}</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
-  // Drag & Drop
+  // Drag & Drop (Only for Project Tasks)
   onDragStart(e, taskId) {
+    const task = Store.getTask(taskId);
+    if (task && task.isPersonal) {
+      e.preventDefault();
+      return false;
+    }
     this._dragTask = taskId;
     e.target.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
@@ -284,14 +665,227 @@ const TasksScreen = {
   onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); },
   onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); },
   onDrop(e, status) {
-    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-    if (this._dragTask) { this.updateStatus(this._dragTask, status); this._dragTask = null; }
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (this._dragTask) {
+      const task = Store.getTask(this._dragTask);
+      if (task && task.isPersonal) {
+        this._dragTask = null;
+        return;
+      }
+      this.updateStatus(this._dragTask, status);
+      this._dragTask = null;
+    }
   },
 
   updateStatus(taskId, status) {
-    Store.updateTask(taskId, { status });
+    const completed = status === 'done';
+    Store.updateTask(taskId, { status, completed });
     Toast.show(`Task moved to ${Utils.humanize(status)}`);
     this.updateTasksContainer();
+  },
+
+  togglePersonalTaskComplete(event, taskId) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    const t = Store.getTask(taskId);
+    if (!t) return;
+    const newCompleted = !Boolean(t.completed || t.status === 'done');
+    Store.updateTask(taskId, {
+      completed: newCompleted,
+      status: newCompleted ? 'done' : 'todo'
+    });
+    Toast.show(newCompleted ? 'Personal task completed' : 'Personal task marked active');
+    this.updateTasksContainer();
+  },
+
+  openAddPersonalTaskModal(status) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (currentUser && currentUser.role === 'Admin') return;
+    this.promptAddPersonalTask();
+  },
+
+  promptAddPersonalTask() {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (currentUser && currentUser.role === 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Personal tasks are not available for Admins.', 'info');
+      return;
+    }
+    const body = `
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" style="font-size:12px;font-weight:600;">Personal Task Title *</label>
+        <input type="text" class="form-input" id="quick-personal-title-input" placeholder="e.g. Follow up on retro items..." autofocus style="font-size:13px" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.submitPromptPersonalTask();}">
+      </div>
+    `;
+    const footer = `
+      <button class="btn btn-secondary btn-sm" onclick="Modal.closeAll()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="TasksScreen.submitPromptPersonalTask()">Add Task</button>
+    `;
+    if (typeof Modal !== 'undefined' && Modal.open) {
+      Modal.open('Add Personal Task', body, footer, { small: true });
+      setTimeout(() => {
+        const inp = document.getElementById('quick-personal-title-input');
+        if (inp) inp.focus();
+      }, 80);
+    } else {
+      const title = (typeof window !== 'undefined' && window.prompt) ? window.prompt('Enter personal task title:') : null;
+      if (title && title.trim()) {
+        this._createPersonalTaskDirect(title.trim());
+      }
+    }
+  },
+
+  submitPromptPersonalTask() {
+    const input = document.getElementById('quick-personal-title-input');
+    const title = input ? input.value.trim() : '';
+    if (!title) {
+      if (input) input.focus();
+      return;
+    }
+    this._createPersonalTaskDirect(title);
+    if (typeof Modal !== 'undefined') Modal.closeAll();
+  },
+
+  _createPersonalTaskDirect(title) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const userMemberId = currentUser ? (currentUser.memberId || currentUser.id) : '';
+    Store.createTask({
+      title,
+      description: '',
+      status: 'todo',
+      completed: false,
+      priority: 'medium',
+      dueDate: new Date().toISOString().split('T')[0],
+      projectId: '',
+      isPersonal: true,
+      assigneeId: userMemberId,
+      subtasks: []
+    });
+    if (typeof Toast !== 'undefined') Toast.show('Personal task added');
+    this.updateTasksContainer();
+  },
+
+  focusQuickAddPersonalTask() {
+    this.promptAddPersonalTask();
+  },
+
+  submitQuickAddPersonalTask() {
+    const input = document.getElementById('quick-add-personal-input');
+    if (input && input.value.trim()) {
+      this._createPersonalTaskDirect(input.value.trim());
+      input.value = '';
+    } else {
+      this.promptAddPersonalTask();
+    }
+  },
+
+  quickPromptAddPersonalTask() {
+    this.promptAddPersonalTask();
+  },
+
+  // ─── Assignee Selector Helpers ───
+  _getSelectableAssignees(projectId, currentUser) {
+    const allAssignees = Store.getAssignees(); // Excludes Admin m1
+    if (!currentUser || currentUser.role === 'Admin') {
+      return allAssignees;
+    }
+    if (!projectId) {
+      return allAssignees;
+    }
+    const project = Store.getProject(projectId);
+    if (!project || !Array.isArray(project.memberIds) || project.memberIds.length === 0) {
+      return allAssignees;
+    }
+    const filtered = allAssignees.filter(m =>
+      project.memberIds.includes(m.id) ||
+      (m.id === 'm2' && project.memberIds.includes('preet')) ||
+      (m.id === 'm3' && project.memberIds.includes('mohit')) ||
+      (m.id === 'm4' && project.memberIds.includes('hirvi'))
+    );
+    return filtered.length > 0 ? filtered : allAssignees;
+  },
+
+  _renderAssigneePills(availableMembers, selectedMemberIds = [], prefix = 'task') {
+    if (!availableMembers || availableMembers.length === 0) {
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No assignees available for this project.</div>`;
+    }
+    return `
+      <div class="assignee-pills-wrap" id="${prefix}-assignee-pills" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
+        ${availableMembers.map(m => {
+          const isSelected = selectedMemberIds.includes(m.id) ||
+                             (m.id === 'm2' && selectedMemberIds.includes('preet')) ||
+                             (m.id === 'm3' && selectedMemberIds.includes('mohit')) ||
+                             (m.id === 'm4' && selectedMemberIds.includes('hirvi'));
+          const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+          const color = m.color || '#2563EB';
+          return `
+            <label class="assignee-pill-btn ${isSelected ? 'selected' : ''}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid ${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-border)'};background:${isSelected ? 'rgba(37,99,235,0.08)' : 'var(--color-surface)'};cursor:pointer;user-select:none;transition:all 0.15s ease;">
+              <input type="checkbox" class="task-assignee-cb" value="${m.id}" ${isSelected ? 'checked' : ''} onchange="TasksScreen.handleAssigneePillToggle(this)" style="display:none;">
+              <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">${initials}</span>
+              <span style="font-size:12.5px;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-text-primary)'};">${m.name}</span>
+              <span class="assignee-check-indicator" style="font-size:12px;color:var(--color-primary);font-weight:bold;margin-left:2px;display:${isSelected ? 'inline-block' : 'none'};">✓</span>
+            </label>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
+  handleAssigneePillToggle(input) {
+    const label = input.closest('.assignee-pill-btn');
+    if (!label) return;
+    const isChecked = input.checked;
+    if (isChecked) {
+      label.classList.add('selected');
+      label.style.borderColor = 'var(--color-primary, #2563EB)';
+      label.style.background = 'rgba(37,99,235,0.08)';
+      const textSpan = label.querySelector('span:nth-of-type(2)');
+      if (textSpan) {
+        textSpan.style.color = 'var(--color-primary, #2563EB)';
+        textSpan.style.fontWeight = '600';
+      }
+      const checkIndicator = label.querySelector('.assignee-check-indicator');
+      if (checkIndicator) checkIndicator.style.display = 'inline-block';
+    } else {
+      label.classList.remove('selected');
+      label.style.borderColor = 'var(--color-border)';
+      label.style.background = 'var(--color-surface)';
+      const textSpan = label.querySelector('span:nth-of-type(2)');
+      if (textSpan) {
+        textSpan.style.color = 'var(--color-text-primary)';
+        textSpan.style.fontWeight = '500';
+      }
+      const checkIndicator = label.querySelector('.assignee-check-indicator');
+      if (checkIndicator) checkIndicator.style.display = 'none';
+    }
+    const checked = Array.from(document.querySelectorAll('.task-assignee-cb:checked')).map(cb => cb.value);
+    const hiddenInput = document.getElementById('task-assignee') || document.getElementById('detail-assignee');
+    if (hiddenInput) hiddenInput.value = checked[0] || '';
+  },
+
+  handleProjectChangeInModal(projectId, prefix = 'task') {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const available = this._getSelectableAssignees(projectId, currentUser);
+    const container = document.getElementById(`${prefix}-assignee-picker`);
+    if (!container) return;
+
+    // Retain currently checked assignees that are still available
+    const currentChecked = Array.from(container.querySelectorAll('.task-assignee-cb:checked')).map(cb => cb.value);
+    let selected = currentChecked.filter(id => available.some(m => m.id === id));
+
+    // If none are selected and standard user, pre-select current user if collaborator
+    if (selected.length === 0 && currentUser && currentUser.role !== 'Admin') {
+      const myId = currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : currentUser.id);
+      if (available.some(m => m.id === myId)) {
+        selected = [myId];
+      }
+    }
+
+    container.innerHTML = this._renderAssigneePills(available, selected, prefix);
+    const hiddenInput = document.getElementById(`${prefix}-assignee`);
+    if (hiddenInput) hiddenInput.value = selected[0] || '';
   },
 
   refresh() { 
@@ -301,143 +895,421 @@ const TasksScreen = {
     }
   },
 
+  // ─── Create Official Project Task Modal ───
   openCreateModal(projectId, defaultDueDate) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    if (!currentUser || currentUser.role !== 'Admin') {
-      if (typeof Toast !== 'undefined') Toast.show('Only administrators can create tasks.', 'error');
-      return;
-    }
-    const isAdmin = true; // Guard passed above — always admin here
-    const projects = Store.getProjects();
-    const assignees = Store.getAssignees();
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
-    const devAssigneeId = currentUser ? (currentUser.memberId || currentUser.id) : '';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
+    const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
+
+    const allProjects = Store.getProjects();
+    const projects = isStandardUser
+      ? allProjects.filter(p =>
+          Array.isArray(p.memberIds) && (
+            p.memberIds.includes(userMemberId) ||
+            p.memberIds.includes(currentUser?.id) ||
+            (currentUser?.id === 'preet' && p.memberIds.includes('m2')) ||
+            (currentUser?.id === 'mohit' && p.memberIds.includes('m3')) ||
+            (currentUser?.id === 'hirvi' && p.memberIds.includes('m4'))
+          )
+        )
+      : allProjects;
+
+    const initialProjectId = projectId || (projects.length === 1 ? projects[0].id : (projects[0]?.id || ''));
+    const defaultAssigneeId = userMemberId || currentUser?.id || 'm2';
+    const selectableAssignees = this._getSelectableAssignees(initialProjectId, currentUser);
+    const initialSelectedAssignees = isStandardUser ? [defaultAssigneeId] : [];
+
+    this._modalSubtasks = [];
 
     const body = `
-      <div class="form-group" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:14px">
         <label class="form-label">Task Title *</label>
-        <input type="text" class="form-input" id="task-title" placeholder="Enter task title">
-        <div class="form-error" id="task-title-error"></div>
+        <input type="text" class="form-input" id="task-title" placeholder="Enter task title" required>
+        <div class="form-error" id="task-title-error" style="color:var(--color-error-500);font-size:12px;margin-top:4px;"></div>
       </div>
-      <div class="form-group" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:14px">
         <label class="form-label">Description</label>
-        <textarea class="form-textarea" id="task-desc" placeholder="Describe the task"></textarea>
+        <textarea class="form-textarea" id="task-desc" placeholder="Describe the task..." rows="3"></textarea>
       </div>
-      <div class="form-row" style="margin-bottom:16px">
-        <div class="form-group">
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group" style="flex:1;">
           <label class="form-label">Project *</label>
-          <select class="form-select" id="task-project">
+          <select class="form-select" id="task-project" required onchange="TasksScreen.handleProjectChangeInModal(this.value, 'task')">
             <option value="">Select project</option>
-            ${projects.map(p => `<option value="${p.id}" ${projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+            ${projects.map(p => `<option value="${p.id}" ${(initialProjectId===p.id) ? 'selected' : ''}>${p.name}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Assignee</label>
-          ${isAdmin ? `
-            <select class="form-select" id="task-assignee">
-              <option value="">Unassigned</option>
-              ${assignees.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
-            </select>
-          ` : `
-            <select class="form-select" id="task-assignee">
-              <option value="${devAssigneeId}">${currentUser ? currentUser.name : 'You'} (You)</option>
-            </select>
-          `}
-        </div>
       </div>
-      <div class="form-row" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Assignee(s) <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span></span>
+        </label>
+        <div id="task-assignee-picker">
+          ${this._renderAssigneePills(selectableAssignees, initialSelectedAssignees, 'task')}
+        </div>
+        <input type="hidden" id="task-assignee" value="${initialSelectedAssignees[0] || ''}">
+      </div>
+      <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
           <label class="form-label">Priority</label>
           <select class="form-select" id="task-priority">
-            <option value="medium">Medium</option>
+            <option value="medium" selected>Medium</option>
             <option value="high">High</option>
             <option value="low">Low</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Due Date</label>
-          <input type="date" class="form-input" id="task-due" value="${defaultDueDate || ''}">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="task-status">
+            <option value="todo" selected>To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Due Date</label>
+        <input type="date" class="form-input" id="task-due" value="${defaultDueDate || ''}">
+      </div>
+
+      <!-- Initial Subtasks Checklist Section -->
+      <div class="form-group" style="border-top:1px solid var(--color-border);padding-top:14px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="subtasks-header-wrap" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span class="subtasks-header-icon" style="display: inline-flex; align-items: center; justify-content: center; width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; color: #2563EB; flex-shrink: 0;">
+              ${Icons.checkSquare.replace('<svg ', '<svg style="width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; color: #2563EB; flex-shrink: 0;" ')}
+            </span>
+            <span class="subtasks-header-title" style="font-size: 14px; font-weight: 600; color: #0F172A; line-height: 1;">Initial Subtasks</span>
+          </div>
+          <span id="create-modal-subtasks-count" style="font-size:11px;color:var(--color-text-muted);font-weight:600;">0 items</span>
+        </div>
+        <div id="create-modal-subtasks-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+          <div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;" id="create-modal-subtasks-empty">No subtasks added yet. Type below to add checklist items.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" class="form-input" id="create-modal-new-subtask" placeholder="Add subtask item (e.g. Wireframe approval)..." style="font-size:13px;height:34px;flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.addModalSubtask();}">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="TasksScreen.addModalSubtask()" style="white-space:nowrap;height:34px;">
+            ${Icons.plus} Add Item
+          </button>
         </div>
       </div>`;
-    const footer = `<button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button><button class="btn btn-primary" onclick="TasksScreen.saveTask()">Create Task</button>`;
-    Modal.open('New Task', body, footer);
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit-task-btn" onclick="TasksScreen.saveTask()">Create Task</button>`;
+    
+    Modal.open('Create New Task', body, footer, { large: true });
+  },
+
+  // ─── Create Personal Task Modal ───
+  openAddPersonalTaskModal(defaultStatus = 'todo') {
+    this._modalSubtasks = [];
+
+    const body = `
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Personal Task Title *</label>
+        <input type="text" class="form-input" id="personal-task-title" placeholder="e.g. Prep sprint retrospective notes..." required>
+        <div class="form-error" id="personal-task-title-error" style="color:var(--color-error-500);font-size:12px;margin-top:4px;"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Notes / Description</label>
+        <textarea class="form-textarea" id="personal-task-desc" placeholder="Personal notes, reminders, or scratchpad..." rows="3"></textarea>
+      </div>
+      <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="personal-task-status">
+            <option value="todo" ${defaultStatus==='todo'?'selected':''}>To Do</option>
+            <option value="in-progress" ${defaultStatus==='in-progress'?'selected':''}>In Progress</option>
+            <option value="review" ${defaultStatus==='review'?'selected':''}>Review</option>
+            <option value="done" ${defaultStatus==='done'?'selected':''}>Done</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-select" id="personal-task-priority">
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Due Date</label>
+        <input type="date" class="form-input" id="personal-task-due" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+
+      <!-- Subtasks Section -->
+      <div class="form-group" style="border-top:1px solid var(--color-border);padding-top:14px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="subtasks-header-wrap" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span class="subtasks-header-icon" style="display:inline-flex;align-items:center;justify-content:center;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;color:#8B2CF5;flex-shrink:0;">
+              ${Icons.checkSquare.replace('<svg ', '<svg style="width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;color:#8B2CF5;flex-shrink:0;" ')}
+            </span>
+            <span class="subtasks-header-title" style="font-size:14px;font-weight:600;color:#0F172A;line-height:1;">Checklist Items</span>
+          </div>
+          <span id="create-modal-subtasks-count" style="font-size:11px;color:var(--color-text-muted);font-weight:600;">0 items</span>
+        </div>
+        <div id="create-modal-subtasks-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+          <div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;" id="create-modal-subtasks-empty">No subtasks added yet. Type below to add items.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" class="form-input" id="create-modal-new-subtask" placeholder="Add checklist item..." style="font-size:13px;height:34px;flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.addModalSubtask();}">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="TasksScreen.addModalSubtask()" style="white-space:nowrap;height:34px;">
+            ${Icons.plus} Add
+          </button>
+        </div>
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button class="btn btn-primary" onclick="TasksScreen.savePersonalTask()">Create Personal Task</button>
+    `;
+
+    Modal.open('Create Personal Task', body, footer, { large: true });
+  },
+
+  savePersonalTask() {
+    const titleInput = document.getElementById('personal-task-title');
+    const title = titleInput?.value?.trim() || '';
+    if (!title) {
+      const err = document.getElementById('personal-task-title-error');
+      if (err) err.textContent = 'Personal task title is required';
+      if (titleInput) titleInput.focus();
+      return;
+    }
+
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const userMemberId = currentUser ? (currentUser.memberId || currentUser.id) : '';
+
+    const data = {
+      title,
+      description: document.getElementById('personal-task-desc')?.value?.trim() || '',
+      status: document.getElementById('personal-task-status')?.value || 'todo',
+      priority: document.getElementById('personal-task-priority')?.value || 'medium',
+      dueDate: document.getElementById('personal-task-due')?.value || '',
+      projectId: '',
+      isPersonal: true,
+      assigneeId: userMemberId,
+      assigneeIds: [userMemberId],
+      creatorId: currentUser ? (currentUser.id || currentUser.memberId || '') : '',
+      createdBy: currentUser ? (currentUser.name || '') : '',
+      subtasks: this._modalSubtasks || []
+    };
+
+    Store.createTask(data);
+    Toast.show('Personal task created');
+    Modal.closeAll();
+    this.updateTasksContainer();
+  },
+
+  deletePersonalTask(taskId) {
+    Modal.confirm('Delete Personal Task', 'Are you sure you want to remove this personal task?', () => {
+      Store.deleteTask(taskId);
+      Toast.show('Personal task removed');
+      Modal.closeAll();
+      this.updateTasksContainer();
+    }, { danger: true });
+  },
+
+  addModalSubtask() {
+    const input = document.getElementById('create-modal-new-subtask');
+    if (!input) return;
+    const title = input.value.trim();
+    if (!title) return;
+
+    const newSubtask = {
+      id: 'st-' + Date.now().toString(36) + '-' + Math.floor(Math.random()*1000),
+      title: title,
+      completed: false
+    };
+    this._modalSubtasks.push(newSubtask);
+    input.value = '';
+    this.renderModalSubtasks();
+    input.focus();
+  },
+
+  removeModalSubtask(id) {
+    this._modalSubtasks = this._modalSubtasks.filter(s => s.id !== id);
+    this.renderModalSubtasks();
+  },
+
+  renderModalSubtasks() {
+    const listEl = document.getElementById('create-modal-subtasks-list');
+    const countEl = document.getElementById('create-modal-subtasks-count');
+    if (!listEl) return;
+
+    if (countEl) {
+      countEl.textContent = `${this._modalSubtasks.length} item${this._modalSubtasks.length === 1 ? '' : 's'}`;
+    }
+
+    if (this._modalSubtasks.length === 0) {
+      listEl.innerHTML = `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;" id="create-modal-subtasks-empty">No subtasks added yet. Type below to add checklist items.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = this._modalSubtasks.map((st, idx) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:var(--color-surface-soft, #f8fafc);border:1px solid var(--color-border-subtle, #e2e8f0);">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+          <span style="font-size:11px;font-weight:700;color:var(--color-primary);">${idx + 1}.</span>
+          <span style="font-size:13px;color:var(--color-text-primary);">${Utils.escapeHtml(st.title)}</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-xs btn-icon" onclick="TasksScreen.removeModalSubtask('${st.id}')" title="Remove" style="color:var(--color-text-muted);">
+          ${Icons.x}
+        </button>
+      </div>
+    `).join('');
   },
 
   saveTask(id) {
-    // Support both create form (task-*) and edit form (detail-*)
     const titleEl = document.getElementById('task-title') || document.getElementById('detail-title');
     const projectEl = document.getElementById('task-project') || document.getElementById('detail-project');
     const descEl = document.getElementById('task-desc') || document.getElementById('detail-desc');
-    const assigneeEl = document.getElementById('task-assignee') || document.getElementById('detail-assignee');
     const priorityEl = document.getElementById('task-priority') || document.getElementById('detail-priority');
     const dueEl = document.getElementById('task-due') || document.getElementById('detail-due');
-    const statusEl = document.getElementById('detail-status');
+    const statusEl = document.getElementById('task-status') || document.getElementById('detail-status');
 
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
+    const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     const title = titleEl?.value?.trim() || '';
     const projectId = projectEl?.value || '';
-    if (!title) { const errEl = document.getElementById('task-title-error'); if(errEl) errEl.textContent = 'Title is required'; if(titleEl) titleEl.classList.add('error'); return; }
-    if (!projectId) { Toast.show('Please select a project', 'error'); return; }
-    
-    let assigneeId = assigneeEl?.value || '';
-    if (isDeveloper && !assigneeId) {
-      assigneeId = currentUser.memberId || currentUser.id;
+    if (!title) {
+      const errEl = document.getElementById('task-title-error');
+      if (errEl) errEl.textContent = 'Task title is required';
+      if (titleEl) { titleEl.classList.add('error'); titleEl.focus(); }
+      return;
     }
 
-    const data = {
-      title, projectId, description: descEl?.value?.trim() || '',
-      assigneeId, priority: priorityEl?.value || 'medium',
-      dueDate: dueEl?.value || ''
-    };
-    if (statusEl) data.status = statusEl.value;
-    if (id) { Store.updateTask(id, data); Toast.show('Task updated'); }
-    else { Store.createTask(data); Toast.show('Task created'); }
-    Modal.closeAll(); App.refresh();
+    const existingTask = id ? Store.getTask(id) : null;
+    const isPersonal = existingTask ? existingTask.isPersonal : !projectId;
+
+    if (!isPersonal && !projectId) {
+      Toast.show('Please select a project for this task', 'error');
+      if (projectEl) projectEl.focus();
+      return;
+    }
+
+    // Collect multi-select assignees from picker
+    const checkedAssigneeBoxes = document.querySelectorAll('.task-assignee-cb:checked');
+    let assigneeIds = Array.from(checkedAssigneeBoxes).map(cb => cb.value);
+
+    // Fallbacks if no checkboxes checked
+    if (assigneeIds.length === 0) {
+      const fallbackAssignee = document.getElementById('task-assignee')?.value || document.getElementById('detail-assignee')?.value;
+      if (fallbackAssignee) {
+        assigneeIds = [fallbackAssignee];
+      } else if (existingTask && Array.isArray(existingTask.assigneeIds) && existingTask.assigneeIds.length > 0) {
+        assigneeIds = existingTask.assigneeIds;
+      } else if (existingTask && existingTask.assigneeId) {
+        assigneeIds = [existingTask.assigneeId];
+      } else if (isStandardUser && !id) {
+        assigneeIds = [userMemberId || currentUser?.id || ''];
+      }
+    }
+    // Clean & filter out admin
+    assigneeIds = assigneeIds.filter(mid => mid && mid !== 'm1' && Store.getMember(mid)?.role !== 'Admin');
+    assigneeIds = [...new Set(assigneeIds)];
+    const assigneeId = assigneeIds[0] || '';
+
+    if (id) {
+      const updatePayload = {
+        title,
+        projectId: isPersonal ? '' : projectId,
+        description: descEl?.value?.trim() || '',
+        assigneeId,
+        assigneeIds,
+        priority: priorityEl?.value || 'medium',
+        status: statusEl?.value || 'todo',
+        dueDate: dueEl?.value || ''
+      };
+
+      Store.updateTask(id, updatePayload);
+      Toast.show('Task updated');
+    } else {
+      const data = {
+        title,
+        projectId,
+        description: descEl?.value?.trim() || '',
+        assigneeId,
+        assigneeIds,
+        creatorId: currentUser ? (currentUser.id || currentUser.memberId || '') : '',
+        createdBy: currentUser ? (currentUser.name || '') : '',
+        priority: priorityEl?.value || 'medium',
+        status: statusEl?.value || 'todo',
+        dueDate: dueEl?.value || '',
+        subtasks: this._modalSubtasks || []
+      };
+      Store.createTask(data);
+      Toast.show('Task created successfully');
+    }
+
+    Modal.closeAll();
+    this.updateTasksContainer();
+    if (typeof App !== 'undefined') App.refresh();
   },
 
   openDetailModal(taskId) {
     const t = Store.getTask(taskId);
     if (!t) return;
-    const assignees = Store.getAssignees();
     const projects = Store.getProjects();
     const comments = Store.getComments(taskId);
-    const m = Store.getMember(t.assigneeId);
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
+    const isOwnTask = this._isUserTask(t, currentUser);
+    const isCreator = t && currentUser && (
+      t.creatorId === currentUser.id ||
+      t.creatorId === currentUser.memberId ||
+      t.createdBy === currentUser.name ||
+      (currentUser.id === 'preet' && (t.creatorId === 'm2' || t.createdBy === 'Preet Banga')) ||
+      (currentUser.id === 'mohit' && (t.creatorId === 'm3' || t.createdBy === 'Mohit Joshi')) ||
+      (currentUser.id === 'hirvi' && (t.creatorId === 'm4' || t.createdBy === 'Hirvi Shah'))
+    );
+    const canDelete = isAdmin || isCreator || t.isPersonal;
+    const subtasks = Array.isArray(t.subtasks) ? t.subtasks : [];
+
+    const existingAssigneeIds = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0
+      ? t.assigneeIds
+      : (t.assigneeId ? [t.assigneeId] : []);
+    const selectableAssignees = this._getSelectableAssignees(t.projectId, currentUser);
 
     const body = `
-      <div class="form-group" style="margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:14px">
         <label class="form-label">Title</label>
-        <input type="text" class="form-input" id="detail-title" value="${t.title}">
+        <input type="text" class="form-input" id="detail-title" value="${Utils.escapeHtml(t.title)}">
       </div>
-      <div class="form-group" style="margin-bottom:16px">
-        <label class="form-label">Description</label>
-        <textarea class="form-textarea" id="detail-desc">${t.description}</textarea>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">${t.isPersonal ? 'Notes / Scratchpad' : 'Description'}</label>
+        <textarea class="form-textarea" id="detail-desc" rows="3">${Utils.escapeHtml(t.description || '')}</textarea>
       </div>
-      <div class="form-row" style="margin-bottom:16px">
-        <div class="form-group">
-          <label class="form-label">Project</label>
-          <select class="form-select" id="detail-project">
-            ${projects.map(p => `<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Assignee</label>
-          ${isAdmin ? `
-            <select class="form-select" id="detail-assignee">
-              <option value="">Unassigned</option>
-              ${assignees.map(m => `<option value="${m.id}" ${t.assigneeId===m.id?'selected':''}>${m.name}</option>`).join('')}
+      
+      ${!t.isPersonal ? `
+        <div class="form-row" style="margin-bottom:14px">
+          <div class="form-group" style="flex:1;">
+            <label class="form-label">Project</label>
+            <select class="form-select" id="detail-project" onchange="TasksScreen.handleProjectChangeInModal(this.value, 'detail')">
+              ${projects.map(p => `<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
             </select>
-          ` : `
-            <select class="form-select" id="detail-assignee" disabled>
-              <option value="${t.assigneeId}">${m ? m.name : (currentUser ? currentUser.name : 'You')}</option>
-            </select>
-          `}
+          </div>
         </div>
-      </div>
-      <div class="form-row" style="margin-bottom:16px">
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Assignee(s) <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span></span>
+          </label>
+          <div id="detail-assignee-picker">
+            ${this._renderAssigneePills(selectableAssignees, existingAssigneeIds, 'detail')}
+          </div>
+          <input type="hidden" id="detail-assignee" value="${t.assigneeId || ''}">
+        </div>
+      ` : ''}
+
+      <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
           <label class="form-label">Status</label>
           <select class="form-select" id="detail-status">
@@ -451,40 +1323,144 @@ const TasksScreen = {
           </select>
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:20px">
+      <div class="form-group" style="margin-bottom:18px">
         <label class="form-label">Due Date</label>
         <input type="date" class="form-input" id="detail-due" value="${t.dueDate || ''}">
       </div>
-      <div style="border-top:1px solid var(--color-border);padding-top:16px">
-        <label class="form-label" style="margin-bottom:12px">Comments (${comments.length})</label>
-        <div class="comment-list" style="margin-bottom:16px">
-          ${comments.map(c => {
-            const author = Store.getMember(c.authorId);
-            return `<div class="comment-item">
-              <div class="avatar avatar-sm" style="background:${author?author.color:'#94A3B8'}">${author?author.name.split(' ').map(w=>w[0]).join('').slice(0,2):'??'}</div>
-              <div class="comment-body">
-                <div class="comment-header"><span class="comment-author">${author?author.name:'Unknown'}</span><span class="comment-time">${Utils.timeAgo(c.createdAt)}</span></div>
-                <div class="comment-text">${c.text}</div>
-              </div>
-            </div>`;
-          }).join('') || '<div style="font-size:13px;color:var(--color-text-muted);padding:12px 0">No comments yet</div>'}
+
+      <!-- Interactive Subtasks Checklist Section with Visual Progress Bar -->
+      <div id="detail-subtasks-wrapper" style="border-top:1px solid var(--color-border);padding-top:16px;margin-bottom:20px;">
+        ${this._buildSubtasksHtml(taskId, subtasks)}
+      </div>
+
+      <!-- Comments Section (Project tasks) -->
+      ${!t.isPersonal ? `
+        <div style="border-top:1px solid var(--color-border);padding-top:16px">
+          <label class="form-label" style="margin-bottom:12px">Comments (${comments.length})</label>
+          <div class="comment-list" style="margin-bottom:16px">
+            ${comments.map(c => {
+              const author = Store.getMember(c.authorId);
+              return `<div class="comment-item">
+                <div class="avatar avatar-sm" style="background:${author?author.color:'#94A3B8'}">${author?author.name.split(' ').map(w=>w[0]).join('').slice(0,2):'??'}</div>
+                <div class="comment-body">
+                  <div class="comment-header"><span class="comment-author">${author?author.name:'Unknown'}</span><span class="comment-time">${Utils.timeAgo(c.createdAt)}</span></div>
+                  <div class="comment-text">${Utils.escapeHtml(c.text)}</div>
+                </div>
+              </div>`;
+            }).join('') || '<div style="font-size:13px;color:var(--color-text-muted);padding:12px 0">No comments yet</div>'}
+          </div>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="form-input" id="new-comment" placeholder="Add a comment..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.addComment('${taskId}');}">
+            <button class="btn btn-primary btn-sm" onclick="TasksScreen.addComment('${taskId}')">Post</button>
+          </div>
         </div>
-        <div style="display:flex;gap:8px">
-          <input type="text" class="form-input" id="new-comment" placeholder="Add a comment..." style="flex:1">
-          <button class="btn btn-primary btn-sm" onclick="TasksScreen.addComment('${taskId}')">Post</button>
-        </div>
-      </div>`;
+      ` : ''}
+    `;
 
     const footer = `
-      ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TasksScreen.deleteTask('${taskId}')" style="margin-right:auto">Delete</button>` : ''}
+      ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="${t.isPersonal ? `TasksScreen.deletePersonalTask('${taskId}')` : `TasksScreen.deleteTask('${taskId}')`}" style="margin-right:auto">Delete</button>` : ''}
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save</button>`;
-    Modal.open('Edit Task', body, footer, { large: true });
+      <button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save Changes</button>`;
+    
+    Modal.open(t.isPersonal ? 'Personal Task Details' : 'Edit Task Details', body, footer, { large: true });
+  },
+
+  _buildSubtasksHtml(taskId, subtasks) {
+    const list = Array.isArray(subtasks) ? subtasks : [];
+    const total = list.length;
+    const completed = list.filter(s => s.completed).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const isFull = total > 0 && completed === total;
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="subtasks-header-wrap" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <span class="subtasks-header-icon" style="display: inline-flex; align-items: center; justify-content: center; width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; color: #2563EB; flex-shrink: 0;">
+            ${Icons.checkSquare.replace('<svg ', '<svg style="width: 18px !important; height: 18px !important; min-width: 18px !important; min-height: 18px !important; color: #2563EB; flex-shrink: 0;" ')}
+          </span>
+          <span class="subtasks-header-title" style="font-size: 14px; font-weight: 600; color: #0F172A; line-height: 1;">Subtasks Checklist <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(${completed}/${total})</span></span>
+        </div>
+        <span class="badge ${isFull ? 'badge-success' : 'badge-primary'}" id="subtask-percent-pill" style="font-size:11px;font-weight:700;">
+          ${percent}% Completed
+        </span>
+      </div>
+
+      <!-- Visual Completion Percentage Bar -->
+      <div class="subtasks-progress-track" style="width:100%;height:7px;background:var(--color-surface-subtle, #f1f5f9);border-radius:999px;overflow:hidden;margin-bottom:12px;border:1px solid var(--color-border-subtle, #e2e8f0);">
+        <div class="subtasks-progress-fill" style="width:${percent}%;height:100%;background:${isFull ? 'var(--color-success-500, #22c55e)' : 'linear-gradient(90deg, var(--color-primary), var(--color-ai, #8B2CF5))'};transition:width 0.25s ease;border-radius:999px;"></div>
+      </div>
+
+      <!-- Checklist Items -->
+      <div class="subtasks-checklist-items" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+        ${total === 0 ? `
+          <div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No subtasks created for this task yet. Add checklist items below.</div>
+        ` : list.map(st => `
+          <div class="subtask-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:${st.completed ? 'var(--color-surface-subtle, #f8fafc)' : 'var(--color-surface)'};border:1px solid ${st.completed ? 'var(--color-border-subtle, #e2e8f0)' : 'var(--color-border)'};transition:all 0.15s ease;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;margin:0;user-select:none;">
+              <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="TasksScreen.handleToggleSubtask('${taskId}', '${st.id}', this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primary);border-radius:4px;">
+              <span style="font-size:13px;transition:all 0.15s ease;${st.completed ? 'text-decoration:line-through;color:var(--color-text-disabled);' : 'color:var(--color-text-primary);font-weight:500;'}">
+                ${Utils.escapeHtml(st.title)}
+              </span>
+            </label>
+            <button type="button" class="btn btn-ghost btn-xs btn-icon" onclick="TasksScreen.handleDeleteSubtask('${taskId}', '${st.id}')" title="Delete Subtask" style="color:var(--color-text-muted);">
+              ${Icons.x}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Inline + Add Subtask Text Field -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" class="form-input" id="detail-new-subtask-input" placeholder="+ Add a new subtask checklist item..." style="font-size:13px;height:34px;flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.handleAddSubtask('${taskId}');}">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="TasksScreen.handleAddSubtask('${taskId}')" style="white-space:nowrap;height:34px;">
+          ${Icons.plus} Add Subtask
+        </button>
+      </div>
+    `;
+  },
+
+  handleToggleSubtask(taskId, subtaskId, isChecked) {
+    Store.toggleSubtask(taskId, subtaskId, isChecked);
+    const updatedTask = Store.getTask(taskId);
+    const wrapper = document.getElementById('detail-subtasks-wrapper');
+    if (wrapper && updatedTask) {
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+    }
+    this.updateTasksContainer();
+  },
+
+  handleAddSubtask(taskId) {
+    const input = document.getElementById('detail-new-subtask-input');
+    if (!input) return;
+    const title = input.value.trim();
+    if (!title) return;
+
+    Store.addSubtask(taskId, title);
+    const updatedTask = Store.getTask(taskId);
+    const wrapper = document.getElementById('detail-subtasks-wrapper');
+    if (wrapper && updatedTask) {
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+      const newInput = document.getElementById('detail-new-subtask-input');
+      if (newInput) newInput.focus();
+    }
+    this.updateTasksContainer();
+    Toast.show('Subtask added');
+  },
+
+  handleDeleteSubtask(taskId, subtaskId) {
+    Store.deleteSubtask(taskId, subtaskId);
+    const updatedTask = Store.getTask(taskId);
+    const wrapper = document.getElementById('detail-subtasks-wrapper');
+    if (wrapper && updatedTask) {
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+    }
+    this.updateTasksContainer();
+    Toast.show('Subtask removed');
   },
 
   addComment(taskId) {
     const input = document.getElementById('new-comment');
-    const text = input.value.trim();
+    const text = input ? input.value.trim() : '';
     if (!text) return;
     Store.addComment(taskId, Store.getSettings().currentUser, text);
     Toast.show('Comment added');
@@ -494,8 +1470,20 @@ const TasksScreen = {
 
   deleteTask(id) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    if (!currentUser || currentUser.role !== 'Admin') {
-      if (typeof Toast !== 'undefined') Toast.show('Only administrators can delete tasks.', 'error');
+    const t = Store.getTask(id);
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isCreator = t && currentUser && (
+      t.creatorId === currentUser.id ||
+      t.creatorId === currentUser.memberId ||
+      t.createdBy === currentUser.name ||
+      (currentUser.id === 'preet' && (t.creatorId === 'm2' || t.createdBy === 'Preet Banga')) ||
+      (currentUser.id === 'mohit' && (t.creatorId === 'm3' || t.createdBy === 'Mohit Joshi')) ||
+      (currentUser.id === 'hirvi' && (t.creatorId === 'm4' || t.createdBy === 'Hirvi Shah'))
+    );
+    const isPersonal = t && t.isPersonal;
+
+    if (!isAdmin && !isCreator && !isPersonal) {
+      if (typeof Toast !== 'undefined') Toast.show('Only the task creator or administrators can delete tasks.', 'error');
       return;
     }
     Modal.confirm('Delete Task', 'Are you sure you want to delete this task?',

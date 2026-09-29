@@ -25,26 +25,34 @@ const ProjectDetailScreen = {
     if (!p) return '<div class="empty-state"><h3>Project not found</h3></div>';
 
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     const isUserTask = (t) => {
-      return t.assigneeId === currentUser.id ||
+      return t.assigneeId === currentUser?.id ||
              (userMemberId && t.assigneeId === userMemberId) ||
-             (currentUser.id === 'preet' && t.assigneeId === 'm2') ||
-             (currentUser.id === 'mohit' && t.assigneeId === 'm3') ||
-             (currentUser.id === 'hirvi' && t.assigneeId === 'm4') ||
-             (currentUser.memberId === 'm2' && t.assigneeId === 'preet') ||
-             (currentUser.memberId === 'm3' && t.assigneeId === 'mohit') ||
-             (currentUser.memberId === 'm4' && t.assigneeId === 'hirvi');
+             (currentUser?.id === 'preet' && t.assigneeId === 'm2') ||
+             (currentUser?.id === 'mohit' && t.assigneeId === 'm3') ||
+             (currentUser?.id === 'hirvi' && t.assigneeId === 'm4') ||
+             (currentUser?.memberId === 'm2' && t.assigneeId === 'preet') ||
+             (currentUser?.memberId === 'm3' && t.assigneeId === 'mohit') ||
+             (currentUser?.memberId === 'm4' && t.assigneeId === 'hirvi');
     };
 
     let allProjectTasks = Store.getTasks(projectId);
 
-    // Strict Privacy: AI Developer must have assigned tasks in project to view it
-    if (isDeveloper) {
+    // Strict RBAC: Standard user must be a member or have assigned tasks in project to view it
+    if (isStandardUser) {
+      const isMember = Array.isArray(p.memberIds) && (
+        p.memberIds.includes(userMemberId) ||
+        p.memberIds.includes(currentUser?.id) ||
+        (currentUser?.id === 'preet' && p.memberIds.includes('m2')) ||
+        (currentUser?.id === 'mohit' && p.memberIds.includes('m3')) ||
+        (currentUser?.id === 'hirvi' && p.memberIds.includes('m4'))
+      );
       const myProjectTasks = allProjectTasks.filter(isUserTask);
-      if (myProjectTasks.length === 0) {
+      if (!isMember && myProjectTasks.length === 0) {
         return `
           <div class="access-restricted-wrapper" style="min-height:75vh;display:flex;align-items:center;justify-content:center;padding:32px 20px;box-sizing:border-box;">
             <div class="section-card access-restricted-card" style="max-width:520px;width:100%;text-align:center;padding:48px 36px;box-shadow:var(--shadow-md);border-radius:12px;background:var(--color-surface);border:1px solid var(--color-border);box-sizing:border-box;">
@@ -56,7 +64,7 @@ const ProjectDetailScreen = {
               </div>
               <h2 style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--color-text-primary);margin:0 0 12px 0;">Access Restricted</h2>
               <p style="font-size:14px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 24px 0;">
-                You do not have any tasks assigned in this project. Please contact Ayush Desai (Admin) for project allocation.
+                You are not listed as an active team member on this project. Please contact an administrator for project allocation.
               </p>
               <div>
                 <button type="button" class="btn btn-primary" onclick="App.navigate('projects')" style="padding:0 24px;height:42px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;margin:0 auto;border-radius:8px;cursor:pointer;">
@@ -69,19 +77,19 @@ const ProjectDetailScreen = {
       }
     }
 
-    const tasks = isDeveloper ? allProjectTasks.filter(isUserTask) : allProjectTasks;
+    const tasks = isStandardUser ? allProjectTasks.filter(isUserTask) : allProjectTasks;
     const milestones = Store.getMilestones(projectId);
     let issues = Store.getIssues(projectId);
-    if (isDeveloper) {
+    if (isStandardUser) {
       issues = issues.filter(i => 
-        i.assigneeId === currentUser.id ||
+        i.assigneeId === currentUser?.id ||
         (userMemberId && i.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && i.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && i.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && i.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && i.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && i.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && i.assigneeId === 'hirvi')
+        (currentUser?.id === 'preet' && i.assigneeId === 'm2') ||
+        (currentUser?.id === 'mohit' && i.assigneeId === 'm3') ||
+        (currentUser?.id === 'hirvi' && i.assigneeId === 'm4') ||
+        (currentUser?.memberId === 'm2' && i.assigneeId === 'preet') ||
+        (currentUser?.memberId === 'm3' && i.assigneeId === 'mohit') ||
+        (currentUser?.memberId === 'm4' && i.assigneeId === 'hirvi')
       );
     }
     const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
@@ -114,7 +122,7 @@ const ProjectDetailScreen = {
           </div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-secondary" onclick="ProjectsScreen.openCreateModal(Store.getProject('${projectId}'))">${Icons.edit} Edit</button>
+          ${isAdmin ? `<button class="btn btn-secondary" onclick="ProjectsScreen.openCreateModal(Store.getProject('${projectId}'))">${Icons.edit} Edit</button>` : ''}
           <button class="btn btn-primary" onclick="TasksScreen.openCreateModal('${projectId}')">${Icons.plus} Add Task</button>
         </div>
       </div>
@@ -173,11 +181,25 @@ const ProjectDetailScreen = {
     return `<div class="table-wrap"><table class="table">
       <thead><tr><th style="width:40px"></th><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
       <tbody>${tasks.sort((a,b)=>a.order-b.order).map(t => {
-        const m = Store.getMember(t.assigneeId);
+        const assigneeIds = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        const members = assigneeIds.map(id => Store.getMember(id)).filter(Boolean);
+        const m = members[0];
         return `<tr>
           <td><span class="priority-dot priority-${t.priority}" title="${t.priority}"></span></td>
           <td><span class="task-title" onclick="TasksScreen.openDetailModal('${t.id}')">${t.title}</span></td>
-          <td>${m ? `<div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span style="font-size:12px">${m.name}</span></div>` : '<span style="color:var(--color-text-disabled);font-size:12px">Unassigned</span>'}</td>
+          <td>${members.length > 1 ? `
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="avatar-stack">
+                ${members.map((mem, idx) => {
+                  const initials = mem.initials || mem.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+                  return `<div class="avatar avatar-stack-item" style="background:${mem.color};width:24px;height:24px;font-size:9.5px;font-weight:700;color:#FFF;border:2px solid var(--color-surface,#FFF);border-radius:50%;margin-left:${idx===0?'0':'-8px'};position:relative;z-index:${idx+1}" title="${mem.name}">${initials}</div>`;
+                }).join('')}
+              </div>
+              <span style="font-size:12px">${members.map(mem=>mem.name.split(' ')[0]).join(' + ')}</span>
+            </div>
+          ` : (members.length === 1 ? `
+            <div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span style="font-size:12px">${m.name}</span></div>
+          ` : '<span style="color:var(--color-text-disabled);font-size:12px">Unassigned</span>')}</td>
           <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
           <td>
             <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">

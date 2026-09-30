@@ -916,28 +916,48 @@ const TasksScreen = {
   // ─── Assignee Selector Helpers ───
   _getSelectableAssignees(projectId, currentUser) {
     const allAssignees = Store.getAssignees(); // Excludes Admin m1
-    if (!currentUser || currentUser.role === 'Admin') {
-      return allAssignees;
-    }
     if (!projectId) {
       return allAssignees;
     }
     const project = Store.getProject(projectId);
-    if (!project || !Array.isArray(project.memberIds) || project.memberIds.length === 0) {
+    if (!project) {
       return allAssignees;
     }
+    const pMemberIds = Array.isArray(project.memberIds)
+      ? project.memberIds.map(x => (typeof x === 'object' && x ? (x.id || x.memberId || '') : String(x))).filter(Boolean)
+      : [];
+    if (pMemberIds.length === 0) {
+      return [];
+    }
     const filtered = allAssignees.filter(m =>
-      project.memberIds.includes(m.id) ||
-      (m.id === 'm2' && project.memberIds.includes('preet')) ||
-      (m.id === 'm3' && project.memberIds.includes('mohit')) ||
-      (m.id === 'm4' && project.memberIds.includes('hirvi'))
+      pMemberIds.includes(m.id) ||
+      pMemberIds.includes(String(m.id)) ||
+      (m.memberId && pMemberIds.includes(m.memberId)) ||
+      (m.userId && pMemberIds.includes(m.userId)) ||
+      (m.id === 'm2' && pMemberIds.includes('preet')) ||
+      (m.id === 'm3' && pMemberIds.includes('mohit')) ||
+      (m.id === 'm4' && pMemberIds.includes('hirvi'))
     );
-    return filtered.length > 0 ? filtered : allAssignees;
+    if (filtered.length === 0) {
+      const allMembers = Store.getMembers() || [];
+      const projMembers = allMembers.filter(m =>
+        m.id !== 'm1' && m.role !== 'Admin' && (
+          pMemberIds.includes(m.id) ||
+          pMemberIds.includes(String(m.id)) ||
+          (m.memberId && pMemberIds.includes(m.memberId)) ||
+          (m.id === 'm2' && pMemberIds.includes('preet')) ||
+          (m.id === 'm3' && pMemberIds.includes('mohit')) ||
+          (m.id === 'm4' && pMemberIds.includes('hirvi'))
+        )
+      );
+      if (projMembers.length > 0) return projMembers;
+    }
+    return filtered;
   },
 
   _renderAssigneePills(availableMembers, selectedMemberIds = [], prefix = 'task') {
     if (!availableMembers || availableMembers.length === 0) {
-      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No assignees available for this project.</div>`;
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No team members assigned to this project.</div>`;
     }
     return `
       <div class="assignee-pills-wrap" id="${prefix}-assignee-pills" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
@@ -988,8 +1008,11 @@ const TasksScreen = {
       const checkIndicator = label.querySelector('.assignee-check-indicator');
       if (checkIndicator) checkIndicator.style.display = 'none';
     }
-    const checked = Array.from(document.querySelectorAll('.task-assignee-cb:checked')).map(cb => cb.value);
-    const hiddenInput = document.getElementById('task-assignee') || document.getElementById('detail-assignee');
+    const picker = input.closest('#task-assignee-picker') || input.closest('#detail-assignee-picker');
+    const checked = picker
+      ? Array.from(picker.querySelectorAll('.task-assignee-cb:checked')).map(cb => cb.value)
+      : Array.from(document.querySelectorAll('.task-assignee-cb:checked')).map(cb => cb.value);
+    const hiddenInput = document.getElementById(picker && picker.id.includes('detail') ? 'detail-assignee' : 'task-assignee');
     if (hiddenInput) hiddenInput.value = checked[0] || '';
   },
 
@@ -1046,7 +1069,9 @@ const TasksScreen = {
     const initialProjectId = projectId || (projects.length === 1 ? projects[0].id : (projects[0]?.id || ''));
     const defaultAssigneeId = userMemberId || currentUser?.id || 'm2';
     const selectableAssignees = this._getSelectableAssignees(initialProjectId, currentUser);
-    const initialSelectedAssignees = isStandardUser ? [defaultAssigneeId] : [];
+    const initialSelectedAssignees = isStandardUser && selectableAssignees.some(m => m.id === defaultAssigneeId)
+      ? [defaultAssigneeId]
+      : [];
 
     this._modalSubtasks = [];
 

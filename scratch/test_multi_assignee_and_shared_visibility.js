@@ -187,12 +187,14 @@ assert(preetSelectable.some(m => m.id === 'm3'), 'Mohit (collaborator) is select
 assert(!preetSelectable.some(m => m.id === 'm4'), 'Hirvi (not in project1) is NOT selectable for project1 by standard user');
 assert(!preetSelectable.some(m => m.id === 'm1'), 'Admin Ayush Desai is NOT selectable');
 
-// Admin creates task
+// Admin creates task - project selection determines available team members
 Auth.getCurrentUser = () => ({ id: 'admin', memberId: 'm1', name: 'Ayush Desai', role: 'Admin' });
 const adminUser = Auth.getCurrentUser();
 const adminSelectable = TasksScreen._getSelectableAssignees(project1.id, adminUser);
-assert(adminSelectable.some(m => m.id === 'm2') && adminSelectable.some(m => m.id === 'm3') && adminSelectable.some(m => m.id === 'm4'),
-  'Admin can select any team member across all projects (Preet, Mohit, Hirvi)');
+assert(adminSelectable.some(m => m.id === 'm2') && adminSelectable.some(m => m.id === 'm3'),
+  'Admin sees project1 team members (Preet, Mohit)');
+assert(!adminSelectable.some(m => m.id === 'm4'),
+  'Admin does NOT see team members outside project1 (Hirvi is not in project1)');
 
 // Assignee pill selector markup
 const pillsHtml = TasksScreen._renderAssigneePills(preetSelectable, ['m2'], 'task');

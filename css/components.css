@@ -1286,13 +1286,13 @@
 .settings-row-desc { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
 
 /* ==========================================================================
-   Executive Macro-Level Gantt Chart & Timeline Styles
+   Executive Macro-Level Gantt Chart & Timeline Styles (Hintonn AI Design System)
    ========================================================================== */
 
 .timeline-macro-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
   display: flex;
@@ -1304,7 +1304,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 18px 24px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   flex-wrap: wrap;
@@ -1319,7 +1319,7 @@
 
 .timeline-macro-title h3 {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
@@ -1328,17 +1328,18 @@
 .timeline-macro-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 
 .timeline-legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 500;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--color-text-secondary);
+  font-family: var(--font-ui);
 }
 
 .timeline-legend-dot {
@@ -1349,9 +1350,9 @@
 }
 
 .timeline-legend-bar {
-  width: 16px;
-  height: 6px;
-  border-radius: 3px;
+  width: 20px;
+  height: 7px;
+  border-radius: var(--radius-pill);
   flex-shrink: 0;
 }
 
@@ -1363,17 +1364,18 @@
   padding: 3px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  gap: 2px;
+  gap: 3px;
   box-shadow: var(--shadow-xs);
 }
 
 .timeline-scale-tab {
   border: none;
   background: none;
-  padding: 5px 14px;
-  border-radius: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
+  font-family: var(--font-ui);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -1386,16 +1388,16 @@
 }
 
 .timeline-scale-tab.active {
-  background: var(--color-primary);
+  background: var(--gradient-primary);
   color: #FFFFFF;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .timeline-macro-controls {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-page);
   flex-wrap: wrap;
@@ -1408,16 +1410,17 @@
   padding: 3px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  gap: 2px;
+  gap: 3px;
 }
 
 .timeline-stage-tab {
   border: none;
   background: none;
   padding: 5px 12px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
+  font-family: var(--font-ui);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -1430,9 +1433,9 @@
 }
 
 .timeline-stage-tab.active {
-  background: var(--color-primary);
+  background: var(--gradient-primary);
   color: #FFFFFF;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
 }
 
 /* Split Layout Gantt Grid Architecture */
@@ -1443,11 +1446,11 @@
   background: var(--color-surface);
 }
 
-/* Left Fixed Column: 300px Wide */
+/* Left Fixed Column: 320px Wide */
 .timeline-macro-sidebar {
-  width: 300px;
-  min-width: 300px;
-  max-width: 300px;
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -1457,10 +1460,10 @@
 }
 
 .timeline-sidebar-col-header {
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
-  padding: 0 14px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  padding: 0 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1468,16 +1471,16 @@
   font-weight: 700;
   text-transform: uppercase;
   color: var(--color-text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-page);
 }
 
 .timeline-project-row {
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
-  padding: 14px 16px;
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
+  padding: 0 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1498,33 +1501,34 @@
 .timeline-project-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }
 
 .timeline-expand-arrow {
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   font-size: 10px;
   font-family: var(--font-mono);
   width: 12px;
   flex-shrink: 0;
+  transition: transform var(--transition-fast);
 }
 
 .timeline-pkg-badge {
   font-size: 10px;
   font-family: var(--font-mono);
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--color-bg-page);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  color: var(--color-primary-700);
   flex-shrink: 0;
 }
 
 .timeline-project-name {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -1532,6 +1536,7 @@
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
+  font-family: var(--font-ui);
 }
 
 .timeline-project-meta-right {
@@ -1542,9 +1547,9 @@
 }
 
 .timeline-stage-pill {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: var(--radius-pill);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -1552,21 +1557,21 @@
 }
 
 .stage-pill-exec {
-  background: rgba(37, 99, 235, 0.12);
-  color: #2563EB;
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  border: 1px solid var(--color-primary-200);
 }
 
 .stage-pill-dlp {
-  background: rgba(124, 58, 237, 0.12);
-  color: #7C3AED;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: var(--color-ai-50);
+  color: var(--color-ai-700);
+  border: 1px solid var(--color-ai-200);
 }
 
 .stage-pill-plan {
-  background: rgba(71, 85, 105, 0.14);
-  color: #475569;
-  border: 1px solid rgba(71, 85, 105, 0.25);
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
 }
 
 /* Assignee Avatars in Timeline */
@@ -1595,18 +1600,18 @@
   margin-left: 0;
 }
 
-/* Phase Sub-rows in Sidebar (Height: 40px) */
+/* Phase Sub-rows in Sidebar (Height: 42px) */
 .timeline-phase-row {
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
-  padding: 8px 16px 8px 26px;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
+  padding: 0 18px 0 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-bg-page);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   font-weight: 500;
   gap: 8px;
@@ -1627,9 +1632,13 @@
 }
 
 .timeline-phase-pct {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
 /* Multi-Scale Gantt Grid Canvas */
@@ -1645,9 +1654,9 @@
 
 /* Month View */
 .timeline-month-grid-header {
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   border-bottom: 1px solid var(--color-border);
@@ -1658,7 +1667,7 @@
 
 .timeline-month-grid-bg {
   position: absolute;
-  top: 44px;
+  top: 48px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -1674,9 +1683,9 @@
 }
 
 .timeline-week-grid-header {
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   border-bottom: 1px solid var(--color-border);
@@ -1711,7 +1720,7 @@
 
 .timeline-week-grid-bg {
   position: absolute;
-  top: 44px;
+  top: 48px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -1727,9 +1736,9 @@
 }
 
 .timeline-day-grid-header {
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
   display: grid;
   grid-template-columns: repeat(30, 1fr);
   border-bottom: 1px solid var(--color-border);
@@ -1761,7 +1770,7 @@
 
 .timeline-day-grid-bg {
   position: absolute;
-  top: 44px;
+  top: 48px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -1775,12 +1784,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-right: 1px solid #F3F4F6;
+  border-right: 1px solid var(--color-border-subtle);
   position: relative;
   z-index: 6;
 }
@@ -1790,34 +1799,36 @@
 }
 
 .timeline-col-current-badge {
-  background: #2563EB;
+  background: var(--gradient-primary);
   color: #FFFFFF;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  letter-spacing: 0.04em;
 }
 
 .today-col {
-  background: #EFF6FF !important;
+  background: rgba(37, 99, 235, 0.04) !important;
 }
 
 .today-badge {
-  background: #2563EB;
+  background: var(--gradient-primary);
   color: #FFFFFF !important;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
   font-size: 10px;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.4);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
 }
 
 .today-line-bg {
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(37, 99, 235, 0.03);
 }
 
 .timeline-grid-vertical-line {
-  border-right: 1px solid #F3F4F6;
+  border-right: 1px solid var(--color-border-subtle);
   height: 100%;
 }
 
@@ -1831,23 +1842,23 @@
   top: 0;
   bottom: 0;
   width: 0;
-  border-left: 1px dashed #2563EB;
-  z-index: 3;
+  border-left: 2px dashed var(--color-primary);
+  z-index: 4;
   pointer-events: none;
 }
 
 .timeline-macro-today-badge {
   position: absolute;
-  top: 2px;
+  top: 3px;
   left: 50%;
   transform: translateX(-50%);
-  background: #2563EB;
+  background: var(--gradient-primary);
   color: #FFFFFF;
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1864,9 +1875,9 @@
 }
 
 .timeline-macro-canvas-row {
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
   position: relative;
   display: flex;
   align-items: center;
@@ -1875,14 +1886,14 @@
 }
 
 .timeline-macro-canvas-phase-row {
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
+  height: 42px;
+  min-height: 42px;
+  max-height: 42px;
   position: relative;
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: rgba(248, 250, 252, 0.5);
+  background: rgba(248, 250, 252, 0.6);
   width: 100%;
 }
 
@@ -1895,122 +1906,125 @@
   transform: translateY(-50%);
   cursor: pointer;
   z-index: 3;
-  transition: transform 0.15s ease, filter 0.15s ease;
-  height: 14px;
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+  height: 20px;
 }
 
 .timeline-bar-wrapper:hover {
-  transform: translateY(-50%) scaleY(1.15);
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
+  transform: translateY(-50%) scaleY(1.08);
+  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.22));
   z-index: 10;
 }
 
 .timeline-bar-slim {
-  height: 12px;
-  max-height: 12px;
-  border-radius: 6px;
+  height: 18px;
+  max-height: 18px;
+  border-radius: 9px;
   position: relative;
   overflow: visible;
   display: flex;
   align-items: center;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-xs);
 }
 
-/* Distinct Color Schemes */
-/* Planning / Design: Solid Dark Slate (#475569) */
+/* Distinct Color Schemes adhering to Hintonn Design */
+/* Planning / Design: Refined Hintonn Indigo/Violet Tone */
 .timeline-bar-slim.stage-plan {
-  background: rgba(71, 85, 105, 0.16);
-  border-color: rgba(71, 85, 105, 0.35);
+  background: #EEF2FF;
+  border: 1px solid #C7D2FE;
 }
 
 .timeline-bar-fill.fill-plan {
-  background: linear-gradient(90deg, #475569, #64748B);
+  background: linear-gradient(90deg, #3867FF 0%, #6366F1 100%);
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25);
 }
 
-/* Execution / Construction: Vibrant Solid Blue (#2563EB) */
+/* Execution / Construction: Signature Hintonn Blue */
 .timeline-bar-slim.stage-exec {
-  background: rgba(37, 99, 235, 0.16);
-  border-color: rgba(37, 99, 235, 0.35);
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
 }
 
 .timeline-bar-fill.fill-exec {
-  background: linear-gradient(90deg, #1D4ED8, #2563EB);
+  background: linear-gradient(90deg, #1683FF 0%, #2563EB 100%);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
 }
 
-/* Handover & DLP: Deep Violet Purple (#7C3AED) */
+/* Handover & DLP: Signature Hintonn AI Violet */
 .timeline-bar-slim.stage-dlp {
-  background: rgba(124, 58, 237, 0.16);
-  border-color: rgba(124, 58, 237, 0.35);
+  background: #FAF5FF;
+  border: 1px solid #E9D5FF;
 }
 
 .timeline-bar-fill.fill-dlp {
-  background: linear-gradient(90deg, #6D28D9, #7C3AED);
+  background: linear-gradient(90deg, #7C3AED 0%, #9333EA 100%);
+  box-shadow: 0 1px 4px rgba(147, 51, 234, 0.25);
 }
 
 .timeline-bar-fill {
   height: 100%;
-  border-radius: 5px;
+  border-radius: 8px;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
 .timeline-bar-progress-text {
   position: absolute;
-  right: -38px;
+  right: -42px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: #1E293B;
-  background: #E2E8F0;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   pointer-events: none;
   line-height: 1;
   white-space: nowrap;
   z-index: 5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-family: var(--font-ui);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Stage-specific progress badge colors */
 .timeline-bar-slim.stage-exec .timeline-bar-progress-text {
-  background: #DBEAFE;
+  background: #EFF6FF;
   color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 
 .timeline-bar-slim.stage-dlp .timeline-bar-progress-text {
-  background: #EDE9FE;
-  color: #6D28D9;
+  background: #FAF5FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
 }
 
 .timeline-bar-slim.stage-plan .timeline-bar-progress-text {
-  background: #E2E8F0;
-  color: #334155;
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
 }
 
 /* Phase Sub-Bar */
 .timeline-bar-phase-slim {
-  height: 10px;
-  max-height: 10px;
-  border-radius: 4px;
+  height: 14px;
+  max-height: 14px;
+  border-radius: 7px;
   position: relative;
   overflow: visible;
   display: flex;
   align-items: center;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .timeline-bar-phase-slim .timeline-bar-fill {
-  border-radius: 3px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .timeline-bar-phase-slim .timeline-bar-progress-text {
-  font-size: 9px;
-  right: -34px;
+  font-size: 9.5px;
+  right: -38px;
   padding: 1px 5px;
 }
 
@@ -2027,21 +2041,22 @@
   position: fixed;
   pointer-events: none;
   z-index: 99999;
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: #F8FAFC;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 11.5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 12px;
   line-height: 1.5;
-  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45), 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 0 20px rgba(37, 99, 235, 0.12);
   max-width: 320px;
-  min-width: 240px;
+  min-width: 250px;
   opacity: 0;
   transform: translate(-50%, -100%) translateY(-12px);
   transition: opacity 0.12s ease;
+  font-family: var(--font-ui);
 }
 
 .timeline-glass-tooltip.visible {

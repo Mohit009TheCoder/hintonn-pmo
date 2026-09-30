@@ -410,8 +410,8 @@ const TimelineScreen = {
 
     const stageColors = {
       'Execution / Construction': '#2563EB',
-      'Handover & DLP Timelines': '#7C3AED',
-      'Planning / Design': '#475569'
+      'Handover & DLP Timelines': '#9333EA',
+      'Planning / Design': '#4F46E5'
     };
     const stageColor = stageColors[data.stage] || '#2563EB';
 
@@ -577,15 +577,15 @@ const TimelineScreen = {
             </div>
             <div class="timeline-macro-legend">
               <div class="timeline-legend-item">
-                <span class="timeline-legend-bar" style="background:#2563EB"></span>
+                <span class="timeline-legend-bar" style="background:linear-gradient(90deg, #1683FF, #2563EB)"></span>
                 <span>Execution / Construction</span>
               </div>
               <div class="timeline-legend-item">
-                <span class="timeline-legend-bar" style="background:#7C3AED"></span>
+                <span class="timeline-legend-bar" style="background:linear-gradient(90deg, #7C3AED, #9333EA)"></span>
                 <span>Handover & DLP</span>
               </div>
               <div class="timeline-legend-item">
-                <span class="timeline-legend-bar" style="background:#475569"></span>
+                <span class="timeline-legend-bar" style="background:linear-gradient(90deg, #3867FF, #6366F1)"></span>
                 <span>Planning / Design</span>
               </div>
             </div>

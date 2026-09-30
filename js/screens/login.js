@@ -585,8 +585,8 @@ const LoginScreen = {
       Store._data.settings.currentUser = 'm3';
     }
 
-    if (typeof Toast !== 'undefined') Toast.show('Logged in as Admin (Mohit Jain). Opening User Approvals...', 'info');
-    window.location.hash = '#user-approvals';
+    if (typeof Toast !== 'undefined') Toast.show('Logged in as Admin (Mohit Jain). Opening Dashboard...', 'info');
+    window.location.hash = '#dashboard';
     if (typeof App !== 'undefined') App.handleRoute();
   },
 

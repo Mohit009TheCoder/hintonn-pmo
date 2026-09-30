@@ -30,6 +30,17 @@ button, a, input, select, textarea, [role="button"] {
   touch-action: manipulation;
 }
 
+/* Global SVG Safeguards */
+svg {
+  flex-shrink: 0;
+}
+
+svg:not([width]):not([height]):not(.icon-hexagon-h) {
+  width: 1em;
+  height: 1em;
+  max-width: 100%;
+}
+
 /* Hide native browser password reveal icon (Edge/IE) so only custom eye toggle shows */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {

@@ -700,16 +700,16 @@ const ReportsScreen = {
     const { title, scopeLabel, dateRange, generatedAt, metrics, completionRate, velocity, overdueTasks, totalTasks, completedTasks, activeTasks, priorityCounts, memberBreakdown, tasks } = report;
 
     const body = `
-      <div class="custom-report-output-container" id="printable-report-content" style="display:flex;flex-direction:column;gap:20px;">
+      <div class="custom-report-output-container" id="printable-report-content">
         
         <!-- Header Banner -->
-        <div style="background:var(--color-surface-subtle);padding:16px 20px;border-radius:10px;border:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div class="report-header-banner">
           <div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-              <h2 style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">${Utils.escapeHtml(title)}</h2>
+            <div class="report-title-row">
+              <h2>${Utils.escapeHtml(title)}</h2>
               <span class="badge badge-primary" style="font-size:11px;">Custom Report</span>
             </div>
-            <div style="font-size:12.5px;color:var(--color-text-secondary);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div class="report-meta-row">
               <span><strong>Scope:</strong> ${Utils.escapeHtml(scopeLabel)}</span>
               <span>•</span>
               <span><strong>Period:</strong> ${Utils.humanize(dateRange)}</span>
@@ -730,35 +730,35 @@ const ReportsScreen = {
         </div>
 
         <!-- Summary KPI Metric Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;">
+        <div class="report-kpi-grid">
           ${metrics.completion ? `
-            <div style="background:var(--color-surface);padding:14px;border-radius:8px;border:1px solid var(--color-border);text-align:center;">
-              <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:4px;">Completion Rate</div>
-              <div style="font-size:22px;font-weight:800;color:var(--color-success-600);">${completionRate}%</div>
-              <div style="font-size:11px;color:var(--color-text-muted);">${completedTasks}/${totalTasks} Tasks</div>
+            <div class="report-kpi-card">
+              <div class="report-kpi-card-label">Completion Rate</div>
+              <div class="report-kpi-card-val" style="color:var(--color-success-600);">${completionRate}%</div>
+              <div class="report-kpi-card-sub">${completedTasks}/${totalTasks} Tasks</div>
             </div>
           ` : ''}
 
           ${metrics.velocity ? `
-            <div style="background:var(--color-surface);padding:14px;border-radius:8px;border:1px solid var(--color-border);text-align:center;">
-              <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:4px;">Task Velocity</div>
-              <div style="font-size:22px;font-weight:800;color:var(--color-primary);">${velocity} <span style="font-size:12px;font-weight:normal;">closed</span></div>
-              <div style="font-size:11px;color:var(--color-text-muted);">in period</div>
+            <div class="report-kpi-card">
+              <div class="report-kpi-card-label">Task Velocity</div>
+              <div class="report-kpi-card-val" style="color:var(--color-primary);">${velocity} <span style="font-size:12px;font-weight:normal;">closed</span></div>
+              <div class="report-kpi-card-sub">in period</div>
             </div>
           ` : ''}
 
           ${metrics.overdue ? `
-            <div style="background:var(--color-surface);padding:14px;border-radius:8px;border:1px solid var(--color-border);text-align:center;">
-              <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:4px;">Overdue Items</div>
-              <div style="font-size:22px;font-weight:800;color:${overdueTasks > 0 ? '#DC2626' : 'var(--color-text-primary)'};">${overdueTasks}</div>
-              <div style="font-size:11px;color:${overdueTasks > 0 ? '#DC2626' : 'var(--color-text-muted)'};">${overdueTasks > 0 ? 'Requires attention' : 'All on track'}</div>
+            <div class="report-kpi-card">
+              <div class="report-kpi-card-label">Overdue Items</div>
+              <div class="report-kpi-card-val" style="color:${overdueTasks > 0 ? '#DC2626' : 'var(--color-text-primary)'};">${overdueTasks}</div>
+              <div class="report-kpi-card-sub" style="color:${overdueTasks > 0 ? '#DC2626' : 'var(--color-text-muted)'};">${overdueTasks > 0 ? 'Requires attention' : 'All on track'}</div>
             </div>
           ` : ''}
 
-          <div style="background:var(--color-surface);padding:14px;border-radius:8px;border:1px solid var(--color-border);text-align:center;">
-            <div style="font-size:11px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:4px;">Active Workload</div>
-            <div style="font-size:22px;font-weight:800;color:var(--color-ai);">${activeTasks}</div>
-            <div style="font-size:11px;color:var(--color-text-muted);">In flight items</div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-card-label">Active Workload</div>
+            <div class="report-kpi-card-val" style="color:var(--color-ai);">${activeTasks}</div>
+            <div class="report-kpi-card-sub">In flight items</div>
           </div>
         </div>
 
@@ -766,9 +766,12 @@ const ReportsScreen = {
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">
           
           <!-- Task Status Breakdown -->
-          <div style="background:var(--color-surface);padding:16px;border-radius:8px;border:1px solid var(--color-border);">
-            <div style="font-size:13.5px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-              ${Icons.checkSquare} Task Status Distribution
+          <div class="report-section-card" style="padding:16px;">
+            <div style="margin-bottom:12px;">
+              <div class="report-section-title">
+                <span class="report-icon-badge blue">${Icons.checkSquare}</span>
+                Task Status Distribution
+              </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;">
               ${[
@@ -795,9 +798,12 @@ const ReportsScreen = {
 
           <!-- Priority Breakdown -->
           ${metrics.priority ? `
-            <div style="background:var(--color-surface);padding:16px;border-radius:8px;border:1px solid var(--color-border);">
-              <div style="font-size:13.5px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-                ${Icons.target} Priority Breakdown
+            <div class="report-section-card" style="padding:16px;">
+              <div style="margin-bottom:12px;">
+                <div class="report-section-title">
+                  <span class="report-icon-badge red">${Icons.target}</span>
+                  Priority Breakdown
+                </div>
               </div>
               <div style="display:flex;flex-direction:column;gap:10px;">
                 ${[
@@ -826,9 +832,12 @@ const ReportsScreen = {
 
         <!-- Workload Distribution Table (if multiple members or workload metric active) -->
         ${metrics.workload && memberBreakdown.length > 0 ? `
-          <div style="background:var(--color-surface);border-radius:8px;border:1px solid var(--color-border);overflow:hidden;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--color-border);font-size:13.5px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
-              ${Icons.users} Workload Distribution by Teammate
+          <div class="report-section-card">
+            <div class="report-section-card-header">
+              <div class="report-section-title">
+                <span class="report-icon-badge purple">${Icons.users}</span>
+                Workload Distribution by Teammate
+              </div>
             </div>
             <div class="table-wrap no-pad">
               <table class="table">
@@ -868,10 +877,11 @@ const ReportsScreen = {
         ` : ''}
 
         <!-- Filtered Tasks Table -->
-        <div style="background:var(--color-surface);border-radius:8px;border:1px solid var(--color-border);overflow:hidden;">
-          <div style="padding:12px 16px;border-bottom:1px solid var(--color-border);font-size:13.5px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;justify-content:space-between;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              ${Icons.checkSquare} Scoped Tasks (${tasks.length})
+        <div class="report-section-card">
+          <div class="report-section-card-header">
+            <div class="report-section-title">
+              <span class="report-icon-badge sky">${Icons.checkSquare}</span>
+              Scoped Tasks (${tasks.length})
             </div>
             <span style="font-size:11px;color:var(--color-text-muted);font-weight:normal;">Strictly filtered by selected employee scope</span>
           </div>

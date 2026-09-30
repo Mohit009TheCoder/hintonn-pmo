@@ -1070,24 +1070,24 @@ const BillingScreen = {
     return `
     <div class="bim">
       <style>
-        .bim { display:flex; flex-direction:column; gap:14px; font-size:13px; color:var(--color-text-primary); }
+        .bim { display:flex; flex-direction:column; gap:12px; font-size:13px; color:var(--color-text-primary); }
+        /* Slim context strip (replaces the old bulky hero) */
+        .bim-topline { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:2px 2px 0; flex-wrap:wrap; }
+        .bim-topline-main { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+        .bim-brand { font-family:var(--font-display); font-weight:700; font-size:12.5px; color:var(--color-text-primary); }
+        .bim-topline-sub { font-size:11.5px; color:var(--color-text-muted); }
+        .bim-pill { font-size:10.5px; font-weight:700; letter-spacing:0.3px; color:var(--color-primary); background:var(--color-primary-50); border:1px solid var(--color-border-brand); padding:3px 10px; border-radius:var(--radius-pill); white-space:nowrap; }
+        .bim-pill-ok { color:var(--color-success-700); background:var(--color-success-soft); border-color:var(--color-primary-200); }
 
-        /* Header strip */
-        .bim-hero { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 16px; background:var(--color-primary-50); border:1px solid var(--color-border-brand); border-radius:var(--radius-md); flex-wrap:wrap; }
-        .bim-hero-main { display:flex; align-items:center; gap:12px; min-width:0; }
-        .bim-hero-icon { width:38px; height:38px; flex-shrink:0; border-radius:var(--radius-sm); background:var(--color-primary); color:#FFFFFF; display:flex; align-items:center; justify-content:center; }
-        .bim-hero-title { font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--color-primary-700); letter-spacing:0.2px; }
-        .bim-hero-sub { font-size:11.5px; color:var(--color-text-muted); margin-top:2px; }
-        .bim-pill { font-size:10.5px; font-weight:700; letter-spacing:0.3px; color:var(--color-primary); background:var(--color-surface); border:1px solid var(--color-border-brand); padding:4px 11px; border-radius:var(--radius-pill); white-space:nowrap; }
-        .bim-pill-ok { color:var(--color-success-700, #1E40AF); background:var(--color-success-soft); border-color:var(--color-primary-200); }
-
-        /* Cards */
-        .bim-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden; }
-        .bim-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 16px; border-bottom:1px solid var(--color-border); background:var(--color-bg-page); flex-wrap:wrap; }
-        .bim-card-title { display:flex; align-items:baseline; gap:9px; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--color-text-primary); min-width:0; }
+        /* Single sheet, divider-separated steps */
+        .bim-sheet { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); overflow:hidden; }
+        .bim-step { padding:14px 18px; }
+        .bim-step + .bim-step { border-top:1px solid var(--color-border); }
+        .bim-step-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+        .bim-step-title { display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--color-text-primary); min-width:0; }
         .bim-num { font-family:var(--font-mono); font-size:10px; font-weight:600; color:var(--color-primary); background:var(--color-primary-50); border:1px solid var(--color-border-brand); border-radius:var(--radius-xs); padding:2px 6px; flex-shrink:0; }
-        .bim-title-sub { font-weight:500; font-size:11.5px; color:var(--color-text-muted); }
-        .bim-card-body { padding:14px 16px; display:flex; flex-direction:column; gap:12px; }
+        .bim-sub { font-weight:500; font-size:11.5px; color:var(--color-text-muted); }
+        .bim-step-body { display:flex; flex-direction:column; gap:12px; }
 
         /* Grids & fields */
         .bim-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -1100,10 +1100,10 @@ const BillingScreen = {
 
         /* Segmented radio control */
         .bim-seg { display:inline-flex; background:var(--color-bg-subtle); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:2px; gap:2px; }
-        .bim-seg label { display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:var(--radius-xs); font-size:12px; font-weight:600; color:var(--color-text-secondary); cursor:pointer; transition:all var(--transition-fast); white-space:nowrap; }
+        .bim-seg label { display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:var(--radius-xs); font-size:12px; font-weight:600; color:var(--color-text-secondary); cursor:pointer; transition:all var(--transition-fast); white-space:nowrap; border:1px solid transparent; }
         .bim-seg label:hover { color:var(--color-text-primary); }
         .bim-seg input { accent-color:var(--color-primary); margin:0; }
-        .bim-seg label.on { background:var(--color-surface); color:var(--color-primary); box-shadow:var(--shadow-sm); border:1px solid var(--color-border-brand); padding:4px 10px; }
+        .bim-seg label.on { background:var(--color-surface); color:var(--color-primary); box-shadow:var(--shadow-sm); border-color:var(--color-border-brand); }
 
         .bim-info-line { font-size:11.5px; color:var(--color-text-muted); display:flex; align-items:center; gap:6px; line-height:1.4; }
         .bim-warn { padding:9px 12px; background:var(--color-warning-soft); border:1px solid var(--violet-200); border-radius:var(--radius-sm); font-size:11.5px; color:var(--color-warning-700); line-height:1.45; }
@@ -1126,26 +1126,25 @@ const BillingScreen = {
 
         /* Totals */
         .bim-totals { display:grid; grid-template-columns:1.15fr 1fr; gap:12px; margin-top:2px; }
-        .bim-words { background:var(--color-bg-page); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:10px 13px; display:flex; flex-direction:column; gap:6px; }
+        .bim-words { background:var(--color-bg-page); border-radius:var(--radius-sm); padding:10px 13px; display:flex; flex-direction:column; gap:6px; }
         .bim-words-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); }
         .bim-words-value { font-size:12.5px; font-weight:600; color:var(--color-text-primary); line-height:1.5; }
         .bim-words-note { font-size:10.5px; color:var(--color-text-muted); line-height:1.4; }
-        .bim-sum { background:var(--color-bg-page); border:1px solid var(--color-border); border-radius:var(--radius-sm); padding:9px 13px; font-size:12px; display:flex; flex-direction:column; justify-content:center; }
+        .bim-sum { background:var(--color-bg-page); border-radius:var(--radius-sm); padding:9px 13px; font-size:12px; display:flex; flex-direction:column; justify-content:center; }
         .bim-sum-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; color:var(--color-text-secondary); gap:10px; }
         .bim-sum-row strong { color:var(--color-text-primary); font-weight:600; }
         .bim-sum-row .neg { color:var(--color-error); font-weight:600; }
-        .bim-sum-row .pos { color:var(--color-success-700, #1E40AF); font-weight:600; }
+        .bim-sum-row .pos { color:var(--color-success-700); font-weight:600; }
         .bim-sum-row.total { border-top:1px solid var(--color-border); margin-top:4px; padding-top:8px; font-size:13px; font-weight:700; color:var(--color-text-primary); }
         .bim-sum-row.net { margin-top:6px; background:var(--color-primary-50); border:1px solid var(--color-border-brand); border-radius:var(--radius-xs); padding:7px 10px; font-weight:800; color:var(--color-primary-700); }
-        .bim-sum-row.net span:first-child { font-weight:700; }
 
-        /* Mini cards (schedule / recurring) */
-        .bim-mini { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:12px 14px; display:flex; flex-direction:column; gap:9px; min-width:0; }
+        /* Mini blocks (schedule / recurring) */
+        .bim-mini { background:var(--color-bg-page); border-radius:var(--radius-sm); padding:11px 13px; display:flex; flex-direction:column; gap:8px; min-width:0; }
         .bim-mini-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
         .bim-mini-title { font-family:var(--font-display); font-weight:700; font-size:12.5px; color:var(--color-text-primary); display:flex; align-items:center; gap:7px; }
         .bim-dot { width:7px; height:7px; border-radius:50%; background:var(--color-primary); flex-shrink:0; }
         .bim-dot-ai { background:var(--color-ai); }
-        .bim-sched-row { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11.5px; color:var(--color-text-secondary); padding:5px 9px; background:var(--color-bg-page); border:1px solid var(--color-border-subtle); border-radius:var(--radius-xs); }
+        .bim-sched-row { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:11.5px; color:var(--color-text-secondary); padding:5px 9px; background:var(--color-surface); border:1px solid var(--color-border-subtle); border-radius:var(--radius-xs); }
         .bim-sched-row strong { color:var(--color-text-primary); font-weight:700; }
         .bim-check { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--color-text-secondary); cursor:pointer; white-space:nowrap; }
         .bim-check input { accent-color:var(--color-primary); margin:0; }
@@ -1157,258 +1156,266 @@ const BillingScreen = {
         }
       </style>
 
-      <!-- Header strip -->
-      <div class="bim-hero">
-        <div class="bim-hero-main">
-          <div class="bim-hero-icon">${Icons.fileText || '📄'}</div>
-          <div style="min-width:0">
-            <div class="bim-hero-title">Proforma Invoice Generator</div>
-            <div class="bim-hero-sub">Hintonn AI Private Limited · Not a tax invoice — for client approval &amp; advance payment</div>
-          </div>
+      <!-- Slim context strip -->
+      <div class="bim-topline">
+        <div class="bim-topline-main">
+          <span class="bim-brand">Hintonn AI Private Limited</span>
+          <span class="bim-topline-sub">Proforma invoice · not a tax invoice — for client approval &amp; advance payment</span>
         </div>
-        <span class="bim-pill">3-Page Official Format</span>
+        <span class="bim-pill">3-Page Format</span>
       </div>
 
-      <!-- 01 · BILL TO -->
-      <section class="bim-card">
-        <header class="bim-card-head">
-          <div class="bim-card-title">
-            <span class="bim-num">01</span> Bill to
-            <span class="bim-title-sub">Client &amp; company details</span>
+      <div class="bim-sheet">
+        <!-- 01 · BILL TO -->
+        <div class="bim-step">
+          <div class="bim-step-head">
+            <div class="bim-step-title">
+              <span class="bim-num">01</span> Bill to
+              <span class="bim-sub">Client &amp; company details</span>
+            </div>
+            ${companies.length > 0 ? `
+            <div class="bim-seg" role="radiogroup" aria-label="Client source">
+              <label class="${s.clientMode==='other'?'on':''}">
+                <input type="radio" name="inv-client-mode" value="other" ${s.clientMode==='other'?'checked':''} onchange="BillingScreen._toggleClientMode('other')">
+                New client details
+              </label>
+              <label class="${s.clientMode==='existing'?'on':''}">
+                <input type="radio" name="inv-client-mode" value="existing" ${s.clientMode==='existing'?'checked':''} onchange="BillingScreen._toggleClientMode('existing')">
+                Existing client (${companies.length})
+              </label>
+            </div>` : ''}
           </div>
-          ${companies.length > 0 ? `
-          <div class="bim-seg" role="radiogroup" aria-label="Client source">
-            <label class="${s.clientMode==='other'?'on':''}">
-              <input type="radio" name="inv-client-mode" value="other" ${s.clientMode==='other'?'checked':''} onchange="BillingScreen._toggleClientMode('other')">
-              New client details
-            </label>
-            <label class="${s.clientMode==='existing'?'on':''}">
-              <input type="radio" name="inv-client-mode" value="existing" ${s.clientMode==='existing'?'checked':''} onchange="BillingScreen._toggleClientMode('existing')">
-              Existing client (${companies.length})
-            </label>
-          </div>` : ''}
-        </header>
-        <div class="bim-card-body">
-          <!-- Existing company dropdown -->
-          <div id="inv-existing-company-row" style="display:${s.clientMode==='existing'?'block':'none'}">
-            <div class="bim-field">
-              <label class="bim-label" for="inv-existing-select">Registered client company</label>
-              <select class="form-control" id="inv-existing-select" onchange="BillingScreen._onSelectExistingClient(this.value)">
-                <option value="">— Choose existing client company —</option>
-                ${companies.map(c => `
-                  <option value="${c.id}" ${s.selectedCompanyId===c.id?'selected':''}>${Utils.escapeHtml(c.name)}</option>
-                `).join('')}
-              </select>
+          <div class="bim-step-body">
+            <!-- Existing company dropdown -->
+            <div id="inv-existing-company-row" style="display:${s.clientMode==='existing'?'block':'none'}">
+              <div class="bim-field">
+                <label class="bim-label" for="inv-existing-select">Registered client company</label>
+                <select class="form-control" id="inv-existing-select" onchange="BillingScreen._onSelectExistingClient(this.value)">
+                  <option value="">— Choose existing client company —</option>
+                  ${companies.map(c => `
+                    <option value="${c.id}" ${s.selectedCompanyId===c.id?'selected':''}>${Utils.escapeHtml(c.name)}</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+
+            <!-- Client fields -->
+            <div id="inv-other-company-fields" style="display:flex;flex-direction:column;gap:12px">
+              <div class="bim-grid-2">
+                <div class="bim-field">
+                  <label class="bim-label" for="inv-client-name">Client / company legal name <span class="bim-req">*</span></label>
+                  <input type="text" class="form-control" id="inv-client-name" placeholder="e.g. Acme AI Innovations Private Limited"
+                         value="${Utils.escapeHtml(s.clientLegalName)}"
+                         oninput="BillingScreen._onClientNameInput(this.value)">
+                </div>
+                <div class="bim-field">
+                  <label class="bim-label" for="inv-client-gstin">Client GSTIN / tax ID</label>
+                  <input type="text" class="form-control" id="inv-client-gstin" placeholder="e.g. 24AAACH1234N1Z0 or —"
+                         value="${Utils.escapeHtml(s.clientGstin)}">
+                </div>
+              </div>
+
+              <div class="bim-grid-2">
+                <div class="bim-field">
+                  <label class="bim-label" for="inv-client-addr1">Address line 1</label>
+                  <input type="text" class="form-control" id="inv-client-addr1" placeholder="e.g. 10th Floor, Horizon Tech Park, Corporate Rd"
+                         value="${Utils.escapeHtml(s.clientAddr1)}">
+                </div>
+                <div class="bim-field">
+                  <label class="bim-label" for="inv-client-addr2">Address line 2, city — PIN</label>
+                  <input type="text" class="form-control" id="inv-client-addr2" placeholder="e.g. S.G. Highway, Ahmedabad — 380054"
+                         value="${Utils.escapeHtml(s.clientAddr2)}">
+                </div>
+              </div>
+
+              <div class="bim-grid-2" style="align-items:end">
+                <div class="bim-field">
+                  <label class="bim-label" for="inv-client-state">State, country</label>
+                  <input type="text" class="form-control" id="inv-client-state" placeholder="e.g. Gujarat, India"
+                         value="${Utils.escapeHtml(s.clientState)}">
+                </div>
+                <div id="inv-save-company-wrap" class="bim-side" style="display:${s.clientMode==='other'?'flex':'none'}">
+                  <label class="bim-check">
+                    <input type="checkbox" id="inv-save-company-check" ${s.saveCompany?'checked':''}>
+                    Save this company to the client directory for future billing
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- New client fields -->
-          <div id="inv-other-company-fields" style="display:flex;flex-direction:column;gap:12px">
+        <!-- 02 · PROJECT LINK -->
+        <div class="bim-step">
+          <div class="bim-step-head">
+            <div class="bim-step-title">
+              <span class="bim-num">02</span> Project link
+              <span class="bim-sub">Bill against an existing workspace project</span>
+            </div>
+            <span class="bim-pill bim-pill-ok">Live project data</span>
+          </div>
+          <div class="bim-step-body">
             <div class="bim-grid-2">
               <div class="bim-field">
-                <label class="bim-label" for="inv-client-name">Client / company legal name <span class="bim-req">*</span></label>
-                <input type="text" class="form-control" id="inv-client-name" placeholder="e.g. Acme AI Innovations Private Limited"
-                       value="${Utils.escapeHtml(s.clientLegalName)}"
-                       oninput="BillingScreen._onClientNameInput(this.value)">
+                <label class="bim-label" for="inv-project">Existing project</label>
+                <select class="form-control" id="inv-project" onchange="BillingScreen._onProjectChange(this.value)">
+                  <option value="">— General invoice (no project link) —</option>
+                  ${projects.map(p => `
+                    <option value="${p.id}" ${s.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}${p.status ? ` · ${p.status}` : ''}</option>
+                  `).join('')}
+                </select>
               </div>
               <div class="bim-field">
-                <label class="bim-label" for="inv-client-gstin">Client GSTIN / tax ID</label>
-                <input type="text" class="form-control" id="inv-client-gstin" placeholder="e.g. 24AAACH1234N1Z0 or —"
-                       value="${Utils.escapeHtml(s.clientGstin)}">
+                <label class="bim-label" for="inv-milestone">Milestone (from project)</label>
+                <select class="form-control" id="inv-milestone" onchange="BillingScreen._onMilestoneChange(this.value)">
+                  ${this._renderMilestoneOptions(s.projectId, s.milestoneId)}
+                </select>
               </div>
             </div>
+            <div id="inv-project-info" class="bim-info-line">
+              ${s.projectId ? this._projectInfoHtml(s.projectId) : 'No project selected — this invoice will be logged as a general client bill.'}
+            </div>
+            ${projects.length === 0 ? `
+              <div class="bim-warn">
+                No projects exist yet. Create a project first (Projects screen) to bill against it — or continue with a general invoice below.
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        <!-- 03 · REFERENCES -->
+        <div class="bim-step">
+          <div class="bim-step-head">
+            <div class="bim-step-title">
+              <span class="bim-num">03</span> Invoice references
+              <span class="bim-sub">Numbering, dates &amp; validity</span>
+            </div>
+          </div>
+          <div class="bim-step-body">
+            <div class="bim-grid-3">
+              <div class="bim-field">
+                <label class="bim-label" for="inv-number">Invoice no. <span class="bim-req">*</span></label>
+                <input type="text" class="form-control" id="inv-number" value="${Utils.escapeHtml(s.invoiceNumber)}" style="font-family:var(--font-mono);font-weight:600;font-size:12.5px">
+              </div>
+              <div class="bim-field">
+                <label class="bim-label" for="inv-date">Invoice date</label>
+                <input type="date" class="form-control" id="inv-date" value="${s.invoiceDate}">
+              </div>
+              <div class="bim-field">
+                <label class="bim-label" for="inv-valid-until">Valid until (expiry)</label>
+                <input type="date" class="form-control" id="inv-valid-until" value="${s.validUntil}">
+              </div>
+            </div>
+            <div class="bim-grid-3">
+              <div class="bim-field">
+                <label class="bim-label" for="inv-ref-quotation">Ref. quotation</label>
+                <input type="text" class="form-control" id="inv-ref-quotation" value="${Utils.escapeHtml(s.refQuotation)}" style="font-family:var(--font-mono);font-size:12.5px">
+              </div>
+              <div class="bim-field">
+                <label class="bim-label" for="inv-currency">Currency</label>
+                <input type="text" class="form-control" id="inv-currency" value="${Utils.escapeHtml(s.currency)}" readonly style="background:var(--color-bg-page);color:var(--color-text-secondary)">
+              </div>
+              <div class="bim-field">
+                <label class="bim-label" for="inv-modules-tag">Prepared for modules</label>
+                <input type="text" class="form-control" id="inv-modules-tag" value="${Utils.escapeHtml(s.modulesTag)}">
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <!-- 04 · CHARGES -->
+        <div class="bim-step">
+          <div class="bim-step-head">
+            <div class="bim-step-title">
+              <span class="bim-num">04</span> Development charges
+              <span class="bim-sub">One-time line items</span>
+            </div>
+            <button type="button" class="btn btn-outline btn-xs" onclick="BillingScreen._addModuleItemRow()" style="font-weight:600">
+              ${Icons.plus || '+'} Add line
+            </button>
+          </div>
+          <div class="bim-step-body">
+            <div style="overflow-x:auto;border:1px solid var(--color-border);border-radius:var(--radius-sm)">
+              <table class="bim-table" id="inv-items-table">
+                <thead>
+                  <tr>
+                    <th style="min-width:230px">Module / service description</th>
+                    <th class="num" style="width:120px">Gross (₹)</th>
+                    <th class="num" style="width:105px">Disc. %</th>
+                    <th class="num" style="width:110px">Taxable (₹)</th>
+                    <th class="num" style="width:105px">GST 18% (₹)</th>
+                    <th class="num" style="width:115px">Amount (₹)</th>
+                    <th style="width:42px"></th>
+                  </tr>
+                </thead>
+                <tbody id="inv-items-tbody">
+                  ${this._renderCreateModalItemsRows()}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Live totals -->
+            <div class="bim-totals">
+              <div class="bim-words">
+                <div class="bim-words-label">Amount in words (incl. GST)</div>
+                <div id="inv-words-preview" class="bim-words-value">Indian Rupees Zero Only (incl. GST).</div>
+                <div class="bim-words-note">TDS @10% u/s 194J will be deducted by the client on the taxable value base.</div>
+              </div>
+              <div class="bim-sum">
+                <div class="bim-sum-row"><span>Gross development cost</span><strong id="inv-sum-gross">₹0</strong></div>
+                <div class="bim-sum-row"><span>Less: discount</span><span class="neg" id="inv-sum-discount">–₹0</span></div>
+                <div class="bim-sum-row"><span>Taxable value</span><span id="inv-sum-taxable">₹0</span></div>
+                <div class="bim-sum-row"><span>Add: GST @18% (CGST 9% + SGST 9%)</span><span class="pos" id="inv-sum-gst">₹0</span></div>
+                <div class="bim-sum-row total"><span>Total payable (incl. GST)</span><span id="inv-sum-total">₹0</span></div>
+                <div class="bim-sum-row"><span>Less: TDS @10% u/s 194J</span><span class="neg" id="inv-sum-tds">–₹0</span></div>
+                <div class="bim-sum-row net"><span>Net payable after TDS</span><span id="inv-sum-net">₹0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 05 · SCHEDULE & RECURRING -->
+        <div class="bim-step">
+          <div class="bim-step-head">
+            <div class="bim-step-title">
+              <span class="bim-num">05</span> Payment schedule
+              <span class="bim-sub">Milestones &amp; recurring reference</span>
+            </div>
+          </div>
+          <div class="bim-step-body">
             <div class="bim-grid-2">
-              <div class="bim-field">
-                <label class="bim-label" for="inv-client-addr1">Address line 1</label>
-                <input type="text" class="form-control" id="inv-client-addr1" placeholder="e.g. 10th Floor, Horizon Tech Park, Corporate Rd"
-                       value="${Utils.escapeHtml(s.clientAddr1)}">
+              <div class="bim-mini">
+                <div class="bim-mini-head">
+                  <div class="bim-mini-title"><span class="bim-dot"></span> Milestones</div>
+                  <span class="bim-hint">40 / 40 / 20 split</span>
+                </div>
+                <div class="bim-sched-row"><span>M1 · Advance on PO</span><strong id="inv-sched-m1">₹0</strong></div>
+                <div class="bim-sched-row"><span>M2 · Module demonstration</span><strong id="inv-sched-m2">₹0</strong></div>
+                <div class="bim-sched-row"><span>M3 · Deployment &amp; go-live</span><strong id="inv-sched-m3">₹0</strong></div>
               </div>
-              <div class="bim-field">
-                <label class="bim-label" for="inv-client-addr2">Address line 2, city — PIN</label>
-                <input type="text" class="form-control" id="inv-client-addr2" placeholder="e.g. S.G. Highway, Ahmedabad — 380054"
-                       value="${Utils.escapeHtml(s.clientAddr2)}">
+
+              <div class="bim-mini">
+                <div class="bim-mini-head">
+                  <div class="bim-mini-title"><span class="bim-dot bim-dot-ai"></span> Recurring <span class="bim-hint">(reference only)</span></div>
+                  <label class="bim-check">
+                    <input type="checkbox" id="inv-include-recurring" ${s.includeRecurring?'checked':''} onchange="BillingScreen._toggleRecurring(this.checked)">
+                    Include table
+                  </label>
+                </div>
+                <div id="inv-recurring-inputs" style="display:${s.includeRecurring?'block':'none'}">
+                  <div class="bim-rec-grid">
+                    <input type="text" class="form-control" id="inv-rec-module" placeholder="Module name" value="${Utils.escapeHtml(s.recurringItem.module)}">
+                    <input type="number" class="form-control" id="inv-rec-amount" placeholder="Amount (excl. GST)" value="${s.recurringItem.amount}">
+                  </div>
+                  <div class="bim-hint" style="margin-top:8px">
+                    Amounts exclusive of GST. Shown for reference only — billed separately as they fall due.
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div class="bim-grid-2" style="align-items:end">
-              <div class="bim-field">
-                <label class="bim-label" for="inv-client-state">State, country</label>
-                <input type="text" class="form-control" id="inv-client-state" placeholder="e.g. Gujarat, India"
-                       value="${Utils.escapeHtml(s.clientState)}">
-              </div>
-              <div id="inv-save-company-wrap" class="bim-side" style="display:${s.clientMode==='other'?'flex':'none'}">
-                <label class="bim-check">
-                  <input type="checkbox" id="inv-save-company-check" ${s.saveCompany?'checked':''}>
-                  Save this company to the client directory for future billing
-                </label>
-              </div>
-            </div>
           </div>
         </div>
-      </section>
 
-      <!-- 02 · PROJECT LINK -->
-      <section class="bim-card">
-        <header class="bim-card-head">
-          <div class="bim-card-title">
-            <span class="bim-num">02</span> Project link
-            <span class="bim-title-sub">Bill against an existing workspace project</span>
-          </div>
-          <span class="bim-pill bim-pill-ok">Generated from live project data</span>
-        </header>
-        <div class="bim-card-body">
-          <div class="bim-grid-2">
-            <div class="bim-field">
-              <label class="bim-label" for="inv-project">Existing project</label>
-              <select class="form-control" id="inv-project" onchange="BillingScreen._onProjectChange(this.value)">
-                <option value="">— General invoice (no project link) —</option>
-                ${projects.map(p => `
-                  <option value="${p.id}" ${s.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}${p.status ? ` · ${p.status}` : ''}</option>
-                `).join('')}
-              </select>
-            </div>
-            <div class="bim-field">
-              <label class="bim-label" for="inv-milestone">Milestone (from project)</label>
-              <select class="form-control" id="inv-milestone" onchange="BillingScreen._onMilestoneChange(this.value)">
-                ${this._renderMilestoneOptions(s.projectId, s.milestoneId)}
-              </select>
-            </div>
-          </div>
-          <div id="inv-project-info" class="bim-info-line">
-            ${s.projectId ? this._projectInfoHtml(s.projectId) : 'No project selected — this invoice will be logged as a general client bill.'}
-          </div>
-          ${projects.length === 0 ? `
-            <div class="bim-warn">
-              No projects exist yet. Create a project first (Projects screen) to bill against it — or continue with a general invoice below.
-            </div>
-          ` : ''}
-        </div>
-      </section>
-
-      <!-- 03 · REFERENCES -->
-      <section class="bim-card">
-        <header class="bim-card-head">
-          <div class="bim-card-title">
-            <span class="bim-num">03</span> Invoice references
-            <span class="bim-title-sub">Numbering, dates &amp; validity</span>
-          </div>
-        </header>
-        <div class="bim-card-body">
-          <div class="bim-grid-3">
-            <div class="bim-field">
-              <label class="bim-label" for="inv-number">Invoice no. <span class="bim-req">*</span></label>
-              <input type="text" class="form-control" id="inv-number" value="${Utils.escapeHtml(s.invoiceNumber)}" style="font-family:var(--font-mono);font-weight:600;font-size:12.5px">
-            </div>
-            <div class="bim-field">
-              <label class="bim-label" for="inv-date">Invoice date</label>
-              <input type="date" class="form-control" id="inv-date" value="${s.invoiceDate}">
-            </div>
-            <div class="bim-field">
-              <label class="bim-label" for="inv-valid-until">Valid until (expiry)</label>
-              <input type="date" class="form-control" id="inv-valid-until" value="${s.validUntil}">
-            </div>
-          </div>
-          <div class="bim-grid-3">
-            <div class="bim-field">
-              <label class="bim-label" for="inv-ref-quotation">Ref. quotation</label>
-              <input type="text" class="form-control" id="inv-ref-quotation" value="${Utils.escapeHtml(s.refQuotation)}" style="font-family:var(--font-mono);font-size:12.5px">
-            </div>
-            <div class="bim-field">
-              <label class="bim-label" for="inv-currency">Currency</label>
-              <input type="text" class="form-control" id="inv-currency" value="${Utils.escapeHtml(s.currency)}" readonly style="background:var(--color-bg-page);color:var(--color-text-secondary)">
-            </div>
-            <div class="bim-field">
-              <label class="bim-label" for="inv-modules-tag">Prepared for modules</label>
-              <input type="text" class="form-control" id="inv-modules-tag" value="${Utils.escapeHtml(s.modulesTag)}">
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 04 · CHARGES -->
-      <section class="bim-card">
-        <header class="bim-card-head">
-          <div class="bim-card-title">
-            <span class="bim-num">04</span> Development charges
-            <span class="bim-title-sub">One-time line items</span>
-          </div>
-          <button type="button" class="btn btn-outline btn-xs" onclick="BillingScreen._addModuleItemRow()" style="font-weight:600">
-            ${Icons.plus || '+'} Add line
-          </button>
-        </header>
-        <div class="bim-card-body">
-          <div style="overflow-x:auto;border:1px solid var(--color-border);border-radius:var(--radius-sm)">
-            <table class="bim-table" id="inv-items-table">
-              <thead>
-                <tr>
-                  <th style="min-width:230px">Module / service description</th>
-                  <th class="num" style="width:120px">Gross (₹)</th>
-                  <th class="num" style="width:105px">Disc. %</th>
-                  <th class="num" style="width:110px">Taxable (₹)</th>
-                  <th class="num" style="width:105px">GST 18% (₹)</th>
-                  <th class="num" style="width:115px">Amount (₹)</th>
-                  <th style="width:42px"></th>
-                </tr>
-              </thead>
-              <tbody id="inv-items-tbody">
-                ${this._renderCreateModalItemsRows()}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Live totals -->
-          <div class="bim-totals">
-            <div class="bim-words">
-              <div class="bim-words-label">Amount in words (incl. GST)</div>
-              <div id="inv-words-preview" class="bim-words-value">Indian Rupees Zero Only (incl. GST).</div>
-              <div class="bim-words-note">TDS @10% u/s 194J will be deducted by the client on the taxable value base.</div>
-            </div>
-            <div class="bim-sum">
-              <div class="bim-sum-row"><span>Gross development cost</span><strong id="inv-sum-gross">₹0</strong></div>
-              <div class="bim-sum-row"><span>Less: discount</span><span class="neg" id="inv-sum-discount">–₹0</span></div>
-              <div class="bim-sum-row"><span>Taxable value</span><span id="inv-sum-taxable">₹0</span></div>
-              <div class="bim-sum-row"><span>Add: GST @18% (CGST 9% + SGST 9%)</span><span class="pos" id="inv-sum-gst">₹0</span></div>
-              <div class="bim-sum-row total"><span>Total payable (incl. GST)</span><span id="inv-sum-total">₹0</span></div>
-              <div class="bim-sum-row"><span>Less: TDS @10% u/s 194J</span><span class="neg" id="inv-sum-tds">–₹0</span></div>
-              <div class="bim-sum-row net"><span>Net payable after TDS</span><span id="inv-sum-net">₹0</span></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 05 · SCHEDULE & RECURRING -->
-      <div class="bim-grid-2">
-        <div class="bim-mini">
-          <div class="bim-mini-head">
-            <div class="bim-mini-title"><span class="bim-dot"></span> Payment milestones</div>
-            <span class="bim-hint">40 / 40 / 20 split</span>
-          </div>
-          <div class="bim-sched-row"><span>M1 · Advance on PO</span><strong id="inv-sched-m1">₹0</strong></div>
-          <div class="bim-sched-row"><span>M2 · Module demonstration</span><strong id="inv-sched-m2">₹0</strong></div>
-          <div class="bim-sched-row"><span>M3 · Deployment &amp; go-live</span><strong id="inv-sched-m3">₹0</strong></div>
-        </div>
-
-        <div class="bim-mini">
-          <div class="bim-mini-head">
-            <div class="bim-mini-title"><span class="bim-dot bim-dot-ai"></span> Recurring charges <span class="bim-hint">(reference only)</span></div>
-            <label class="bim-check">
-              <input type="checkbox" id="inv-include-recurring" ${s.includeRecurring?'checked':''} onchange="BillingScreen._toggleRecurring(this.checked)">
-              Include table
-            </label>
-          </div>
-          <div id="inv-recurring-inputs" style="display:${s.includeRecurring?'block':'none'}">
-            <div class="bim-rec-grid">
-              <input type="text" class="form-control" id="inv-rec-module" placeholder="Module name" value="${Utils.escapeHtml(s.recurringItem.module)}">
-              <input type="number" class="form-control" id="inv-rec-amount" placeholder="Amount (excl. GST)" value="${s.recurringItem.amount}">
-            </div>
-            <div class="bim-hint" style="margin-top:8px">
-              Amounts exclusive of GST. Shown for reference only — billed separately as they fall due.
-            </div>
-          </div>
-        </div>
       </div>
-
     </div>
   `;
   },

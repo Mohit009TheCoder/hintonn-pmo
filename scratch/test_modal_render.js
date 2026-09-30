@@ -35,7 +35,13 @@ Store.init();
 const proj = Store.createProject({ name: 'client ERP Modernisation', status: 'active' });
 Store.createMilestone({ projectId: proj.id, name: 'Phase 1 — Discovery sign-off', dueDate: '2026-11-30' });
 
+// Existing client + selected project → exercises populated branches of the modal
+Store.createCompany({ name: 'Acme AI Pvt Ltd', gstin: '24AAACA1234A1Z5' });
 BillingScreen._initCreateModalState();
+const ms = Store.getMilestones(proj.id)[0];
+BillingScreen._createModalState.projectId = proj.id;
+BillingScreen._createModalState.milestoneId = ms.id;
+BillingScreen._createModalState.clientMode = 'existing';
 const html = BillingScreen._renderCreateModalBody();
 
 // ── Assertions ──
@@ -71,6 +77,7 @@ forbidden.forEach(f => {
 // Live project data must appear
 if (!html.includes('client ERP Modernisation')) { fail++; console.log('❌ real project name not in dropdown'); }
 if (!html.includes('Phase 1 — Discovery sign-off')) { fail++; console.log('❌ real milestone not in dropdown'); }
+if (!html.includes('inv-existing-select')) { fail++; console.log('❌ existing-client select missing when companies exist'); }
 // Theme tokens must be used, raw hexes in app markup should be gone
 if (!html.includes('var(--color-')) { fail++; console.log('❌ no theme tokens used'); }
 

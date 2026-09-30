@@ -50,7 +50,7 @@ check('milestone created', !!ms && Store.getMilestones(proj.id).length === 1);
 const bn1 = Store.generateBillNumber('Acme AI Pvt Ltd');
 const bn2 = Store.generateBillNumber('Acme AI Pvt Ltd');
 const year = new Date().getFullYear();
-check('bill number format HIN-PI-ACMEA-YYYY-001', bn1 === `HIN-PI-ACMEA-${year}-001`, bn1);
+check('bill number format HIN-PI-ACME-YYYY-001', bn1 === `HIN-PI-ACME-${year}-001`, bn1);
 check('second call before invoice still 001 (count-based)', bn2 === bn1, bn2);
 
 // ── 4. Project-based generation ──

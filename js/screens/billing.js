@@ -159,7 +159,7 @@ const BillingScreen = {
             <p>Multi-bill company grouping, invoice version tracking (v1.0, v1.1, v2.0), and commercial revision history audit ledger.</p>
           </div>
           <div class="page-header-actions" style="display:flex;align-items:center;gap:10px;margin-left:auto">
-            <button class="btn btn-primary" id="btn-create-invoice" onclick="BillingScreen.openCreateInvoiceModal()" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-weight:700;font-size:13.5px;box-shadow:0 2px 10px rgba(37,99,235,0.25);border-radius:8px">
+            <button class="btn btn-primary" id="btn-create-invoice" onclick="BillingScreen.openCreateInvoiceModal()" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-weight:700;font-size:13.5px;box-shadow:var(--shadow-md);border-radius:8px">
               ${Icons.plus} Create Invoice
             </button>
           </div>
@@ -339,7 +339,7 @@ const BillingScreen = {
                 
                 <div style="display:flex;align-items:center;gap:12px;min-width:0">
                   <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-text-muted)">${isExpanded ? '▼' : '▶'}</span>
-                  <div style="width:36px;height:36px;border-radius:8px;background:rgba(37,99,235,0.1);color:#2563EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">
+                  <div style="width:36px;height:36px;border-radius:8px;background:var(--color-primary-50);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">
                     ${comp.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div style="min-width:0">
@@ -347,7 +347,7 @@ const BillingScreen = {
                       <span style="font-weight:700;font-size:14.5px;color:var(--color-text-primary)">${comp.name}</span>
                       <span class="badge badge-primary" style="font-size:10px;padding:1px 6px">${compInvoices.length} Bills Issued</span>
                       <span class="badge ${comp.paymentStatusBadge}" style="font-size:10px;padding:1px 6px">${comp.paymentStatus}</span>
-                      ${comp.hasRevisions ? `<span class="badge" style="background:#F3E8FF;color:#7C3AED;border:1px solid #DDD6FE;font-size:10px;padding:1px 6px">Version Controlled</span>` : ''}
+                      ${comp.hasRevisions ? `<span class="badge" style="background:var(--color-warning-soft);color:var(--color-warning-700);border:1px solid var(--violet-200);font-size:10px;padding:1px 6px">Version Controlled</span>` : ''}
                     </div>
                     <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:1px">
                       ${comp.activePackage} · Contract: <strong>${comp.totalContractValue}</strong> · Contact: ${comp.contactPerson}
@@ -363,7 +363,7 @@ const BillingScreen = {
                   </div>
                   <div style="text-align:right">
                     <div style="font-size:10.5px;text-transform:uppercase;color:var(--color-text-muted);font-weight:600">Open Bills</div>
-                    <div style="font-size:13.5px;font-weight:700;color:#DC2626">${compInvoices.filter(i => i.status !== 'paid').length} Bills</div>
+                    <div style="font-size:13.5px;font-weight:700;color:var(--color-error)">${compInvoices.filter(i => i.status !== 'paid').length} Bills</div>
                   </div>
                   <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); BillingScreen.toggleCompany('${comp.id}')">
                     ${isExpanded ? 'Collapse' : 'Expand'}
@@ -427,7 +427,7 @@ const BillingScreen = {
 
                             <td class="num" style="font-size:11.5px;color:var(--color-text-muted)">
                               <div>+${inv.taxAmount || '₹0'} (Tax)</div>
-                              <div style="color:#DC2626">-${inv.deductions || '₹0'} (Ret)</div>
+                              <div style="color:var(--color-error)">-${inv.deductions || '₹0'} (Ret)</div>
                             </td>
 
                             <td style="font-size:12px;color:var(--color-text-secondary);white-space:nowrap">
@@ -600,12 +600,12 @@ const BillingScreen = {
         </div>
 
         <!-- Baseline vs Current Diff Summary Box -->
-        <div style="padding:12px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="padding:12px 16px;background:var(--color-primary-50);border:1px solid var(--color-border-brand);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:16px">⚖️</span>
             <div>
-              <div style="font-weight:700;color:#1E40AF;font-size:12.5px">Baseline v1.0 vs Active ${inv.version} Revisions</div>
-              <div style="font-size:11.5px;color:#3B82F6">
+              <div style="font-weight:700;color:var(--color-primary-800);font-size:12.5px">Baseline v1.0 vs Active ${inv.version} Revisions</div>
+              <div style="font-size:11.5px;color:var(--color-primary-500)">
                 Total ${history.length} documented revisions logged with strict commercial audit compliance.
               </div>
             </div>
@@ -619,7 +619,7 @@ const BillingScreen = {
         <div class="version-history-timeline" style="display:flex;flex-direction:column;gap:12px;position:relative">
           ${history.slice().reverse().map((ver) => `
             <div class="version-history-item ${ver.isCurrent ? 'active-version' : ''}" 
-                 style="padding:14px 16px;border-radius:8px;border:1px solid ${ver.isCurrent ? '#93C5FD' : 'var(--color-border)'};background:${ver.isCurrent ? '#F8FAFC' : 'var(--color-surface)'};box-shadow:${ver.isCurrent ? '0 2px 6px rgba(37,99,235,0.08)' : 'none'}">
+                 style="padding:14px 16px;border-radius:8px;border:1px solid ${ver.isCurrent ? 'var(--color-primary-300)' : 'var(--color-border)'};background:${ver.isCurrent ? 'var(--color-bg-page)' : 'var(--color-surface)'};box-shadow:${ver.isCurrent ? '0 2px 6px rgba(37,99,235,0.08)' : 'none'}">
               
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                 <div style="display:flex;align-items:center;gap:8px">
@@ -627,7 +627,7 @@ const BillingScreen = {
                     ${ver.version}
                   </span>
                   <span style="font-weight:700;font-size:13px;color:var(--color-text-primary)">${ver.label}</span>
-                  ${ver.isCurrent ? `<span class="badge" style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;font-size:10px;font-weight:700">● CURRENT ACTIVE BASELINE</span>` : `<span class="badge" style="background:var(--color-bg-page);color:var(--color-text-muted);font-size:10px">ARCHIVED HISTORICAL REVISION</span>`}
+                  ${ver.isCurrent ? `<span class="badge" style="background:var(--color-success-soft);color:var(--color-success-700);border:1px solid var(--color-primary-200);font-size:10px;font-weight:700">● CURRENT ACTIVE BASELINE</span>` : `<span class="badge" style="background:var(--color-bg-page);color:var(--color-text-muted);font-size:10px">ARCHIVED HISTORICAL REVISION</span>`}
                 </div>
                 <span style="font-size:11.5px;color:var(--color-text-muted)">
                   📅 ${Utils.formatDate(ver.date)}
@@ -642,11 +642,11 @@ const BillingScreen = {
                 </div>
                 <div>
                   <span style="color:var(--color-text-muted)">Tax/GST:</span>
-                  <strong style="color:#059669">+${ver.tax}</strong>
+                  <strong style="color:var(--color-success-700, #1E40AF)">+${ver.tax}</strong>
                 </div>
                 <div>
                   <span style="color:var(--color-text-muted)">Retention:</span>
-                  <strong style="color:#DC2626">-${ver.deductions}</strong>
+                  <strong style="color:var(--color-error)">-${ver.deductions}</strong>
                 </div>
                 <div>
                   <span style="color:var(--color-text-muted)">Net Payable:</span>
@@ -705,7 +705,7 @@ const BillingScreen = {
     const html = `
       <div style="display:flex;flex-direction:column;gap:14px;font-size:13px">
         
-        <div style="padding:12px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between">
+        <div style="padding:12px 14px;background:var(--color-primary-50);border:1px solid var(--color-border-brand);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:600">Revising Active Bill</div>
             <div style="font-weight:700;font-size:15px;color:var(--color-text-primary)">
@@ -842,8 +842,8 @@ const BillingScreen = {
             </div>
             <div style="font-size:12px;display:flex;flex-direction:column;gap:4px">
               <div>Base Due: <strong>${baseline.baseAmount}</strong></div>
-              <div>Tax (GST): <strong style="color:#059669">+${baseline.tax}</strong></div>
-              <div>Retention: <strong style="color:#DC2626">-${baseline.deductions}</strong></div>
+              <div>Tax (GST): <strong style="color:var(--color-success-700, #1E40AF)">+${baseline.tax}</strong></div>
+              <div>Retention: <strong style="color:var(--color-error)">-${baseline.deductions}</strong></div>
               <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--color-border)">
                 Net Payable: <strong style="color:var(--color-primary-700);font-size:14px">${baseline.netPayable}</strong>
               </div>
@@ -854,15 +854,15 @@ const BillingScreen = {
           </div>
 
           <!-- Current Active Card -->
-          <div class="version-diff-card" style="border-color:#93C5FD;background:#F8FAFC">
+          <div class="version-diff-card" style="border-color:var(--color-primary-300);background:var(--color-bg-page)">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
               <span class="billing-version-badge version-pill-v2">${current.version} (Active)</span>
               <span style="font-size:11.5px;color:var(--color-text-muted)">${Utils.formatDate(current.date)}</span>
             </div>
             <div style="font-size:12px;display:flex;flex-direction:column;gap:4px">
-              <div>Base Due: <strong style="color:#2563EB">${current.baseAmount}</strong></div>
-              <div>Tax (GST): <strong style="color:#059669">+${current.tax}</strong></div>
-              <div>Retention: <strong style="color:#DC2626">-${current.deductions}</strong></div>
+              <div>Base Due: <strong style="color:var(--color-primary)">${current.baseAmount}</strong></div>
+              <div>Tax (GST): <strong style="color:var(--color-success-700, #1E40AF)">+${current.tax}</strong></div>
+              <div>Retention: <strong style="color:var(--color-error)">-${current.deductions}</strong></div>
               <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--color-border)">
                 Net Payable: <strong style="color:var(--color-primary-700);font-size:14px">${current.netPayable}</strong>
               </div>
@@ -873,7 +873,7 @@ const BillingScreen = {
           </div>
         </div>
 
-        <div style="padding:10px 14px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:6px;font-size:12px;color:#065F46">
+        <div style="padding:10px 14px;background:var(--color-success-soft);border:1px solid var(--color-primary-200);border-radius:var(--radius-md);font-size:12px;color:var(--color-success-700)">
           ${Icons.check} <strong>Audit Trail Endorsement:</strong> All revisions cryptographically fingerprinted and aligned with commercial client contracts.
         </div>
       </div>
@@ -915,7 +915,7 @@ const BillingScreen = {
           <div><span style="color:var(--color-text-muted)">Due Date:</span> <strong>${Utils.formatDate(inv.dueDate)}</strong></div>
         </div>
 
-        <div style="padding:10px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius-md);color:#1D4ED8;font-size:12.5px">
+        <div style="padding:10px 14px;background:var(--color-primary-50);border:1px solid var(--color-border-brand);border-radius:var(--radius-md);color:#1D4ED8;font-size:12.5px">
           ${Icons.check} <strong>Verified Billing State:</strong> Certified by commercial directorate. Ready for dispatch or proforma printout.
         </div>
       </div>

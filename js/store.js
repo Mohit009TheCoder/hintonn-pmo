@@ -592,12 +592,15 @@ const Store = {
     }
     return (neg ? '–₹' : '₹') + result;
   },
-  // 'MMRDA (Mumbai...)' / 'Acme AI Pvt Ltd' → 'MMRDA' / 'ACMEA'
+  // 'MMRDA (Mumbai...)' / 'Acme AI Pvt Ltd' → 'MMRDA' / 'ACME'
   _clientCode(name) {
     const words = String(name || '').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
     if (words.length === 0) return 'CLIENT';
-    if (words.length === 1) return words[0].replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6) || 'CLIENT';
-    return (words[0][0] + words[1][0]).toUpperCase() + words[0].replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    // Prefer the brand's first word (MMRDA → MMRDA, Acme AI → ACME); cap at 6 chars
+    const first = words[0].replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (first.length >= 2) return first.slice(0, 6);
+    // Very short first word → initials of first two words
+    return (words.slice(0, 2).map(w => w[0]).join('') + (words[1] || '')).toUpperCase().slice(0, 6) || 'CLIENT';
   },
   // Indian financial year label for a date, e.g. 2026-09-30 → '2026-27'
   _fiscalYear(date) {

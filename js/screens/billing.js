@@ -4,7 +4,7 @@ const BillingScreen = {
   _companyFilter: 'all',
   _viewMode: 'company', // 'company' (default) | 'table'
   _search: '',
-  _expandedCompanies: { 'c1': true, 'c2': true, 'c3': true, 'c4': true, 'c5': true },
+  _expandedCompanies: {},
   _invoices: null,
 
   _getCompanies() {

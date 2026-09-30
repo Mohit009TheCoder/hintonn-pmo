@@ -503,137 +503,50 @@ const Store = {
   },
 
   // ─── Invoices (Billing) ───
-  getInvoices() {
-    if (!this._data.invoices || this._data.invoices.length === 0) {
-      const now = new Date().toISOString();
-      this._data.invoices = [
-        {
-          id: 'HIN-PI-MMRDA-2026-001',
-          billNumber: 'MMRDA/INV/2026-09/001',
-          companyId: 'c1',
-          companyName: 'MMRDA (Mumbai Metropolitan Region Development Authority)',
-          projectName: 'Mumbai Metro Line 3',
-          packageCode: 'PMC-ELV-01',
-          quotationRef: 'HIN-CL-MMRDA-2026-001',
-          milestone: 'Monthly Progress — September [R1 • R2 • R3]',
-          issueDate: '2026-09-15',
-          dueDate: '2026-10-15',
-          amountDue: '₹1,25,00,000',
-          taxAmount: '₹19,12,500',
-          deductions: '₹18,75,000',
-          netPayable: '₹1,14,75,000',
-          status: 'pending-client',
-          statusLabel: 'Pending Approval',
-          badgeClass: 'badge-high',
-          version: 'v1.0',
-          versionBadgeClass: 'version-pill-v1',
-          isRevised: false,
-          clientDetails: {
-            legalName: 'MMRDA (Mumbai Metropolitan Region Development Authority)',
-            addressLine1: 'Bandra-Kurla Complex, Bandra (E)',
-            addressLine2: 'Mumbai — 400051',
-            stateCountry: 'Maharashtra, India',
-            gstin: '27AAALM1234A1Z9'
-          },
-          items: [
-            {
-              name: 'Metro PMC Supervision & AI Defect Analytics Engine',
-              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
-              gross: 12500000,
-              discountPct: 15
-            }
-          ],
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'HIN-PI-PUNE-2026-001',
-          billNumber: 'PUNE/INV/2026-09/001',
-          companyId: 'c2',
-          companyName: 'Pune Metropolitan Region Development Authority',
-          projectName: 'Pune IT Park — Phase 2',
-          packageCode: 'DB-ITP-02',
-          quotationRef: 'HIN-CL-PUNE-2026-001',
-          milestone: 'Foundation Works — Tower B [R1 • R2]',
-          issueDate: '2026-09-01',
-          dueDate: '2026-10-30',
-          amountDue: '₹85,00,000',
-          taxAmount: '₹13,00,500',
-          deductions: '₹12,75,000',
-          netPayable: '₹78,05,500',
-          status: 'under-certification',
-          statusLabel: 'Under Certification',
-          badgeClass: 'badge-medium',
-          version: 'v1.1',
-          versionBadgeClass: 'version-pill-v1-1',
-          isRevised: true,
-          clientDetails: {
-            legalName: 'Pune Metropolitan Region Development Authority',
-            addressLine1: 'Survey No. 152-153, Gaikwad Udyog Bhavan, Aundh',
-            addressLine2: 'Pune — 411067',
-            stateCountry: 'Maharashtra, India',
-            gstin: '27PMRDA5678B1Z2'
-          },
-          items: [
-            {
-              name: 'Tower B Foundation Analysis & Sensor Telemetry Module',
-              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
-              gross: 8500000,
-              discountPct: 15
-            }
-          ],
-          createdAt: now,
-          updatedAt: now
-        },
-        {
-          id: 'HIN-PI-NAGPUR-2026-001',
-          billNumber: 'NAGPUR/INV/2026-09/001',
-          companyId: 'c3',
-          companyName: 'Nagpur Smart & Sustainable City Development Corporation',
-          projectName: 'Nagpur Smart City — Water Supply',
-          packageCode: 'WS-SCADA-03',
-          quotationRef: 'HIN-CL-NAGPUR-2026-001',
-          milestone: 'Zone 3 — Pipe Laying 70% [R1]',
-          issueDate: '2026-08-20',
-          dueDate: '2026-09-30',
-          amountDue: '₹42,00,000',
-          taxAmount: '₹6,42,600',
-          deductions: '₹6,30,000',
-          netPayable: '₹38,59,800',
-          status: 'paid',
-          statusLabel: 'Paid / Certified',
-          badgeClass: 'badge-success',
-          version: 'v1.0',
-          versionBadgeClass: 'version-pill-v1',
-          isRevised: false,
-          clientDetails: {
-            legalName: 'Nagpur Smart & Sustainable City Development Corporation',
-            addressLine1: 'NMC New Administrative Building, Civil Lines',
-            addressLine2: 'Nagpur — 440001',
-            stateCountry: 'Maharashtra, India',
-            gstin: '27NSSCD9012C1Z4'
-          },
-          items: [
-            {
-              name: 'Smart SCADA Telemetry & Pressure Optimisation Module',
-              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
-              gross: 4200000,
-              discountPct: 15
-            }
-          ],
-          createdAt: now,
-          updatedAt: now
-        }
-      ];
-      this._save();
-    }
-    return this._data.invoices || [];
-  },
+  // No seed data: invoices only exist when created through the Billing
+  // screen or generated from real projects via the engine below.
+  getInvoices() { return (this._data && this._data.invoices) || []; },
   getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
   createInvoice(d) {
-    const inv = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    // Project-based fill: derive display fields from the linked project
+    if (d.projectId && !d.projectName) {
+      const proj = this.getProject(d.projectId);
+      if (proj) d.projectName = proj.name;
+    }
+    const inv = {
+      id: d.id || d.billNumber || this._genId(),
+      version: 'v1.0', isRevised: false,
+      items: [], versionHistory: [],
+      ...d,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    };
+    if (!inv.billNumber) inv.billNumber = inv.id;
+    if (!Array.isArray(inv.items)) inv.items = [];
+    if (!Array.isArray(inv.versionHistory) || inv.versionHistory.length === 0) {
+      inv.versionHistory = [{
+        version: inv.version || 'v1.0',
+        label: 'Initial Invoice Issuance',
+        date: inv.issueDate || new Date().toISOString().split('T')[0],
+        baseAmount: inv.amountDue || '₹0',
+        tax: inv.taxAmount || '₹0',
+        deductions: inv.deductions || '₹0',
+        netPayable: inv.netPayable || '₹0',
+        editor: 'Commercial Operations',
+        changeReason: 'Original invoice generated.',
+        modifiedFields: ['Invoice Generated'],
+        isCurrent: true
+      }];
+    }
     this._data.invoices.push(inv);
-    this._addActivity('invoice', `Created invoice <strong>${inv.id}</strong> for ${inv.projectName || ''}`);
+    this._addActivity('invoice', `Created invoice <strong>${inv.billNumber || inv.id}</strong> for ${inv.projectName || inv.companyName || ''}`);
+    // Notify admins only (billing is admin-only)
+    const adminIds = (this._data.members || []).filter(m => m.role === 'Admin').map(m => m.id);
+    this.addNotification({
+      type: 'invoice',
+      text: `New invoice created: ${inv.billNumber || inv.id} for ${inv.projectName || inv.companyName || 'client'}`,
+      targetMemberIds: adminIds.length ? adminIds : null,
+      invoiceId: inv.id
+    });
     this._save(); this._notify();
     this._syncToFirestore('invoices', inv.id, inv);
     return inv;
@@ -652,6 +565,234 @@ const Store = {
     this._addActivity('invoice', `Deleted invoice <strong>${inv.id}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('invoices', id);
+  },
+
+  // ─── Invoice Generation Engine (project-based — no seed data) ───
+  // Parse "₹1,25,00,000" / "$1,234" / 123456 → number
+  _parseAmt(v) {
+    if (v == null || v === '') return 0;
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    const str = String(v).replace(/[^0-9.-]/g, '');
+    const n = parseFloat(str);
+    return isFinite(n) ? n : 0;
+  },
+  // Number → "₹1,25,00,000" (Indian digit grouping)
+  _fmtINR(n) {
+    n = Math.round(Number(n) || 0);
+    if (n === 0) return '₹0';
+    const neg = n < 0;
+    const s = Math.abs(n).toString();
+    let result = '';
+    if (s.length <= 3) result = s;
+    else {
+      result = s.slice(-3);
+      let rem = s.slice(0, -3);
+      while (rem.length > 2) { result = rem.slice(-2) + ',' + result; rem = rem.slice(0, -2); }
+      if (rem.length) result = rem + ',' + result;
+    }
+    return (neg ? '–₹' : '₹') + result;
+  },
+  // 'MMRDA (Mumbai...)' / 'Acme AI Pvt Ltd' → 'MMRDA' / 'ACMEA'
+  _clientCode(name) {
+    const words = String(name || '').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return 'CLIENT';
+    if (words.length === 1) return words[0].replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6) || 'CLIENT';
+    return (words[0][0] + words[1][0]).toUpperCase() + words[0].replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+  },
+  // Indian financial year label for a date, e.g. 2026-09-30 → '2026-27'
+  _fiscalYear(date) {
+    const d = date ? new Date(date) : new Date();
+    const y = d.getFullYear();
+    const startYear = d.getMonth() >= 3 ? y : y - 1; // FY starts in April
+    return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
+  },
+  // Sequential per-client bill number: HIN-PI-<CODE>-<YYYY>-<seq>
+  generateBillNumber(companyName, date) {
+    const d = date ? new Date(date) : new Date();
+    const code = this._clientCode(companyName);
+    const year = d.getFullYear();
+    const prefix = `HIN-PI-${code}-${year}-`;
+    const seq = (this.getInvoices().filter(i => String(i.id || '').startsWith(prefix) || String(i.billNumber || '').startsWith(prefix)).length) + 1;
+    return prefix + String(seq).padStart(3, '0');
+  },
+  // Sequential per-client quotation ref: HIN-CL-<CODE>-<YYYY>-<seq>
+  generateQuotationRef(companyName, date) {
+    const d = date ? new Date(date) : new Date();
+    const code = this._clientCode(companyName);
+    const year = d.getFullYear();
+    const prefix = `HIN-CL-${code}-${year}-`;
+    const seq = (this.getInvoices().filter(i => String(i.quotationRef || '').startsWith(prefix)).length) + 1;
+    return prefix + String(seq).padStart(3, '0');
+  },
+  // Shared commercial math: discount → taxable → GST → TDS → net payable
+  _computeInvoiceTotals(items, opts = {}) {
+    const gstRate = opts.gstRate != null ? opts.gstRate : 18;
+    const tdsRate = opts.tdsRate != null ? opts.tdsRate : 10;
+    let totalGross = 0, totalDiscount = 0, totalTaxable = 0, totalGst = 0, totalPayable = 0;
+    const parsedItems = (items || []).map(it => {
+      const g = this._parseAmt(it.gross);
+      const dPct = it.discountPct != null ? Number(it.discountPct) : 0;
+      const dAmt = Math.round(g * (dPct / 100));
+      const tax = g - dAmt;
+      const gst = Math.round(tax * (gstRate / 100));
+      const amt = tax + gst;
+      totalGross += g; totalDiscount += dAmt; totalTaxable += tax; totalGst += gst; totalPayable += amt;
+      return {
+        name: it.name || 'Professional Services',
+        desc: it.desc || 'As per agreed scope of work',
+        gross: g, discountPct: dPct, discountAmount: dAmt,
+        taxable: tax, gstRate: gstRate, gstAmount: gst, amount: amt
+      };
+    });
+    const tdsAmount = Math.round(totalTaxable * (tdsRate / 100));
+    const netPayable = totalPayable - tdsAmount;
+    return { parsedItems, totalGross, totalDiscount, totalTaxable, totalGst, totalPayable, tdsAmount, netPayable, gstRate, tdsRate };
+  },
+  // Find-or-create client company from billing form details
+  ensureCompany(client) {
+    const name = (client && client.legalName ? client.legalName : '').trim();
+    if (!name) return '';
+    const existing = this.getCompanies().find(c =>
+      c.id === (client.companyId || '') || (c.name || '').toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    return this.createCompany({
+      name: name,
+      contactPerson: client.contactPerson || (name.split(' ')[0] + ' Accounts Team'),
+      addressLine1: client.addressLine1 || '',
+      addressLine2: client.addressLine2 || '',
+      stateCountry: client.stateCountry || '',
+      gstin: client.gstin || '',
+      paymentStatus: 'Pending',
+      paymentStatusBadge: 'badge-high'
+    }).id;
+  },
+  /**
+   * Proper invoice generation — based on an EXISTING project (never seed data).
+   * @param {string|null} projectId - real project id from Store.getProjects(); null → general invoice
+   * @param {object} opts - { companyName, clientDetails:{legalName,addressLine1,addressLine2,stateCountry,gstin},
+   *   milestoneId, items:[{name,desc,gross,discountPct}], modulesTag, invoiceDate, validDays,
+   *   gstRate, tdsRate, includeRecurring, recurringItem:{module,desc,basis,freq,amount}, notes }
+   * @returns {object|null} the persisted invoice, or null when validation fails
+   */
+  generateInvoice(projectId, opts = {}) {
+    const proj = projectId ? this.getProject(projectId) : null;
+    if (projectId && !proj) { console.warn('[InvoiceEngine] Project not found:', projectId); return null; }
+
+    const items = (opts.items && opts.items.length)
+      ? opts.items
+      : [{ name: (proj ? proj.name : 'Professional Services'), desc: 'As per agreed scope of work', gross: 0, discountPct: 0 }];
+    const t = this._computeInvoiceTotals(items, opts);
+    if (t.totalGross <= 0) return null;
+
+    const issueDate = opts.invoiceDate || new Date().toISOString().split('T')[0];
+    const validDays = opts.validDays != null ? opts.validDays : 15;
+    const dueDate = new Date(new Date(issueDate).getTime() + validDays * 86400000).toISOString().split('T')[0];
+    const client = opts.clientDetails || {};
+    const companyName = (client.legalName || opts.companyName || '').trim();
+    const companyId = this.ensureCompany({ ...client, legalName: companyName, companyId: opts.companyId });
+
+    // Milestone — from the real project milestone list when given
+    let milestoneName = opts.milestone || '';
+    if (!milestoneName && opts.milestoneId) {
+      const ms = (this._data.milestones || []).find(m => m.id === opts.milestoneId);
+      if (ms) milestoneName = ms.name;
+    }
+    const modulesTag = opts.modulesTag || '[R1 • R2 • R3]';
+    const milestoneText = milestoneName
+      ? `${milestoneName} ${modulesTag}`
+      : `Deployment of Modules ${modulesTag}`;
+
+    const billNumber = opts.billNumber || this.generateBillNumber(companyName, issueDate);
+    const quotationRef = opts.quotationRef || this.generateQuotationRef(companyName, issueDate);
+    const code = this._clientCode(companyName);
+
+    const m1 = Math.round(t.totalPayable * 0.4);
+    const m2 = Math.round(t.totalPayable * 0.4);
+    const m3 = t.totalPayable - (m1 + m2);
+
+    const invoiceObj = {
+      id: billNumber,
+      billNumber: billNumber,
+      companyId: companyId,
+      companyName: companyName,
+      projectId: proj ? proj.id : '',
+      projectName: proj ? proj.name : (companyName || 'General Engagement'),
+      packageCode: proj ? (proj.tags && proj.tags[0] ? String(proj.tags[0]).toUpperCase() : `PKG-${code.toUpperCase()}`) : quotationRef,
+      quotationRef: quotationRef,
+      milestone: milestoneText,
+      milestoneId: opts.milestoneId || '',
+      modulesTag: modulesTag,
+      issueDate: issueDate,
+      dueDate: dueDate,
+      currency: 'INR (₹)',
+      amountDue: this._fmtINR(t.totalGross),
+      taxAmount: this._fmtINR(t.totalGst),
+      deductions: this._fmtINR(t.totalDiscount),
+      totalPayable: this._fmtINR(t.totalPayable),
+      netPayable: this._fmtINR(t.netPayable),
+      taxableValue: this._fmtINR(t.totalTaxable),
+      tdsAmount: this._fmtINR(t.tdsAmount),
+      totals: {
+        gross: t.totalGross, discount: t.totalDiscount, taxable: t.totalTaxable,
+        gst: t.totalGst, gstRate: t.gstRate, tds: t.tdsAmount, tdsRate: t.tdsRate,
+        payable: t.totalPayable, netPayable: t.netPayable
+      },
+      status: 'pending-client',
+      statusLabel: 'Pending Approval',
+      badgeClass: 'badge-high',
+      version: 'v1.0',
+      versionBadgeClass: 'version-pill-v1',
+      isRevised: false,
+      clientDetails: {
+        legalName: companyName,
+        addressLine1: client.addressLine1 || '',
+        addressLine2: client.addressLine2 || '',
+        stateCountry: client.stateCountry || '',
+        gstin: client.gstin || '—'
+      },
+      items: t.parsedItems,
+      paymentSchedule: [
+        { milestone: 'M1', stage: 'Advance — on signing of agreement / receipt of PO', percent: 40, amount: m1 },
+        { milestone: 'M2', stage: 'Demo — on demonstration of built modules', percent: 40, amount: m2 },
+        { milestone: 'M3', stage: 'Deployment — after production deployment & go-live', percent: 20, amount: m3 }
+      ],
+      recurringCharges: opts.includeRecurring && opts.recurringItem ? [{
+        module: opts.recurringItem.module || 'Annual Maintenance & Support',
+        component: opts.recurringItem.desc || 'Annual Maintenance, Security Patches & Cloud Ops',
+        basis: opts.recurringItem.basis || 'Flat annual package',
+        freq: opts.recurringItem.freq || 'Annual',
+        amount: this._parseAmt(opts.recurringItem.amount)
+      }] : [],
+      notes: opts.notes || '',
+      versionHistory: [{
+        version: 'v1.0',
+        label: 'Initial Invoice Generation',
+        date: issueDate,
+        baseAmount: this._fmtINR(t.totalGross),
+        tax: this._fmtINR(t.totalGst),
+        deductions: this._fmtINR(t.totalDiscount),
+        netPayable: this._fmtINR(t.netPayable),
+        editor: 'Commercial Operations',
+        changeReason: proj
+          ? `Invoice generated from project "${proj.name}"${milestoneName ? ` — milestone "${milestoneName}"` : ''}.`
+          : 'General invoice generated for client approval and milestone advance.',
+        modifiedFields: ['Invoice Generated'],
+        isCurrent: true
+      }]
+    };
+
+    return this.createInvoice(invoiceObj);
+  },
+  // Convenience wrapper: minimal project-based generation (programmatic use)
+  generateInvoiceFromProject(projectId, opts = {}) {
+    const proj = this.getProject(projectId);
+    if (!proj) return null;
+    return this.generateInvoice(projectId, {
+      companyName: opts.companyName || proj.name,
+      clientDetails: opts.clientDetails || { legalName: opts.companyName || proj.name },
+      items: opts.items || [{ name: `${proj.name} — Service Delivery`, desc: 'As per agreed scope of work', gross: opts.gross || 0, discountPct: opts.discountPct || 0 }],
+      ...opts
+    });
   },
 
   // ─── Bank Guarantees ───
@@ -1250,13 +1391,13 @@ const Store = {
       );
     });
 
-    // Commercial entities
+    // Commercial entities — always real Store data (no samples, no seeds)
     const queryMatchesBGs = expandedTerms.has('bg') || expandedTerms.has('bank guarantee') || expandedTerms.has('guarantee') || expandedTerms.has('pbg') || expandedTerms.has('abg') || expandedTerms.has('mbg');
     const queryMatchesBilling = expandedTerms.has('billing') || expandedTerms.has('invoice') || expandedTerms.has('invoices') || expandedTerms.has('bill') || expandedTerms.has('payment');
 
-    const sampleBGs = [];
+    const sampleBGs = (this._data && this._data.bankGuarantees) || [];
 
-    const sampleInvoices = [];
+    const sampleInvoices = (this._data && this._data.invoices) || [];
 
     const matchedBGs = sampleBGs.filter(bg => {
       if (queryMatchesBGs) return true;
@@ -1265,7 +1406,7 @@ const Store = {
 
     const matchedInvoices = sampleInvoices.filter(inv => {
       if (queryMatchesBilling) return true;
-      return isDirectMatch(inv.id) || isDirectMatch(inv.projectName) || isDirectMatch(inv.milestone) || isDirectMatch(inv.amount) || isDirectMatch(inv.status);
+      return isDirectMatch(inv.id) || isDirectMatch(inv.projectName) || isDirectMatch(inv.milestone) || isDirectMatch(inv.amountDue) || isDirectMatch(inv.status);
     });
 
     return {

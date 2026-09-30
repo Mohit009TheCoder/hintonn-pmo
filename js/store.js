@@ -466,20 +466,8 @@ const Store = {
     return m;
   },
 
-  // ─── Companies ───
-  getCompanies() {
-    if (!this._data.companies || this._data.companies.length === 0) {
-      this._data.companies = [
-        { id: 'c1', name: 'MMRDA (Mumbai Metropolitan Region Development Authority)', contactPerson: 'Shri V. Subhash', totalContractValue: '₹142.5 Cr', activePackage: 'PMC — Elevated Section', totalBilledFormatted: '₹68,20,00,000', totalPendingFormatted: '₹74,30,00,000', paymentStatus: 'Partial', paymentStatusBadge: 'badge-warning', billsCountText: '12 Bills', hasRevisions: false, addressLine1: 'Bandra-Kurla Complex, Bandra (E)', addressLine2: 'Mumbai — 400051', stateCountry: 'Maharashtra, India', gstin: '27AAALM1234A1Z9', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: 'c2', name: 'Pune Metropolitan Region Development Authority', contactPerson: 'Dr. Anil Kokne', totalContractValue: '₹87.2 Cr', activePackage: 'Design-Build — IT Park', totalBilledFormatted: '₹32,60,00,000', totalPendingFormatted: '₹54,60,00,000', paymentStatus: 'Pending', paymentStatusBadge: 'badge-high', billsCountText: '8 Bills', hasRevisions: true, addressLine1: 'Survey No. 152-153, Maharaja Sayajirao Gaikwad Udyog Bhavan', addressLine2: 'Aundh, Pune — 411067', stateCountry: 'Maharashtra, India', gstin: '27PMRDA5678B1Z2', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: 'c3', name: 'Nagpur Smart & Sustainable City Development Corporation', contactPerson: 'Shri Radhakrishnan B', totalContractValue: '₹56.8 Cr', activePackage: 'Water Supply Network', totalBilledFormatted: '₹41,20,00,000', totalPendingFormatted: '₹15,60,00,000', paymentStatus: 'On Track', paymentStatusBadge: 'badge-success', billsCountText: '15 Bills', hasRevisions: false, addressLine1: 'NMC New Administrative Building, Civil Lines', addressLine2: 'Nagpur — 440001', stateCountry: 'Maharashtra, India', gstin: '27NSSCD9012C1Z4', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: 'c4', name: 'Hintonn AI (Internal)', contactPerson: 'Ayush Desai', totalContractValue: '₹8.5 Cr', activePackage: 'PMO Platform', totalBilledFormatted: '₹3,80,00,000', totalPendingFormatted: '₹4,70,00,000', paymentStatus: 'Internal', paymentStatusBadge: 'badge-primary', billsCountText: '5 Bills', hasRevisions: false, addressLine1: 'A-706, Titanium Square, Thaltej', addressLine2: 'Ahmedabad — 380054', stateCountry: 'Gujarat, India', gstin: '24AAICH8280N1Z0', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { id: 'c5', name: 'Indian Railways — Western Zone', contactPerson: 'Shri Rajesh Agrawal', totalContractValue: '₹210 Cr', activePackage: 'Station Redevelopment', totalBilledFormatted: '₹0', totalPendingFormatted: '₹210,00,00,000', paymentStatus: 'Not Started', paymentStatusBadge: 'badge-secondary', billsCountText: '0 Bills', hasRevisions: false, addressLine1: 'Western Railway Headquarters, Churchgate', addressLine2: 'Mumbai — 400020', stateCountry: 'Maharashtra, India', gstin: '27AAAGR1234D1Z6', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-      ];
-      this._save();
-    }
-    return this._data.companies || [];
-  },
+  // ─── Companies (client directory — created via Billing, never seeded) ───
+  getCompanies() { return (this._data && this._data.companies) || []; },
   getCompany(id) { return (this._data.companies || []).find(c => c.id === id); },
   createCompany(d) {
     const c = { id: d.id || this._genId(), name: d.name, contactPerson: d.contactPerson || '',

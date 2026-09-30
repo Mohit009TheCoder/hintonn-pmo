@@ -116,7 +116,8 @@ const App = {
   },
 
   handleRoute() {
-    const rawHash = (window.location.hash || '').replace(/^#\/?/, '').split('/')[0];
+    const loc = typeof window !== 'undefined' && window.location ? window.location : { hash: '' };
+    const rawHash = (loc.hash || '').replace(/^#\/?/, '').split('/')[0];
     const authRoutes = ['login', 'signup', 'forgot-password', 'reset-password'];
 
     // 1. Enforce Unauthenticated Route Guarding
@@ -124,20 +125,21 @@ const App = {
       if (!Auth.isAuthenticated()) {
         const targetView = authRoutes.includes(rawHash) ? rawHash : 'login';
         this.currentScreen = targetView;
-        if (!window.location.hash.startsWith('#' + targetView)) {
-          window.location.hash = '#' + targetView;
+        if (loc.hash && !loc.hash.startsWith('#' + targetView)) {
+          loc.hash = '#' + targetView;
         }
         this.renderLogin(targetView);
         return;
       } else {
         // Authenticated user trying to access any auth route gets redirected to #dashboard
         if (authRoutes.includes(rawHash) || !rawHash) {
-          window.location.hash = '#dashboard';
+          if (typeof window !== 'undefined' && window.location) window.location.hash = '#dashboard';
+          loc.hash = '#dashboard';
         }
       }
     }
 
-    const hash = window.location.hash.slice(1) || 'dashboard';
+    const hash = (loc.hash || '').slice(1) || 'dashboard';
     const parts = hash.split('/');
     const screen = parts[0];
     const param = parts[1] || null;
@@ -573,8 +575,10 @@ const App = {
 };
 
 // ─── Init ───
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => App.init());
-} else {
-  App.init();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => App.init());
+  } else if (typeof Store !== 'undefined' && typeof Auth !== 'undefined') {
+    App.init();
+  }
 }

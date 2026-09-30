@@ -464,7 +464,19 @@ const Store = {
   },
 
   // ─── Companies ───
-  getCompanies() { return this._data.companies || []; },
+  getCompanies() {
+    if (!this._data.companies || this._data.companies.length === 0) {
+      this._data.companies = [
+        { id: 'c1', name: 'MMRDA (Mumbai Metropolitan Region Development Authority)', contactPerson: 'Shri V. Subhash', totalContractValue: '₹142.5 Cr', activePackage: 'PMC — Elevated Section', totalBilledFormatted: '₹68,20,00,000', totalPendingFormatted: '₹74,30,00,000', paymentStatus: 'Partial', paymentStatusBadge: 'badge-warning', billsCountText: '12 Bills', hasRevisions: false, addressLine1: 'Bandra-Kurla Complex, Bandra (E)', addressLine2: 'Mumbai — 400051', stateCountry: 'Maharashtra, India', gstin: '27AAALM1234A1Z9', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'c2', name: 'Pune Metropolitan Region Development Authority', contactPerson: 'Dr. Anil Kokne', totalContractValue: '₹87.2 Cr', activePackage: 'Design-Build — IT Park', totalBilledFormatted: '₹32,60,00,000', totalPendingFormatted: '₹54,60,00,000', paymentStatus: 'Pending', paymentStatusBadge: 'badge-high', billsCountText: '8 Bills', hasRevisions: true, addressLine1: 'Survey No. 152-153, Maharaja Sayajirao Gaikwad Udyog Bhavan', addressLine2: 'Aundh, Pune — 411067', stateCountry: 'Maharashtra, India', gstin: '27PMRDA5678B1Z2', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'c3', name: 'Nagpur Smart & Sustainable City Development Corporation', contactPerson: 'Shri Radhakrishnan B', totalContractValue: '₹56.8 Cr', activePackage: 'Water Supply Network', totalBilledFormatted: '₹41,20,00,000', totalPendingFormatted: '₹15,60,00,000', paymentStatus: 'On Track', paymentStatusBadge: 'badge-success', billsCountText: '15 Bills', hasRevisions: false, addressLine1: 'NMC New Administrative Building, Civil Lines', addressLine2: 'Nagpur — 440001', stateCountry: 'Maharashtra, India', gstin: '27NSSCD9012C1Z4', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'c4', name: 'Hintonn AI (Internal)', contactPerson: 'Ayush Desai', totalContractValue: '₹8.5 Cr', activePackage: 'PMO Platform', totalBilledFormatted: '₹3,80,00,000', totalPendingFormatted: '₹4,70,00,000', paymentStatus: 'Internal', paymentStatusBadge: 'badge-primary', billsCountText: '5 Bills', hasRevisions: false, addressLine1: 'A-706, Titanium Square, Thaltej', addressLine2: 'Ahmedabad — 380054', stateCountry: 'Gujarat, India', gstin: '24AAICH8280N1Z0', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'c5', name: 'Indian Railways — Western Zone', contactPerson: 'Shri Rajesh Agrawal', totalContractValue: '₹210 Cr', activePackage: 'Station Redevelopment', totalBilledFormatted: '₹0', totalPendingFormatted: '₹210,00,00,000', paymentStatus: 'Not Started', paymentStatusBadge: 'badge-secondary', billsCountText: '0 Bills', hasRevisions: false, addressLine1: 'Western Railway Headquarters, Churchgate', addressLine2: 'Mumbai — 400020', stateCountry: 'Maharashtra, India', gstin: '27AAAGR1234D1Z6', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+      ];
+      this._save();
+    }
+    return this._data.companies || [];
+  },
   getCompany(id) { return (this._data.companies || []).find(c => c.id === id); },
   createCompany(d) {
     const c = { id: d.id || this._genId(), name: d.name, contactPerson: d.contactPerson || '',
@@ -472,6 +484,8 @@ const Store = {
       totalBilledFormatted: d.totalBilledFormatted || '', totalPendingFormatted: d.totalPendingFormatted || '',
       paymentStatus: d.paymentStatus || '', paymentStatusBadge: d.paymentStatusBadge || '',
       billsCountText: d.billsCountText || '', hasRevisions: d.hasRevisions || false,
+      addressLine1: d.addressLine1 || '', addressLine2: d.addressLine2 || '',
+      stateCountry: d.stateCountry || '', gstin: d.gstin || '',
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.companies.push(c);
     this._addActivity('company', `Added company <strong>${c.name}</strong>`);
@@ -498,7 +512,132 @@ const Store = {
   },
 
   // ─── Invoices (Billing) ───
-  getInvoices() { return this._data.invoices || []; },
+  getInvoices() {
+    if (!this._data.invoices || this._data.invoices.length === 0) {
+      const now = new Date().toISOString();
+      this._data.invoices = [
+        {
+          id: 'HIN-PI-MMRDA-2026-001',
+          billNumber: 'MMRDA/INV/2026-09/001',
+          companyId: 'c1',
+          companyName: 'MMRDA (Mumbai Metropolitan Region Development Authority)',
+          projectName: 'Mumbai Metro Line 3',
+          packageCode: 'PMC-ELV-01',
+          quotationRef: 'HIN-CL-MMRDA-2026-001',
+          milestone: 'Monthly Progress — September [R1 • R2 • R3]',
+          issueDate: '2026-09-15',
+          dueDate: '2026-10-15',
+          amountDue: '₹1,25,00,000',
+          taxAmount: '₹19,12,500',
+          deductions: '₹18,75,000',
+          netPayable: '₹1,14,75,000',
+          status: 'pending-client',
+          statusLabel: 'Pending Approval',
+          badgeClass: 'badge-high',
+          version: 'v1.0',
+          versionBadgeClass: 'version-pill-v1',
+          isRevised: false,
+          clientDetails: {
+            legalName: 'MMRDA (Mumbai Metropolitan Region Development Authority)',
+            addressLine1: 'Bandra-Kurla Complex, Bandra (E)',
+            addressLine2: 'Mumbai — 400051',
+            stateCountry: 'Maharashtra, India',
+            gstin: '27AAALM1234A1Z9'
+          },
+          items: [
+            {
+              name: 'Metro PMC Supervision & AI Defect Analytics Engine',
+              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
+              gross: 12500000,
+              discountPct: 15
+            }
+          ],
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: 'HIN-PI-PUNE-2026-001',
+          billNumber: 'PUNE/INV/2026-09/001',
+          companyId: 'c2',
+          companyName: 'Pune Metropolitan Region Development Authority',
+          projectName: 'Pune IT Park — Phase 2',
+          packageCode: 'DB-ITP-02',
+          quotationRef: 'HIN-CL-PUNE-2026-001',
+          milestone: 'Foundation Works — Tower B [R1 • R2]',
+          issueDate: '2026-09-01',
+          dueDate: '2026-10-30',
+          amountDue: '₹85,00,000',
+          taxAmount: '₹13,00,500',
+          deductions: '₹12,75,000',
+          netPayable: '₹78,05,500',
+          status: 'under-certification',
+          statusLabel: 'Under Certification',
+          badgeClass: 'badge-medium',
+          version: 'v1.1',
+          versionBadgeClass: 'version-pill-v1-1',
+          isRevised: true,
+          clientDetails: {
+            legalName: 'Pune Metropolitan Region Development Authority',
+            addressLine1: 'Survey No. 152-153, Gaikwad Udyog Bhavan, Aundh',
+            addressLine2: 'Pune — 411067',
+            stateCountry: 'Maharashtra, India',
+            gstin: '27PMRDA5678B1Z2'
+          },
+          items: [
+            {
+              name: 'Tower B Foundation Analysis & Sensor Telemetry Module',
+              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
+              gross: 8500000,
+              discountPct: 15
+            }
+          ],
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: 'HIN-PI-NAGPUR-2026-001',
+          billNumber: 'NAGPUR/INV/2026-09/001',
+          companyId: 'c3',
+          companyName: 'Nagpur Smart & Sustainable City Development Corporation',
+          projectName: 'Nagpur Smart City — Water Supply',
+          packageCode: 'WS-SCADA-03',
+          quotationRef: 'HIN-CL-NAGPUR-2026-001',
+          milestone: 'Zone 3 — Pipe Laying 70% [R1]',
+          issueDate: '2026-08-20',
+          dueDate: '2026-09-30',
+          amountDue: '₹42,00,000',
+          taxAmount: '₹6,42,600',
+          deductions: '₹6,30,000',
+          netPayable: '₹38,59,800',
+          status: 'paid',
+          statusLabel: 'Paid / Certified',
+          badgeClass: 'badge-success',
+          version: 'v1.0',
+          versionBadgeClass: 'version-pill-v1',
+          isRevised: false,
+          clientDetails: {
+            legalName: 'Nagpur Smart & Sustainable City Development Corporation',
+            addressLine1: 'NMC New Administrative Building, Civil Lines',
+            addressLine2: 'Nagpur — 440001',
+            stateCountry: 'Maharashtra, India',
+            gstin: '27NSSCD9012C1Z4'
+          },
+          items: [
+            {
+              name: 'Smart SCADA Telemetry & Pressure Optimisation Module',
+              desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
+              gross: 4200000,
+              discountPct: 15
+            }
+          ],
+          createdAt: now,
+          updatedAt: now
+        }
+      ];
+      this._save();
+    }
+    return this._data.invoices || [];
+  },
   getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
   createInvoice(d) {
     const inv = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

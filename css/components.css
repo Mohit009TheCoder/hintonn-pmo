@@ -328,6 +328,8 @@
 }
 
 .modal-lg { max-width: 720px; }
+.modal-xl { max-width: 960px; width: 95%; }
+.modal-2xl { max-width: 1120px; width: 96%; }
 
 .modal-header {
   display: flex;
@@ -4549,5 +4551,446 @@
 .report-icon-badge.neutral {
   background: #F8FAFC;
   color: #64748B;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROFORMA INVOICE FORMAT STYLES (Hintonn AI Commercial PMO)
+   ═══════════════════════════════════════════════════════════════════════ */
+.proforma-doc-wrapper {
+  background: #E2E8F0;
+  padding: 24px;
+  border-radius: 8px;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+
+.proforma-page {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 24px auto;
+  padding: 40px 44px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.proforma-page:last-child {
+  margin-bottom: 0;
+}
+
+.proforma-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.proforma-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proforma-brand-logo {
+  height: 44px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+}
+
+.proforma-brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+}
+
+.proforma-brand-sub {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.proforma-title-area {
+  text-align: right;
+}
+
+.proforma-doc-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1E3A8A;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.proforma-doc-subtitle {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+.proforma-divider {
+  height: 3px;
+  background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%);
+  border-radius: 2px;
+  margin: 16px 0 18px 0;
+}
+
+.proforma-meta-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  font-size: 11.5px;
+}
+
+.proforma-meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.proforma-meta-item {
+  display: flex;
+  gap: 8px;
+}
+
+.proforma-meta-lbl {
+  color: #64748B;
+  min-width: 95px;
+  font-weight: 500;
+}
+
+.proforma-meta-val {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.proforma-meta-right {
+  text-align: right;
+}
+
+.proforma-modules-badge {
+  display: inline-block;
+  color: #1D4ED8;
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.proforma-address-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 14px 18px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  margin-bottom: 22px;
+}
+
+.proforma-addr-col h4 {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #4F46E5;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+
+.proforma-addr-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 3px;
+}
+
+.proforma-addr-text {
+  font-size: 11px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.proforma-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 10px 0;
+}
+
+.proforma-section-bar {
+  width: 4px;
+  height: 16px;
+  background: #2563EB;
+  border-radius: 2px;
+}
+
+.proforma-section-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #0F172A;
+  margin: 0;
+}
+
+.proforma-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-bottom: 12px;
+}
+
+.proforma-table th {
+  background: #1E3A8A !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  padding: 8px 10px;
+  letter-spacing: 0.3px;
+  font-size: 11px;
+}
+
+.proforma-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #E2E8F0;
+  color: #334155;
+  font-size: 11px;
+}
+
+.proforma-table tr.totals-row td {
+  background: #F1F5F9 !important;
+  border-top: 2px solid #CBD5E1;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.proforma-summary-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 14px;
+  gap: 20px;
+}
+
+.proforma-amount-words {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #0F172A;
+}
+
+.proforma-amount-bar {
+  width: 3.5px;
+  height: 16px;
+  background: #4F46E5;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.proforma-calc-box {
+  width: 340px;
+  font-size: 11.5px;
+}
+
+.proforma-calc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 6px;
+}
+
+.proforma-calc-row.taxable {
+  border-top: 1px solid #E2E8F0;
+  font-weight: 600;
+}
+
+.proforma-calc-row.total-payable {
+  font-weight: 800;
+  font-size: 12.5px;
+  color: #0F172A;
+  border-top: 1px solid #CBD5E1;
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.proforma-calc-row.net-payable {
+  background: #EDE9FE !important;
+  color: #5B21B6 !important;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.proforma-bank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: 20px;
+  border: 1px solid #E2E8F0;
+}
+
+.proforma-bank-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.proforma-bank-label {
+  width: 150px;
+  color: #64748B;
+  font-weight: 600;
+  background: #F8FAFC !important;
+  border-right: 1px solid #E2E8F0;
+}
+
+.proforma-bank-val {
+  color: #0F172A;
+  font-weight: 600;
+}
+
+.proforma-terms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #334155;
+  margin-bottom: 20px;
+}
+
+.proforma-term-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.proforma-term-title {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.proforma-footer {
+  text-align: center;
+  font-size: 10px;
+  color: #64748B;
+  line-height: 1.6;
+  padding-top: 18px;
+  border-top: 1px solid #E2E8F0;
+  margin-top: 28px;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0 !important; /* CRITICAL: 0 margin completely strips browser header & footer */
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    background: #FFFFFF !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+  }
+
+  /* Hide app shell and modal chrome when printing */
+  .app-shell,
+  .sidebar,
+  .topbar,
+  .modal-header,
+  .modal-footer,
+  .sidebar-backdrop,
+  .toast-container,
+  .command-overlay,
+  .no-print,
+  .no-print-toolbar,
+  .btn-group {
+    display: none !important;
+  }
+
+  .modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .modal, .modal-xl {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .modal-body {
+    padding: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .proforma-doc-wrapper {
+    background: transparent !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .proforma-page {
+    box-shadow: none !important;
+    border: none !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    min-height: 297mm !important;
+    padding: 14mm 16mm !important;
+    margin: 0 !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    position: relative !important;
+    background: #FFFFFF !important;
+    box-sizing: border-box !important;
+  }
+
+  .proforma-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .proforma-section-heading,
+  .proforma-term-item,
+  .proforma-address-box,
+  .proforma-summary-wrap,
+  .proforma-calc-box,
+  .proforma-bank-table,
+  table, tr, td, th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }
 

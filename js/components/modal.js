@@ -5,7 +5,10 @@ const Modal = {
   open(title, bodyHtml, footerHtml, opts = {}) {
     this.closeAll();
     const id = 'modal-' + Date.now();
-    const size = opts.large ? 'modal-lg' : '';
+    let size = '';
+    if (opts.extraLarge || opts.xl) size = 'modal-xl';
+    else if (opts.large) size = 'modal-lg';
+    if (opts.customClass) size += (size ? ' ' : '') + opts.customClass;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = id;

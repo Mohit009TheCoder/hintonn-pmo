@@ -158,10 +158,7 @@ const BillingScreen = {
         <!-- Page Header -->
         <div class="page-header" style="margin-bottom:18px">
           <div class="page-header-left">
-            <div style="display:flex;align-items:center;gap:10px">
-              <h1>Billing & Invoices</h1>
-              <span class="badge badge-primary" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;">Bill Version Control Active</span>
-            </div>
+            <h1>Billing & Invoices</h1>
             <p>Multi-bill company grouping, invoice version tracking (v1.0, v1.1, v2.0), and commercial revision history audit ledger.</p>
           </div>
         </div>

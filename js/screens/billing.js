@@ -339,15 +339,15 @@ const BillingScreen = {
                   </div>
                 </div>
 
-                <!-- Company Financial Summary Pill -->
+                <!-- Company Bill Status Pill (amounts removed per request) -->
                 <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
                   <div style="text-align:right">
-                    <div style="font-size:10.5px;text-transform:uppercase;color:var(--color-text-muted);font-weight:600">Total Billed</div>
-                    <div style="font-size:13.5px;font-weight:700;color:var(--color-text-primary)">${comp.totalBilledFormatted}</div>
+                    <div style="font-size:10.5px;text-transform:uppercase;color:var(--color-text-muted);font-weight:600">Settled</div>
+                    <div style="font-size:13.5px;font-weight:700;color:var(--color-text-primary)">${compInvoices.filter(i => i.status === 'paid').length} / ${compInvoices.length} Bills</div>
                   </div>
                   <div style="text-align:right">
-                    <div style="font-size:10.5px;text-transform:uppercase;color:var(--color-text-muted);font-weight:600">Pending Due</div>
-                    <div style="font-size:13.5px;font-weight:700;color:#DC2626">${comp.totalPendingFormatted}</div>
+                    <div style="font-size:10.5px;text-transform:uppercase;color:var(--color-text-muted);font-weight:600">Open Bills</div>
+                    <div style="font-size:13.5px;font-weight:700;color:#DC2626">${compInvoices.filter(i => i.status !== 'paid').length} Bills</div>
                   </div>
                   <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); BillingScreen.toggleCompany('${comp.id}')">
                     ${isExpanded ? 'Collapse' : 'Expand'}

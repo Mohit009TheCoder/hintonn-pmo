@@ -393,7 +393,7 @@ async function main() {
   console.log(`   Settings:             1 (workspace_settings)`);
   console.log(`   Users:                ${users.length}`);
   console.log(`   ─────────────────────────────`);
-  const total = members.length + projects.length + tasks.length + milestones.length + issues.length + companies.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
+  const total = members.length + projects.length + tasks.length + milestones.length + issues.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
   console.log(`   TOTAL:                ${total} documents\n`);
 }
 

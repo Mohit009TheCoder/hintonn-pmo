@@ -299,8 +299,17 @@ const TasksScreen = {
 
           // "To Do" Column: Three clean sections (Assigned to Me, Project Tasks / Shared Work, Personal Tasks for standard users)
           if (col.status === 'todo') {
-            const assignedTasks = projectTasks.filter(t => this._isUserTask(t, currentUser));
-            const sharedTasks = projectTasks.filter(t => !this._isUserTask(t, currentUser));
+            // Multi-assignee tasks go to Shared Work, even if current user is one of the assignees
+            const assignedTasks = projectTasks.filter(t => {
+              if (!this._isUserTask(t, currentUser)) return false;
+              const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+              return ids.length <= 1; // Only solo-assigned tasks go to "Assigned to Me"
+            });
+            const sharedTasks = projectTasks.filter(t => {
+              if (!this._isUserTask(t, currentUser)) return true; // Not assigned to me = shared/other
+              const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+              return ids.length > 1; // Multi-assignee tasks go to "Shared Work"
+            });
 
             return `
               <div class="kanban-bifurcated-column">

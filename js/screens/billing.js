@@ -141,16 +141,13 @@ const BillingScreen = {
     const companies = this._getCompanies();
     const invoices = this._getFilteredInvoices();
 
-    // Parse amount strings like "₹410,000" or "$5.8M" to numbers
-    const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
-    const fmtAmt = (n) => { if (!n || n === 0) return '₹0'; const s = Math.round(n).toString(); let result = ''; const len = s.length; if (len <= 3) return '₹' + s; result = s.slice(-3); let remaining = s.slice(0, -3); while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); } if (remaining.length > 0) result = remaining + ',' + result; return '₹' + result; };
-    const totalBilledNum = allInvoices.reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
-    const collectedNum = allInvoices.filter(i => i.status === 'paid').reduce((s,i) => s + parseAmt(i.amountDue || i.netPayable), 0);
-    const pendingNum = totalBilledNum - collectedNum;
-    const totalBilled = fmtAmt(totalBilledNum);
-    const totalCollected = fmtAmt(collectedNum);
-    const totalPending = fmtAmt(pendingNum);
+    // Bill counts — monetary amounts removed from billing summary per request
+    const totalBills = allInvoices.length;
+    const paidBills = allInvoices.filter(i => i.status === 'paid').length;
+    const pendingBills = totalBills - paidBills;
     const totalRevisedBills = allInvoices.filter(i => i.isRevised).length;
+    const companyCount = companies.length;
+    const packageCount = new Set(allInvoices.map(i => i.projectName).filter(Boolean)).size;
 
     return `
       <div class="billing-screen" id="billing">
@@ -167,12 +164,12 @@ const BillingScreen = {
         <div class="kpi-grid" style="margin-bottom:20px">
           <div class="kpi-card" onclick="BillingScreen.setFilter('all')" style="cursor:pointer">
             <div class="kpi-header">
-              <span class="kpi-label">Total Invoiced (8 Bills)</span>
+              <span class="kpi-label">Total Invoiced (${totalBills} Bills)</span>
               <div class="kpi-icon-wrap">${Icons.fileText}</div>
             </div>
-            <div class="kpi-value">${totalBilled}</div>
+            <div class="kpi-value">${totalBills} Bills</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-primary-700)">
-              5 Client Companies · 5 EPC Packages
+              ${companyCount} Client Companies · ${packageCount} EPC Packages
             </div>
           </div>
 
@@ -181,9 +178,9 @@ const BillingScreen = {
               <span class="kpi-label">Certified & Collected</span>
               <div class="kpi-icon-wrap">${Icons.check}</div>
             </div>
-            <div class="kpi-value">${totalCollected}</div>
+            <div class="kpi-value">${paidBills} Invoices</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-emerald-700, #059669)">
-              3 Invoices Fully Settled
+              ${paidBills} Invoices Fully Settled
             </div>
           </div>
 
@@ -192,9 +189,9 @@ const BillingScreen = {
               <span class="kpi-label">Pending Client Sign-off</span>
               <div class="kpi-icon-wrap">${Icons.clock}</div>
             </div>
-            <div class="kpi-value">${totalPending}</div>
+            <div class="kpi-value">${pendingBills} Invoices</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
-              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">5 Invoices</span>
+              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">${pendingBills} Invoices</span>
               Under Review / Certification
             </div>
           </div>

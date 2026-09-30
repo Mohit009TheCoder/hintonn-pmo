@@ -315,8 +315,11 @@ const TimelineScreen = {
     if (container) {
       const data = this._getFilteredData();
       container.innerHTML = this._renderGanttGrid(data.list);
-      // Auto-scroll to today after render
-      requestAnimationFrame(() => this.scrollToToday());
+      // Auto-scroll to today after render & attach wheel listener
+      requestAnimationFrame(() => {
+        this.scrollToToday();
+        this.initScrollListeners();
+      });
     } else {
       this.refresh();
     }
@@ -326,6 +329,29 @@ const TimelineScreen = {
     const content = document.getElementById('page-content');
     if (content && App.currentScreen === 'timeline') {
       content.innerHTML = this.render();
+      setTimeout(() => {
+        this.scrollToToday();
+        this.initScrollListeners();
+      }, 50);
+    }
+  },
+
+  initScrollListeners() {
+    const canvas = document.querySelector('.timeline-macro-canvas');
+    if (!canvas || canvas._hasWheelListener) return;
+    canvas._hasWheelListener = true;
+    canvas.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        canvas.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+  },
+
+  scrollTimeline(amount) {
+    const canvas = document.querySelector('.timeline-macro-canvas');
+    if (canvas) {
+      canvas.scrollBy({ left: amount, behavior: 'smooth' });
     }
   },
 
@@ -336,13 +362,13 @@ const TimelineScreen = {
     const todayMarker = document.querySelector('.timeline-macro-today-line');
     if (todayMarker) {
       const markerLeft = todayMarker.offsetLeft;
-      canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 3), behavior: 'smooth' });
+      canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 2), behavior: 'smooth' });
       return;
     }
     // Fallback: scroll to 70% of canvas width (near today for current date)
     const totalWidth = canvas.scrollWidth - canvas.clientWidth;
     if (totalWidth > 0) {
-      canvas.scrollTo({ left: totalWidth * 0.7, behavior: 'smooth' });
+      canvas.scrollTo({ left: totalWidth * 0.5, behavior: 'smooth' });
     }
   },
 
@@ -603,7 +629,17 @@ const TimelineScreen = {
               Jump to Today
             </button>
 
-            <div class="search-input-wrap" style="width:260px">
+            <!-- Scroll Left / Right Buttons -->
+            <div style="display:inline-flex;align-items:center;gap:2px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:2px;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="TimelineScreen.scrollTimeline(-240)" title="Scroll Left (earlier dates)" style="padding:4px 8px;height:28px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+                ◀ Left
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="TimelineScreen.scrollTimeline(240)" title="Scroll Right (later dates)" style="padding:4px 8px;height:28px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+                Right ▶
+              </button>
+            </div>
+
+            <div class="search-input-wrap" style="width:240px">
               <span class="search-icon">${Icons.search}</span>
               <input type="text" id="timeline-search-input" class="form-input search-input" placeholder="Search package or milestone..." value="${this._search}" oninput="TimelineScreen.setSearch(this.value)">
               <button type="button" id="timeline-search-clear" class="search-clear-btn ${this._search ? '' : 'hidden'}" onclick="TimelineScreen.clearSearch()" title="Clear search">
@@ -622,7 +658,10 @@ const TimelineScreen = {
       </div>
     `;
     // Schedule auto-scroll to today after DOM insertion
-    setTimeout(() => this.scrollToToday(), 100);
+    setTimeout(() => {
+      this.scrollToToday();
+      this.initScrollListeners();
+    }, 100);
     return html;
   },
 
@@ -646,41 +685,42 @@ const TimelineScreen = {
   _renderDayView(list) {
     const win = this._getWindow();
     const todayLeftPct = this._getTodayPositionPercent();
+    const dayInnerWidth = Math.max(1380, win.days.length * 46);
 
     return `
       <div class="timeline-macro-container timeline-day-view">
         
-        <!-- Left Fixed Column: 300px -->
+        <!-- Left Fixed Column: 320px -->
         ${this._renderLeftSidebar(list)}
 
         <!-- Right Daily Canvas -->
         <div class="timeline-macro-canvas timeline-day-canvas">
-          
-          <!-- 30-Day Grid Header -->
-          <div class="timeline-macro-grid-header timeline-day-grid-header">
-            ${win.days.map(d => `
-              <div class="timeline-macro-col-header timeline-day-col-header ${d.isToday ? 'today-col' : ''}">
-                <span class="timeline-day-weekday">${d.day[0]}</span>
-                <span class="timeline-day-num ${d.isToday ? 'today-badge' : ''}">${d.num}</span>
-              </div>
-            `).join('')}
+          <div class="timeline-canvas-inner" style="min-width:${dayInnerWidth}px;">
+            
+            <!-- 30-Day Grid Header -->
+            <div class="timeline-macro-grid-header timeline-day-grid-header" style="grid-template-columns: repeat(${win.days.length}, 1fr);">
+              ${win.days.map(d => `
+                <div class="timeline-macro-col-header timeline-day-col-header ${d.isToday ? 'today-col' : ''}">
+                  <span class="timeline-day-weekday">${d.day[0]}</span>
+                  <span class="timeline-day-num ${d.isToday ? 'today-badge' : ''}">${d.num}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Background Vertical Grid Lines -->
+            <div class="timeline-macro-grid-bg timeline-day-grid-bg" style="grid-template-columns: repeat(${win.days.length}, 1fr);">
+              ${win.days.map(d => `
+                <div class="timeline-grid-vertical-line ${d.isToday ? 'today-line-bg' : ''}"></div>
+              `).join('')}
+            </div>
+
+            <!-- Today Marker Line -->
+            <div class="timeline-macro-today-line" style="left:${todayLeftPct}%"></div>
+
+            <!-- Body Rows -->
+            ${this._renderCanvasRows(list)}
+
           </div>
-
-          <!-- Background Vertical Grid Lines -->
-          <div class="timeline-macro-grid-bg timeline-day-grid-bg">
-            ${win.days.map(d => `
-              <div class="timeline-grid-vertical-line ${d.isToday ? 'today-line-bg' : ''}"></div>
-            `).join('')}
-          </div>
-
-          <!-- Today Marker Line -->
-          <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">SEP 2026</div>
-          </div>
-
-          <!-- Body Rows -->
-          ${this._renderCanvasRows(list)}
-
         </div>
       </div>
     `;
@@ -694,39 +734,39 @@ const TimelineScreen = {
     return `
       <div class="timeline-macro-container timeline-week-view">
         
-        <!-- Left Fixed Column: 300px -->
+        <!-- Left Fixed Column: 320px -->
         ${this._renderLeftSidebar(list)}
 
         <!-- Right Multi-Week Canvas -->
         <div class="timeline-macro-canvas timeline-week-canvas">
-          
-          <!-- 12-Week Grid Header -->
-          <div class="timeline-macro-grid-header timeline-week-grid-header">
-            ${win.weeks.map(w => `
-              <div class="timeline-macro-col-header timeline-week-col-header ${w.isCurrent ? 'today-col' : ''}">
-                <div class="timeline-week-title-wrap">
-                  <span class="timeline-week-label ${w.isCurrent ? 'today-badge' : ''}">${w.label}</span>
-                  <span class="timeline-week-range">${w.range}</span>
+          <div class="timeline-canvas-inner" style="min-width:1100px;">
+            
+            <!-- 12-Week Grid Header -->
+            <div class="timeline-macro-grid-header timeline-week-grid-header" style="grid-template-columns: repeat(${win.weeks.length}, 1fr);">
+              ${win.weeks.map(w => `
+                <div class="timeline-macro-col-header timeline-week-col-header ${w.isCurrent ? 'today-col' : ''}">
+                  <div class="timeline-week-title-wrap">
+                    <span class="timeline-week-label ${w.isCurrent ? 'today-badge' : ''}">${w.label}</span>
+                    <span class="timeline-week-range">${w.range}</span>
+                  </div>
                 </div>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
+
+            <!-- Background Vertical Grid Lines -->
+            <div class="timeline-macro-grid-bg timeline-week-grid-bg" style="grid-template-columns: repeat(${win.weeks.length}, 1fr);">
+              ${win.weeks.map(w => `
+                <div class="timeline-grid-vertical-line ${w.isCurrent ? 'today-line-bg' : ''}"></div>
+              `).join('')}
+            </div>
+
+            <!-- Today Marker Line -->
+            <div class="timeline-macro-today-line" style="left:${todayLeftPct}%"></div>
+
+            <!-- Body Rows -->
+            ${this._renderCanvasRows(list)}
+
           </div>
-
-          <!-- Background Vertical Grid Lines -->
-          <div class="timeline-macro-grid-bg timeline-week-grid-bg">
-            ${win.weeks.map(w => `
-              <div class="timeline-grid-vertical-line ${w.isCurrent ? 'today-line-bg' : ''}"></div>
-            `).join('')}
-          </div>
-
-          <!-- Today Marker Line -->
-          <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">SEP 2026</div>
-          </div>
-
-          <!-- Body Rows -->
-          ${this._renderCanvasRows(list)}
-
         </div>
       </div>
     `;
@@ -740,40 +780,40 @@ const TimelineScreen = {
     return `
       <div class="timeline-macro-container timeline-month-view">
         
-        <!-- Left Fixed Column: 300px -->
+        <!-- Left Fixed Column: 320px -->
         ${this._renderLeftSidebar(list)}
 
         <!-- Right 6-Month Viewport Grid Canvas (100% Width) -->
         <div class="timeline-macro-canvas timeline-month-canvas">
-          
-          <!-- 6-Month Columns Header -->
-          <div class="timeline-macro-grid-header timeline-month-grid-header">
-            ${win.months.map(m => `
-              <div class="timeline-macro-col-header">
-                ${m.isCurrent ? `
-                  <span class="timeline-col-current-badge">${m.label}</span>
-                ` : `
-                  <span>${m.label}</span>
-                `}
-              </div>
-            `).join('')}
+          <div class="timeline-canvas-inner" style="min-width:750px;">
+            
+            <!-- 6-Month Columns Header -->
+            <div class="timeline-macro-grid-header timeline-month-grid-header" style="grid-template-columns: repeat(${win.months.length}, 1fr);">
+              ${win.months.map(m => `
+                <div class="timeline-macro-col-header">
+                  ${m.isCurrent ? `
+                    <span class="timeline-col-current-badge">${m.label}</span>
+                  ` : `
+                    <span>${m.label}</span>
+                  `}
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Background Vertical Grid Lines -->
+            <div class="timeline-macro-grid-bg timeline-month-grid-bg" style="grid-template-columns: repeat(${win.months.length}, 1fr);">
+              ${win.months.map(() => `
+                <div class="timeline-grid-vertical-line"></div>
+              `).join('')}
+            </div>
+
+            <!-- Today Marker Line -->
+            <div class="timeline-macro-today-line" style="left:${todayLeftPct}%"></div>
+
+            <!-- Body Rows -->
+            ${this._renderCanvasRows(list)}
+
           </div>
-
-          <!-- Background Vertical Grid Lines -->
-          <div class="timeline-macro-grid-bg timeline-month-grid-bg">
-            ${win.months.map(() => `
-              <div class="timeline-grid-vertical-line"></div>
-            `).join('')}
-          </div>
-
-          <!-- Today Marker Line -->
-          <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">SEP 2026</div>
-          </div>
-
-          <!-- Body Rows -->
-          ${this._renderCanvasRows(list)}
-
         </div>
       </div>
     `;

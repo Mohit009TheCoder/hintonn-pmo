@@ -52,13 +52,15 @@ const DashboardScreen = {
           stageClass: `stage-${stage}`,
           contractValue: parseAmt(p.description) || 0,
           contractValueFormatted: this._fmtINR(parseAmt(p.description)),
-          pendingInvoices: allInvoices.filter(i => i.projectId === p.id && i.status !== 'paid').reduce((s,i) => s + parseAmt(i.amountDue), 0),
-          pendingInvoicesFormatted: this._fmtINR(allInvoices.filter(i => i.projectId === p.id && i.status !== 'paid').reduce((s,i) => s + parseAmt(i.amountDue), 0)),
+          contractValueExact: this._fmtINR(parseAmt(p.description)),
           retentionHeld: projRetention ? parseAmt(projRetention.retentionHeld) : 0,
           retentionHeldFormatted: projRetention ? this._fmtINR(parseAmt(projRetention.retentionHeld)) : '₹0',
+          retentionHeldExact: projRetention ? this._fmtINR(parseAmt(projRetention.retentionHeld)) : '₹0',
           retentionPct: projRetention ? projRetention.retentionPct : '5%',
           releaseDueDate: projRetention ? projRetention.releaseDueDate : '',
-          releaseStatus: projRetention ? projRetention.statusLabel || 'On Schedule' : 'No Data',
+          releaseDueDateFormatted: projRetention && projRetention.releaseDueDate ? Utils.formatDate(projRetention.releaseDueDate) : '—',
+          releaseStatus: projRetention ? (projRetention.statusLabel || projRetention.status || 'On Schedule') : 'No Data',
+          releaseStatusBadge: projRetention ? ((String(projRetention.statusLabel || projRetention.status || '').toLowerCase().includes('releas')) ? 'badge-completed' : 'badge-active') : 'badge-review',
           milestoneCount: projMilestones.length,
           bgRef: projBG ? projBG.ref : '',
           bgType: projBG ? projBG.type : '',
@@ -110,7 +112,7 @@ const DashboardScreen = {
       time: Utils.timeAgo(a.createdAt),
       tag: 'System'
     })) : [
-      { type: 'info', icon: Icons.info, html: 'No activity yet. Create projects, tasks, and invoices to see activity here.', time: '', tag: 'Info' }
+      { type: 'info', icon: Icons.info, html: 'No activity yet. Create projects and tasks to see activity here.', time: '', tag: 'Info' }
     ];
 
     // Portfolio Health Score
@@ -270,7 +272,7 @@ const DashboardScreen = {
                     <span class="commercial-stage-tag ${p.commercial.stageClass}">${p.commercial.commercialStage}</span>
                   </div>
                   <div class="project-progress-sub">
-                    ${p.commercial.contractValueFormatted} Contract · ${p.commercial.packageCode} · ${p.commercial.milestoneCount} milestones · ${p.commercial.pendingInvoicesFormatted} pending
+                    ${p.commercial.contractValueFormatted} Contract · ${p.commercial.packageCode} · ${p.commercial.milestoneCount} milestones
                   </div>
                 </div>
                 <div class="project-progress-bar-wrap">
@@ -346,7 +348,6 @@ const DashboardScreen = {
                   <tr>
                     <th>Project Name</th>
                     <th class="num">Contract Value</th>
-                    <th class="num">Pending Invoices</th>
                     <th class="num">Retention Held</th>
                     <th>Release Due Date</th>
                     <th class="center">Release Status</th>
@@ -363,9 +364,6 @@ const DashboardScreen = {
                       </td>
                       <td class="num" style="font-weight:600;color:var(--color-text-primary)">
                         ${p.commercial.contractValueExact}
-                      </td>
-                      <td class="num" style="font-weight:600;color:var(--color-text-primary)">
-                        ${p.commercial.pendingInvoicesExact}
                       </td>
                       <td class="num" style="font-weight:600;color:var(--color-text-secondary)">
                         ${p.commercial.retentionHeldExact} <span style="font-size:11px;color:var(--color-text-muted)">(${p.commercial.retentionPct})</span>
@@ -878,14 +876,11 @@ const DashboardScreen = {
 
   openCommercialAudit() {
     const allBGs = Store.getBankGuarantees();
-    const allInvoices = Store.getInvoices();
     const allRetention = Store.getRetentionRecords();
     const allProjects = Store.getProjects();
     const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
     const fmtINR = this._fmtINR;
     const expiringBGs = allBGs.filter(b => b.daysLeft > 0 && b.daysLeft <= 60);
-    const pendingInvoices = allInvoices.filter(i => i.status !== 'paid');
-    const pendingTotal = pendingInvoices.reduce((s,i) => s + parseAmt(i.amountDue), 0);
     const retentionTotal = allRetention.reduce((s,r) => s + parseAmt(r.retentionHeld), 0);
     const portfolioTotal = allProjects.reduce((s,p) => s + parseAmt(p.description), 0);
 
@@ -895,23 +890,15 @@ const DashboardScreen = {
           <div style="color:#15803D">${Icons.check}</div>
           <div style="color:#15803D;font-weight:600">EPC Portfolio: ${allProjects.length} project(s) · ${expiringBGs.length} BG(s) expiring soon</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
-            <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase">Total Portfolio Value</div>
-            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">${fmtINR(portfolioTotal)}</div>
-            <div style="font-size:11.5px;color:var(--color-text-muted)">${allProjects.length} Active EPC Package(s)</div>
-          </div>
-          <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
-            <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase">Pending Invoices</div>
-            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">${fmtINR(pendingTotal)}</div>
-            <div style="font-size:11.5px;color:var(--color-text-muted)">${pendingInvoices.length} invoice(s) pending</div>
-          </div>
+        <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
+          <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase">Total Portfolio Value</div>
+          <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-top:2px">${fmtINR(portfolioTotal)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${allProjects.length} Active EPC Package(s)</div>
         </div>
         <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
           <div style="font-size:12px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px">AI PMO Recommendations:</div>
           <ul style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px">
             ${expiringBGs.length > 0 ? expiringBGs.map(b => `<li>Dispatch BG renewal for <strong>${b.ref} (${fmtINR(parseAmt(b.amount))})</strong> — ${b.daysLeft} days to expiry.</li>`).join('') : '<li>No urgent BG renewals needed.</li>'}
-            ${pendingInvoices.length > 0 ? `<li>Follow up on ${pendingInvoices.length} pending invoice(s) totaling ${fmtINR(pendingTotal)}.</li>` : '<li>No pending invoices.</li>'}
             ${allRetention.length > 0 ? `<li>Track ${allRetention.length} retention release(s) worth ${fmtINR(retentionTotal)}.</li>` : '<li>No retention records.</li>'}
           </ul>
         </div>

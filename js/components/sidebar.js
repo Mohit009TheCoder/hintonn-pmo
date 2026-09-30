@@ -21,7 +21,7 @@ const Sidebar = {
       { id: 'team', icon: 'users', label: 'Team' },
     ]},
     { section: 'COMMERCIAL', isCommercial: true, items: [
-      { id: 'billing', icon: 'fileText', label: 'Billing & Invoices', badge: () => 4 },
+      { id: 'billing', icon: 'fileText', label: 'Billing & Invoices' },
       { id: 'retention', icon: 'dollarSign', label: 'Retention Summary' },
       { id: 'bg', icon: 'shield', label: 'Bank Guarantees (BG)', badge: () => 2 },
       { id: 'dlp', icon: 'clock', label: 'DLP Timelines' },

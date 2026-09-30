@@ -169,12 +169,12 @@ const BillingScreen = {
         <div class="kpi-grid" style="margin-bottom:20px">
           <div class="kpi-card" onclick="BillingScreen.setFilter('all')" style="cursor:pointer">
             <div class="kpi-header">
-              <span class="kpi-label">Total Invoiced (${totalBills} Bills)</span>
+              <span class="kpi-label">Total Invoiced</span>
               <div class="kpi-icon-wrap">${Icons.fileText}</div>
             </div>
             <div class="kpi-value">${totalBills} Bills</div>
-            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-primary-700)">
-              ${companyCount} Client Companies · ${packageCount} EPC Packages
+            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
+              ${companyCount} client ${companyCount === 1 ? 'company' : 'companies'} · ${packageCount} packages
             </div>
           </div>
 
@@ -184,8 +184,8 @@ const BillingScreen = {
               <div class="kpi-icon-wrap">${Icons.check}</div>
             </div>
             <div class="kpi-value">${paidBills} Invoices</div>
-            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-emerald-700, #059669)">
-              ${paidBills} Invoices Fully Settled
+            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-success-700, #1E40AF)">
+              Fully settled
             </div>
           </div>
 
@@ -195,9 +195,8 @@ const BillingScreen = {
               <div class="kpi-icon-wrap">${Icons.clock}</div>
             </div>
             <div class="kpi-value">${pendingBills} Invoices</div>
-            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
-              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">${pendingBills} Invoices</span>
-              Under Review / Certification
+            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
+              Under review / certification
             </div>
           </div>
 
@@ -207,28 +206,28 @@ const BillingScreen = {
               <div class="kpi-icon-wrap">${Icons.shield}</div>
             </div>
             <div class="kpi-value">${totalRevisedBills} Bills Revised</div>
-            <div class="kpi-change neutral" style="font-weight:600;color:#7C3AED">
-              v1.1 to v2.0 Version Controlled
+            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-warning-700, #5B21B6)">
+              v1.1 → v2.0 version controlled
             </div>
           </div>
         </div>
 
         <!-- Filter & Search Toolbar Card -->
-        <div class="section-card" style="margin-bottom:20px;padding:14px 18px">
+        <div class="section-card" style="margin-bottom:20px;padding:12px 16px">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
             
             <!-- Left: View Mode Toggle & Status Filters -->
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
               
               <!-- View Mode Selector -->
-              <div class="btn-group" style="display:inline-flex;background:var(--color-bg-page);padding:2px;border-radius:6px;border:1px solid var(--color-border)">
+              <div class="btn-group" style="display:inline-flex;background:var(--color-bg-page);padding:2px;border-radius:var(--radius-sm);border:1px solid var(--color-border)">
                 <button class="btn btn-xs ${this._viewMode==='company'?'btn-primary':'btn-ghost'}" 
                         onclick="BillingScreen.setViewMode('company')" style="font-weight:600">
-                  🏢 Group by Company
+                  Group by Company
                 </button>
                 <button class="btn btn-xs ${this._viewMode==='table'?'btn-primary':'btn-ghost'}" 
                         onclick="BillingScreen.setViewMode('table')" style="font-weight:600">
-                  📄 All Invoices Table
+                  All Invoices
                 </button>
               </div>
 
@@ -300,12 +299,19 @@ const BillingScreen = {
     });
 
     if (filteredCompanies.length === 0) {
+      const hasInvoices = this._getInvoices().length > 0;
       return `
         <div class="section-card" style="padding:40px;text-align:center">
-          <p style="color:var(--color-text-muted);font-size:14px">
-            ${this._search ? `No billing records found matching "${this._search}"` : 'No billing records match selected filters.'}
+          <div style="width:44px;height:44px;margin:0 auto 12px;border-radius:var(--radius-md);background:var(--color-primary-50);color:var(--color-primary);display:flex;align-items:center;justify-content:center">
+            ${Icons.fileText || ''}
+          </div>
+          <p style="color:var(--color-text-primary);font-size:14px;font-weight:600;margin:0 0 4px">
+            ${this._search ? `No billing records found matching “${this._search}”` : (hasInvoices ? 'No invoices match the selected filters.' : 'No invoices yet')}
           </p>
-          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px">
+          <p style="color:var(--color-text-muted);font-size:12.5px;margin:0">
+            ${hasInvoices ? 'Adjust the filters or search to see more bills.' : 'Generate your first proforma invoice from an existing project — bill numbers, GST and TDS are calculated automatically.'}
+          </p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px">
             <button class="btn btn-secondary btn-sm" onclick="BillingScreen.clearSearch(); BillingScreen.setFilter('all'); BillingScreen.setCompanyFilter('all')">
               Reset Filters
             </button>
@@ -463,12 +469,19 @@ const BillingScreen = {
   // ─── 2. Flat All Invoices Table View ───
   _renderTable(invoices) {
     if (invoices.length === 0) {
+      const hasInvoices = this._getInvoices().length > 0;
       return `
         <div class="section-card" style="padding:40px;text-align:center">
-          <p style="color:var(--color-text-muted);font-size:14px">
-            ${this._search ? `No invoices found matching "${this._search}"` : 'No invoices match selected filter.'}
+          <div style="width:44px;height:44px;margin:0 auto 12px;border-radius:var(--radius-md);background:var(--color-primary-50);color:var(--color-primary);display:flex;align-items:center;justify-content:center">
+            ${Icons.fileText || ''}
+          </div>
+          <p style="color:var(--color-text-primary);font-size:14px;font-weight:600;margin:0 0 4px">
+            ${this._search ? `No invoices found matching “${this._search}”` : (hasInvoices ? 'No invoices match the selected filters.' : 'No invoices yet')}
           </p>
-          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px">
+          <p style="color:var(--color-text-muted);font-size:12.5px;margin:0">
+            ${hasInvoices ? 'Adjust the filters or search to see more bills.' : 'Generate your first proforma invoice from an existing project — bill numbers, GST and TDS are calculated automatically.'}
+          </p>
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:16px">
             <button class="btn btn-secondary btn-sm" onclick="BillingScreen.clearSearch(); BillingScreen.setFilter('all'); BillingScreen.setCompanyFilter('all')">
               Reset Filters
             </button>

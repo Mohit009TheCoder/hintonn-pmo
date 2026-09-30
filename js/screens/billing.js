@@ -59,20 +59,20 @@ const BillingScreen = {
     } else if (this._filter === 'revised') {
       list = list.filter(i => i.isRevised);
     } else if (this._filter === 'latest') {
-      list = list.filter(i => i.version.startsWith('v2') || !i.isRevised);
+      list = list.filter(i => String(i.version || '').startsWith('v2') || !i.isRevised);
     }
 
     // Search query
     if (this._search) {
       const q = this._search.toLowerCase().trim();
-      list = list.filter(i => 
-        i.id.toLowerCase().includes(q) || 
-        i.projectName.toLowerCase().includes(q) || 
-        i.companyName.toLowerCase().includes(q) || 
-        i.milestone.toLowerCase().includes(q) ||
-        i.version.toLowerCase().includes(q) ||
-        i.billNumber.toLowerCase().includes(q) ||
-        i.amountDue.toLowerCase().includes(q)
+      list = list.filter(i =>
+        String(i.id || '').toLowerCase().includes(q) ||
+        String(i.projectName || '').toLowerCase().includes(q) ||
+        String(i.companyName || '').toLowerCase().includes(q) ||
+        String(i.milestone || '').toLowerCase().includes(q) ||
+        String(i.version || '').toLowerCase().includes(q) ||
+        String(i.billNumber || '').toLowerCase().includes(q) ||
+        String(i.amountDue || '').toLowerCase().includes(q)
       );
     }
 
@@ -1674,6 +1674,9 @@ const BillingScreen = {
   },
 
   saveAndGenerateInvoice() {
+    const s = this._createModalState || {};
+
+    // ── Client validation ──
     const clientNameInput = document.getElementById('inv-client-name');
     const clientLegalName = clientNameInput ? clientNameInput.value.trim() : '';
     if (!clientLegalName) {
@@ -1682,181 +1685,85 @@ const BillingScreen = {
       return;
     }
 
-    const invNumInput = document.getElementById('inv-number');
-    const invoiceNumber = invNumInput ? invNumInput.value.trim() : `HIN-PI-${Date.now()}`;
-    const invDateInput = document.getElementById('inv-date');
-    const invoiceDate = invDateInput ? invDateInput.value : new Date().toISOString().split('T')[0];
-    const validUntilInput = document.getElementById('inv-valid-until');
-    const validUntil = validUntilInput ? validUntilInput.value : new Date(Date.now() + 15*86400000).toISOString().split('T')[0];
-    const refQuotInput = document.getElementById('inv-ref-quotation');
-    const refQuotation = refQuotInput ? refQuotInput.value.trim() : 'HIN-CL-2026-001';
-    const modulesTagInput = document.getElementById('inv-modules-tag');
-    const modulesTag = modulesTagInput ? modulesTagInput.value.trim() : '[R1 • R2 • R3]';
+    // ── Form metadata ──
+    const readVal = (id, fallback) => {
+      const el = document.getElementById(id);
+      return el && el.value ? el.value.trim() : fallback;
+    };
+    const invoiceNumber = readVal('inv-number', '') || Store.generateBillNumber(clientLegalName);
+    const invoiceDate = readVal('inv-date', new Date().toISOString().split('T')[0]);
+    const validUntil = readVal('inv-valid-until', '');
+    const refQuotation = readVal('inv-ref-quotation', '') || Store.generateQuotationRef(clientLegalName);
+    const modulesTag = readVal('inv-modules-tag', '[R1 • R2 • R3]');
 
-    const clientGstin = document.getElementById('inv-client-gstin') ? document.getElementById('inv-client-gstin').value.trim() : '';
-    const clientAddr1 = document.getElementById('inv-client-addr1') ? document.getElementById('inv-client-addr1').value.trim() : '';
-    const clientAddr2 = document.getElementById('inv-client-addr2') ? document.getElementById('inv-client-addr2').value.trim() : '';
-    const clientState = document.getElementById('inv-client-state') ? document.getElementById('inv-client-state').value.trim() : 'Gujarat, India';
-    const saveCompanyCheck = document.getElementById('inv-save-company-check');
-    const shouldSaveCompany = saveCompanyCheck ? saveCompanyCheck.checked : false;
+    const clientGstin = readVal('inv-client-gstin', '');
+    const clientAddr1 = readVal('inv-client-addr1', '');
+    const clientAddr2 = readVal('inv-client-addr2', '');
+    const clientState = readVal('inv-client-state', '');
 
-    const includeRecurringCheck = document.getElementById('inv-include-recurring');
-    const includeRecurring = includeRecurringCheck ? includeRecurringCheck.checked : true;
-    const recModule = document.getElementById('inv-rec-module') ? document.getElementById('inv-rec-module').value.trim() : 'Hintonn AI SLA';
-    const recAmount = document.getElementById('inv-rec-amount') ? parseFloat(document.getElementById('inv-rec-amount').value) || 0 : 0;
+    const recModuleEl = document.getElementById('inv-rec-module');
+    const recAmountEl = document.getElementById('inv-rec-amount');
+    const recurringItem = {
+      module: recModuleEl ? recModuleEl.value.trim() : '',
+      desc: 'Annual Maintenance, Security Patches & Cloud Ops',
+      basis: 'Flat annual package',
+      freq: 'Annual',
+      amount: recAmountEl ? parseFloat(recAmountEl.value) || 0 : 0
+    };
 
-    const items = (this._createModalState && this._createModalState.items) ? this._createModalState.items : [];
-    let totalGross = 0;
-    let totalDiscount = 0;
-    let totalTaxable = 0;
-    let totalGst = 0;
-    let totalPayable = 0;
+    const items = Array.isArray(s.items) ? s.items : [];
 
-    const parsedItems = items.map(it => {
-      const g = it.gross || 0;
-      const dPct = it.discountPct !== undefined ? it.discountPct : 15;
-      const dAmt = Math.round(g * (dPct / 100));
-      const tax = g - dAmt;
-      const gst = Math.round(tax * 0.18);
-      const amt = tax + gst;
-
-      totalGross += g;
-      totalDiscount += dAmt;
-      totalTaxable += tax;
-      totalGst += gst;
-      totalPayable += amt;
-
-      return {
-        name: it.name || 'AI Module Development',
-        desc: it.desc || 'One-time development • incl. 1 month post-go-live fine-tuning',
-        gross: g,
-        discountPct: dPct,
-        discountAmount: dAmt,
-        taxable: tax,
-        gstRate: 18,
-        gstAmount: gst,
-        amount: amt
-      };
-    });
-
-    if (totalGross === 0) {
-      Toast.show('Please enter at least one module with gross development cost.', 'warning', 3500);
+    // ── Project + milestone linkage (EXISTING project data only — no seeds) ──
+    const projectId = s.projectId || '';
+    const milestoneId = s.milestoneId || '';
+    const proj = projectId ? Store.getProject(projectId) : null;
+    if (projectId && !proj) {
+      Toast.show('Selected project no longer exists. Please re-select the project.', 'error', 4000);
       return;
     }
 
-    const tdsAmount = Math.round(totalTaxable * 0.10);
-    const netPayable = totalPayable - tdsAmount;
+    // ── Generate through the Store invoice engine (single source of truth) ──
+    const validDays = validUntil
+      ? Math.max(1, Math.round((new Date(validUntil) - new Date(invoiceDate)) / 86400000))
+      : 15;
 
-    // Determine or create company
-    let companyId = this._createModalState ? this._createModalState.selectedCompanyId : '';
-    const companies = this._getCompanies();
-    const existingComp = companies.find(c => c.name.toLowerCase() === clientLegalName.toLowerCase() || c.id === companyId);
-
-    if (existingComp) {
-      companyId = existingComp.id;
-    } else if (shouldSaveCompany || this._createModalState?.clientMode === 'other') {
-      const initials = clientLegalName.replace(/[^A-Za-z0-9]/g, '').slice(0, 5).toLowerCase() || 'comp';
-      const newCId = `c_${initials}_${Date.now()}`;
-      const newComp = Store.createCompany({
-        id: newCId,
-        name: clientLegalName,
-        contactPerson: clientLegalName.split(' ')[0] + ' Accounts Team',
-        totalContractValue: this._fmtINR(totalGross),
-        activePackage: modulesTag,
-        totalBilledFormatted: this._fmtINR(totalPayable),
-        totalPendingFormatted: this._fmtINR(netPayable),
-        paymentStatus: 'Pending',
-        paymentStatusBadge: 'badge-high',
-        billsCountText: '1 Bill',
-        hasRevisions: false,
-        addressLine1: clientAddr1,
-        addressLine2: clientAddr2,
-        stateCountry: clientState,
-        gstin: clientGstin
-      });
-      companyId = newComp.id;
-    } else {
-      companyId = `c_temp_${Date.now()}`;
-    }
-
-    const m1 = Math.round(totalPayable * 0.4);
-    const m2 = Math.round(totalPayable * 0.4);
-    const m3 = totalPayable - (m1 + m2);
-
-    const invoiceObj = {
-      id: invoiceNumber,
+    const invoice = Store.generateInvoice(projectId, {
       billNumber: invoiceNumber,
-      companyId: companyId,
-      companyName: clientLegalName,
-      projectName: 'AI Platform & Intelligent Automation',
-      packageCode: refQuotation,
       quotationRef: refQuotation,
-      milestone: `Deployment of Modules ${modulesTag}`,
-      modulesTag: modulesTag,
-      issueDate: invoiceDate,
-      dueDate: validUntil,
-      currency: 'INR (₹)',
-      amountDue: this._fmtINR(totalGross),
-      taxAmount: this._fmtINR(totalGst),
-      deductions: this._fmtINR(totalDiscount),
-      totalPayable: this._fmtINR(totalPayable),
-      netPayable: this._fmtINR(netPayable),
-      taxableValue: this._fmtINR(totalTaxable),
-      tdsAmount: this._fmtINR(tdsAmount),
-      status: 'pending-client',
-      statusLabel: 'Pending Approval',
-      badgeClass: 'badge-high',
-      version: 'v1.0',
-      versionBadgeClass: 'version-pill-v1',
-      isRevised: false,
+      companyId: s.selectedCompanyId || '',
+      companyName: clientLegalName,
       clientDetails: {
         legalName: clientLegalName,
         addressLine1: clientAddr1,
         addressLine2: clientAddr2,
         stateCountry: clientState,
-        gstin: clientGstin || '—'
+        gstin: clientGstin
       },
-      items: parsedItems,
-      paymentSchedule: [
-        { milestone: 'M1', stage: 'Advance — on signing of agreement / receipt of PO', percent: 40, amount: m1 },
-        { milestone: 'M2', stage: 'Demo — on demonstration of built AI modules', percent: 40, amount: m2 },
-        { milestone: 'M3', stage: 'Deployment — after production deployment & go-live', percent: 20, amount: m3 }
-      ],
-      recurringCharges: includeRecurring ? [
-        {
-          module: recModule || 'Hintonn AI Enterprise Platform SLA',
-          component: 'Annual Maintenance, Security Patches & Cloud Ops',
-          basis: 'Flat annual package',
-          freq: 'Annual',
-          amount: recAmount
-        }
-      ] : [],
-      versionHistory: [
-        {
-          version: 'v1.0',
-          label: 'Initial Proforma Issuance',
-          date: invoiceDate,
-          baseAmount: this._fmtINR(totalGross),
-          tax: this._fmtINR(totalGst),
-          deductions: this._fmtINR(totalDiscount),
-          netPayable: this._fmtINR(netPayable),
-          editor: 'Commercial Operations',
-          changeReason: 'Original Proforma Invoice created for client approval and milestone advance.',
-          modifiedFields: ['Proforma Generated'],
-          isCurrent: true
-        }
-      ]
-    };
+      milestoneId: milestoneId,
+      modulesTag: modulesTag,
+      invoiceDate: invoiceDate,
+      validDays: validDays,
+      items: items,
+      includeRecurring: s.includeRecurring !== false,
+      recurringItem: recurringItem
+    });
 
-    Store.createInvoice(invoiceObj);
+    if (!invoice) {
+      Toast.show('Could not generate invoice — enter at least one line item with a gross amount greater than zero.', 'warning', 4500);
+      return;
+    }
+
     this._invoices = null;
-    this._expandedCompanies[companyId] = true;
+    this._expandedCompanies[invoice.companyId] = true;
     this.updateBillingContainer();
     Modal.closeAll();
-    Toast.show(`Proforma Invoice ${invoiceObj.id} created successfully!`, 'success', 3500);
+    Toast.show(
+      `Proforma Invoice ${invoice.billNumber} generated from ${proj ? `project "${proj.name}"` : 'client details'}!`,
+      'success', 4000
+    );
 
     setTimeout(() => {
-      this.openProformaPreview(invoiceObj.id);
+      this.openProformaPreview(invoice.id);
     }, 150);
   },
 

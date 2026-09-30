@@ -36,33 +36,53 @@ const TimelineScreen = {
       // Get milestones for this project
       const projMilestones = storeMilestones.filter(m => m.projectId === p.id);
 
-      // Build phases from tasks grouped by status
+      // Real fallback dates: createdAt / latest milestone-or-task due date / +30d
+      const todayStr = new Date().toISOString().split('T')[0];
+      const createdStr = String(p.createdAt || '').split('T')[0];
+      const dueList = projMilestones.map(m => m.dueDate).concat(projTasks.map(t => t.dueDate)).filter(Boolean).sort();
+      const latestDue = dueList.length ? dueList[dueList.length - 1] : '';
+      let startDate = p.startDate || createdStr || todayStr;
+      let endDate = p.endDate || latestDue || '';
+      if (!endDate) { const e = new Date(startDate + 'T00:00:00'); e.setDate(e.getDate() + 30); endDate = e.toISOString().split('T')[0]; }
+      if (endDate < startDate) endDate = startDate;
+
+      // Real per-task items — rendered as sub-rows in expanded Day/Week/Month views
+      const taskItems = projTasks.map(t => ({
+        id: t.id,
+        title: t.title || 'Untitled task',
+        start: t.startDate || todayStr,
+        end: t.dueDate || t.startDate || todayStr,
+        status: t.status || (t.completed ? 'done' : 'todo'),
+        priority: t.priority || 'medium',
+        assigneeIds: t.assigneeIds || (t.assigneeId ? [t.assigneeId] : [])
+      }));
+
+      // Phases kept for search/back-compat (real task date ranges when tasks exist)
       const statusGroups = { 'todo': [], 'in-progress': [], 'review': [], 'done': [] };
       projTasks.forEach(t => { if (statusGroups[t.status]) statusGroups[t.status].push(t); });
       const phases = [];
-      const startDate = p.startDate || new Date().toISOString().split('T')[0];
-      const endDate = p.endDate || new Date(Date.now() + 90*86400000).toISOString().split('T')[0];
-
       if (projTasks.length > 0) {
-        // Create phases from task groups
         Object.entries(statusGroups).forEach(([status, tasks]) => {
           if (tasks.length === 0) return;
           const phaseProgress = status === 'done' ? 100 : status === 'review' ? 75 : status === 'in-progress' ? 40 : 0;
+          const tStarts = tasks.map(t => t.startDate).filter(Boolean).sort();
+          const tEnds = tasks.map(t => t.dueDate).filter(Boolean).sort();
           phases.push({
             id: `ph-${p.id}-${status}`,
             name: `${Utils.humanize(status)} Tasks`,
-            start: startDate,
-            end: endDate,
+            start: tStarts[0] || startDate,
+            end: tEnds.length ? tEnds[tEnds.length - 1] : endDate,
             progress: phaseProgress,
             stage: stage,
-            assigneeIds: [...new Set(tasks.map(t => t.assigneeId).filter(Boolean))]
+            assigneeIds: [...new Set(tasks.flatMap(t => t.assigneeIds || (t.assigneeId ? [t.assigneeId] : [])).filter(Boolean))]
           });
         });
-      } else {
+      }
+      if (phases.length === 0) {
         phases.push({ id: `ph-${p.id}-default`, name: 'Project Duration', start: startDate, end: endDate, progress: progress, stage: stage, assigneeIds: p.memberIds || [] });
       }
 
-      // Build milestones
+      // Build milestones (real due dates drive day-column markers)
       const milestones = projMilestones.map(m => ({
         id: m.id,
         name: m.name,
@@ -70,7 +90,7 @@ const TimelineScreen = {
         status: m.status === 'completed' ? 'completed' : 'upcoming',
         isPulse: m.status !== 'completed',
         priority: 'normal',
-        color: m.status === 'completed' ? '#059669' : '#2563EB'
+        color: m.status === 'completed' ? '#1D4ED8' : '#2563EB'
       }));
 
       // Package number
@@ -92,7 +112,8 @@ const TimelineScreen = {
         bgExpiry: '',
         assigneeIds: p.memberIds || [],
         phases,
-        milestones
+        milestones,
+        taskItems
       };
     });
   },
@@ -595,7 +616,7 @@ const TimelineScreen = {
             <button class="btn btn-secondary btn-sm" onclick="App.navigate('bg')">
               ${Icons.shield} Bank Guarantees
             </button>
-            <button class="btn btn-primary btn-sm" onclick="TasksScreen.openCreateModal()">
+            <button class="btn btn-primary btn-sm" onclick="MilestonesScreen.openCreateModal()">
               ${Icons.plus} New EPC Milestone
             </button>
           </div>
@@ -856,15 +877,31 @@ const TimelineScreen = {
               </div>
               
               ${isExpanded ? `
-                ${p.phases.map(ph => `
-                  <div class="timeline-phase-row">
-                    <span class="timeline-phase-name" title="${ph.name}">└─ ${ph.name}</span>
+                ${(p.taskItems || []).map(tk => {
+                  const stCls = tk.status === 'done' ? 'st-done' : tk.status === 'in-progress' ? 'st-prog' : tk.status === 'review' ? 'st-review' : 'st-todo';
+                  const isOverdue = tk.status !== 'done' && tk.end < new Date().toISOString().split('T')[0];
+                  return `
+                  <div class="timeline-phase-row" title="${tk.title} · due ${tk.end}">
+                    <span class="timeline-phase-name"><span class="timeline-task-dot ${stCls}"></span>${tk.title}</span>
                     <div class="timeline-phase-meta-right">
-                      <span class="timeline-phase-pct">${ph.progress}%</span>
-                      ${this._renderAvatars(ph.assigneeIds)}
+                      <span class="timeline-task-due ${isOverdue ? 'overdue' : ''}">${tk.end.slice(5)}</span>
+                      ${this._renderAvatars(tk.assigneeIds)}
                     </div>
                   </div>
-                `).join('')}
+                  `;
+                }).join('')}
+                ${(p.milestones || []).filter(m => m && m.date).map(m => {
+                  const isOverdue = m.status !== 'completed' && m.date < new Date().toISOString().split('T')[0];
+                  return `
+                  <div class="timeline-phase-row timeline-ms-sidebar-row" title="Milestone: ${m.name}">
+                    <span class="timeline-phase-name">◆ ${m.name}</span>
+                    <div class="timeline-phase-meta-right">
+                      <span class="timeline-ms-date ${isOverdue ? 'overdue' : ''}">${m.date.slice(5)}</span>
+                    </div>
+                  </div>
+                  `;
+                }).join('')}
+                ${(p.taskItems || []).length === 0 && (p.milestones || []).length === 0 ? `<div class="timeline-phase-row"><span class="timeline-phase-name" style="color:var(--color-text-muted)">No tasks or milestones yet</span></div>` : ''}
               ` : ''}
             `;
           }).join('') || '<div style="padding:32px 20px;text-align:center;color:var(--color-text-muted);font-size:13px">No commercial packages match filter</div>'}
@@ -875,12 +912,12 @@ const TimelineScreen = {
 
   // ─── Right Canvas Body Rows Renderer ───
   _renderCanvasRows(list) {
+    const todayStr = new Date().toISOString().split('T')[0];
     return `
       <div class="timeline-macro-body">
         ${list.map(p => {
           const isExpanded = !!this._expandedProjects[p.id];
           const pRange = this._rangeToPercent(p.startDate, p.endDate);
-          const activeSepMilestone = p.milestones.find(m => m.status === 'active-sep');
           const durationDays = this._getDurationDays(p.startDate, p.endDate);
           const assignees = (p.assigneeIds || []).map(id => this._getMember(id));
 
@@ -896,8 +933,26 @@ const TimelineScreen = {
             durationDays: durationDays,
             bgExpiry: p.bgExpiry,
             assignees: assignees,
-            activeMilestone: activeSepMilestone ? `${activeSepMilestone.name} (${activeSepMilestone.date})` : null
+            activeMilestone: null
           }));
+
+          // Milestone diamond markers on the project row (real due-date columns)
+          const msMarkers = (p.milestones || []).filter(m => m && m.date).map(m => {
+            const msPct = this._dateToPercent(m.date);
+            const isDone = m.status === 'completed';
+            const msCls = isDone ? 'ms-done' : (m.date < todayStr ? 'ms-overdue' : 'ms-up');
+            const msTip = encodeURIComponent(JSON.stringify({
+              name: `◆ ${m.name}`, packageNo: p.packageNo, stage: p.stageLabel,
+              stageLabel: isDone ? 'Milestone · completed' : 'Milestone · due', progress: isDone ? 100 : 0,
+              contractValue: p.contractValue, startDate: m.date, endDate: m.date, durationDays: 1,
+              bgExpiry: '', assignees: []
+            }));
+            return `<div class="timeline-ms-marker ${msCls}" style="left:${msPct}%"
+                     title="${m.name} — due ${m.date}"
+                     onmouseenter="TimelineScreen.showTooltip(event, '${msTip}')"
+                     onmousemove="TimelineScreen.moveTooltip(event)"
+                     onmouseleave="TimelineScreen.hideTooltip()"></div>`;
+          }).join('');
 
           return `
             <!-- Project Gantt Row -->
@@ -916,45 +971,45 @@ const TimelineScreen = {
                   </div>
                 </div>
               ` : ''}
+              ${msMarkers}
             </div>
 
-            <!-- Sub-Phase Canvas Rows (when expanded) -->
+            <!-- Sub-Rows (when expanded): real tasks + milestones on their due-date columns -->
             ${isExpanded ? `
-              ${p.phases.map(ph => {
-                const phRange = this._rangeToPercent(ph.start, ph.end);
-                const phDuration = this._getDurationDays(ph.start, ph.end);
-                const phAssignees = (ph.assigneeIds || []).map(id => this._getMember(id));
-
-                const phTooltip = encodeURIComponent(JSON.stringify({
-                  name: `${p.name} ➔ ${ph.name}`,
-                  packageNo: p.packageNo,
-                  stage: p.stageLabel,
-                  stageLabel: 'Phase Workstream',
-                  progress: ph.progress,
-                  contractValue: p.contractValue,
-                  startDate: ph.start,
-                  endDate: ph.end,
-                  durationDays: phDuration,
-                  bgExpiry: p.bgExpiry,
-                  assignees: phAssignees
+              ${(p.taskItems || []).map(tk => {
+                const tkRange = this._rangeToPercent(tk.start, tk.end);
+                const tkAssignees = (tk.assigneeIds || []).map(id => this._getMember(id));
+                const stCls = tk.status === 'done' ? 'st-done' : tk.status === 'in-progress' ? 'st-prog' : tk.status === 'review' ? 'st-review' : 'st-todo';
+                const tkProgress = tk.status === 'done' ? 100 : tk.status === 'review' ? 75 : tk.status === 'in-progress' ? 40 : 0;
+                const tkTip = encodeURIComponent(JSON.stringify({
+                  name: tk.title, packageNo: p.packageNo, stage: p.stageLabel,
+                  stageLabel: `Task · ${tk.status}`, progress: tkProgress,
+                  contractValue: p.contractValue, startDate: tk.start, endDate: tk.end,
+                  durationDays: this._getDurationDays(tk.start, tk.end), bgExpiry: '', assignees: tkAssignees
                 }));
-
                 return `
-                  <div class="timeline-macro-canvas-phase-row">
-                    ${phRange.visible ? `
+                  <div class="timeline-macro-canvas-phase-row timeline-task-canvas-row">
+                    ${tkRange.visible ? `
                       <div class="timeline-bar-wrapper"
-                           style="left:${phRange.left}%; width:${phRange.width}%"
-                           onmouseenter="TimelineScreen.showTooltip(event, '${phTooltip}')"
+                           style="left:${tkRange.left}%; width:${tkRange.width}%"
+                           onmouseenter="TimelineScreen.showTooltip(event, '${tkTip}')"
                            onmousemove="TimelineScreen.moveTooltip(event)"
                            onmouseleave="TimelineScreen.hideTooltip()">
-                        <div class="timeline-bar-phase-slim ${p.barClass}">
-                          <div class="timeline-bar-fill ${p.fillClass}" style="width:${ph.progress}%"></div>
-                          <span class="timeline-bar-progress-text">${ph.progress}%</span>
+                        <div class="timeline-task-bar ${stCls}">
+                          <span class="timeline-task-bar-label">${tk.status === 'done' ? '✓ ' : ''}${tk.title}</span>
                         </div>
                       </div>
                     ` : ''}
                   </div>
                 `;
+              }).join('')}
+              ${(p.milestones || []).filter(m => m && m.date).map(m => {
+                const msPct = this._dateToPercent(m.date);
+                const isDone = m.status === 'completed';
+                const msCls = isDone ? 'ms-done' : (m.date < todayStr ? 'ms-overdue' : 'ms-up');
+                return `<div class="timeline-macro-canvas-phase-row timeline-task-canvas-row">
+                          <div class="timeline-ms-marker ${msCls}" style="left:${msPct}%" title="Milestone: ${m.name} (${m.date})"></div>
+                        </div>`;
               }).join('')}
             ` : ''}
           `;

@@ -5044,3 +5044,84 @@ input[type="number"].form-control {
   }
 }
 
+
+/* ─── Timeline: milestone diamonds + task sub-rows (Day/Week/Month views) ─── */
+.timeline-ms-marker {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  z-index: 4;
+  cursor: pointer;
+  border: 1.5px solid #FFFFFF;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+  transition: transform var(--transition-fast);
+}
+.timeline-ms-marker:hover { transform: translate(-50%, -50%) rotate(45deg) scale(1.4); z-index: 9; }
+.timeline-ms-marker.ms-up { background: var(--color-primary); }
+.timeline-ms-marker.ms-done { background: var(--color-primary-700); opacity: 0.7; }
+.timeline-ms-marker.ms-overdue { background: var(--color-error); box-shadow: 0 0 0 3px var(--color-error-soft); }
+
+.timeline-task-canvas-row { background: rgba(248, 250, 252, 0.6); }
+.timeline-task-bar {
+  height: 16px;
+  max-height: 16px;
+  border-radius: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  border: 1px solid transparent;
+}
+.timeline-task-bar-label {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #FFFFFF;
+  line-height: 1;
+}
+.timeline-task-bar.st-todo { background: #E2E8F0; border-color: #CBD5E1; }
+.timeline-task-bar.st-todo .timeline-task-bar-label { color: var(--color-text-secondary); }
+.timeline-task-bar.st-prog { background: linear-gradient(90deg, #1683FF, #2563EB); }
+.timeline-task-bar.st-review { background: linear-gradient(90deg, #7C3AED, #9333EA); }
+.timeline-task-bar.st-done { background: linear-gradient(90deg, #3867FF, #6366F1); opacity: 0.72; }
+
+.timeline-task-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.timeline-task-dot.st-todo { background: #CBD5E1; }
+.timeline-task-dot.st-prog { background: var(--color-primary); }
+.timeline-task-dot.st-review { background: var(--color-ai); }
+.timeline-task-dot.st-done { background: var(--color-primary-700); }
+
+.timeline-task-due,
+.timeline-ms-date {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg-page);
+  border: 1px solid var(--color-border-subtle);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.timeline-task-due.overdue,
+.timeline-ms-date.overdue {
+  color: var(--color-error);
+  border-color: var(--color-error);
+  background: var(--color-error-soft);
+}
+.timeline-ms-sidebar-row .timeline-phase-name { color: var(--color-primary-700); font-weight: 600; }

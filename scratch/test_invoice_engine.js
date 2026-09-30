@@ -18,7 +18,7 @@ globalThis.firebase = {
   }),
   auth: () => ({
     currentUser: null,
-    signInAnonymously: () => ({ then: () => {} }),
+    signInAnonymously: () => ({ then: () => ({ catch: () => {} }) }),
     onAuthStateChanged: () => {}
   })
 };
@@ -65,7 +65,7 @@ check('invoice generated', !!inv);
 if (inv) {
   check('linked to REAL project name', inv.projectName === 'client ERP Modernisation', inv.projectName);
   check('milestone text from real milestone', inv.milestone.includes('Phase 1 — Discovery sign-off'), inv.milestone);
-  check('billNumber sequential', inv.billNumber === `HIN-PI-ACMEA-${year}-001`, inv.billNumber);
+  check('billNumber sequential', inv.billNumber === `HIN-PI-ACME-${year}-001`, inv.billNumber);
   check('gross formatted ₹1,00,000', inv.amountDue === '₹1,00,000', inv.amountDue);
   check('GST amount ₹15,300', inv.taxAmount === '₹15,300', inv.taxAmount);
   check('discount ₹15,000', inv.deductions === '₹15,000', inv.deductions);
@@ -85,7 +85,7 @@ const inv2 = Store.generateInvoice(proj.id, {
   clientDetails: { legalName: 'Acme AI Pvt Ltd' },
   items: [{ name: 'Phase 2 build', gross: 50000, discountPct: 0 }]
 });
-check('second invoice gets 002', inv2 && inv2.billNumber === `HIN-PI-ACMEA-${year}-002`, inv2 && inv2.billNumber);
+check('second invoice gets 002', inv2 && inv2.billNumber === `HIN-PI-ACME-${year}-002`, inv2 && inv2.billNumber);
 
 // ── 5. Validation guards ──
 check('unknown projectId → null', Store.generateInvoice('nope', { items: [{ gross: 100 }] }) === null);

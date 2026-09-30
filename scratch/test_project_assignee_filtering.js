@@ -54,7 +54,7 @@ const pC = Store.createProject({ id: 'proj-empty', name: 'Empty Team', memberIds
 const adminUser = { id: 'admin', memberId: 'm1', role: 'Admin', name: 'Ayush Desai' };
 
 // 1. Selecting Hintonn CRM must only show Preet (m2) and Hirvi (m4), NOT Max Jain (m3)
-const crmAssignees = TasksScreen._getSelectableAssignees('proj-crm', adminUser);
+const crmAssignees = TasksScreen._getSelectableAssignees(pA.id, adminUser);
 console.log('--- 1. Project-specific assignees for Hintonn CRM (Admin User) ---');
 console.assert(crmAssignees.some(m => m.id === 'm2'), 'Preet (m2) is selectable for Hintonn CRM');
 console.assert(crmAssignees.some(m => m.id === 'm4'), 'Hirvi (m4) is selectable for Hintonn CRM');
@@ -62,7 +62,7 @@ console.assert(!crmAssignees.some(m => m.id === 'm3'), 'Max Jain (m3) is NOT sel
 console.log('✓ Hintonn CRM only returns assigned team members (m2, m4) and excludes unassigned members (m3)');
 
 // 2. Selecting Infra Core must only show Max Jain (m3)
-const infraAssignees = TasksScreen._getSelectableAssignees('proj-infra', adminUser);
+const infraAssignees = TasksScreen._getSelectableAssignees(pB.id, adminUser);
 console.log('\n--- 2. Project-specific assignees for Infra Core ---');
 console.assert(infraAssignees.some(m => m.id === 'm3'), 'Max Jain (m3) is selectable for Infra Core');
 console.assert(!infraAssignees.some(m => m.id === 'm2'), 'Preet (m2) is NOT selectable for Infra Core');
@@ -70,7 +70,7 @@ console.assert(!infraAssignees.some(m => m.id === 'm4'), 'Hirvi (m4) is NOT sele
 console.log('✓ Infra Core only returns Max Jain (m3)');
 
 // 3. Selecting a project with no assigned members
-const emptyAssignees = TasksScreen._getSelectableAssignees('proj-empty', adminUser);
+const emptyAssignees = TasksScreen._getSelectableAssignees(pC.id, adminUser);
 console.log('\n--- 3. Project with no assigned members ---');
 console.assert(emptyAssignees.length === 0, 'Empty project returns 0 assignees');
 console.log('✓ Project with no members cleanly returns 0 assignees');

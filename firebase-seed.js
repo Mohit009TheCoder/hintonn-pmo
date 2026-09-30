@@ -236,12 +236,35 @@ async function main() {
   ];
 
   // ═══════════════════════════════════════════════
-  // 9. DLP RECORDS
+  // 9. DLP RECORDS — real-world, tied to actual projects (p3, p6)
+  //    Retention figures cross-linked with retentionRecords (ret2, ret4)
   // ═══════════════════════════════════════════════
   const dlpRecords = [
-    { id: 'dlp1', projectName: 'Thane Creek Bridge — Structural Audit', projectId: 'p6', contractor: 'Hintonn AI Consulting', handoverDate: '2025-11-30', dlpExpiry: '2027-11-30', warrantyMonths: 24, openDefects: 0, readiness: 100, countdownDays: 761, statusLabel: 'Completed', createdAt: now, updatedAt: now },
-    { id: 'dlp2', projectName: 'Nagpur Smart City — Zone 1-2', projectId: 'p3', contractor: 'BuildCon Infrastructure', handoverDate: '2026-08-15', dlpExpiry: '2029-08-15', warrantyMonths: 36, openDefects: 2, readiness: 75, countdownDays: 1050, statusLabel: 'In Progress', createdAt: now, updatedAt: now },
-    { id: 'dlp3', projectName: 'Mumbai Metro Line 3 — Section A', projectId: 'p1', contractor: 'Metro Build Corp', handoverDate: '2027-06-30', dlpExpiry: '2030-06-30', warrantyMonths: 36, openDefects: 0, readiness: 0, countdownDays: 1582, statusLabel: 'In Progress', createdAt: now, updatedAt: now },
+    {
+      id: 'dlp1', projectId: 'p6', projectName: 'Thane Creek Bridge — Structural Audit',
+      packageCode: 'PKG-06', contractor: 'Hintonn AI Consulting',
+      handoverDate: '2025-11-30', dlpDuration: '12 Months (DLP)', warrantyMonths: 12,
+      dlpExpiry: '2026-11-30', openDefects: 1, closedDefects: 4, readiness: 85,
+      warrantyValue: '₹4,20,000', retentionAmount: '₹2,10,000',
+      handoverStatus: 'DLP Active', statusLabel: 'In Progress',
+      defectClaims: [
+        { id: 'dc1', description: 'Expansion joint sealant peeling at Span 6 — re-application required', severity: 'Minor', sla: '7 Days', status: 'open', raisedBy: 'Mohit Jain', raisedAt: '2026-09-12' }
+      ],
+      createdAt: now, updatedAt: now
+    },
+    {
+      id: 'dlp2', projectId: 'p3', projectName: 'Nagpur Smart City — Water Supply Network',
+      packageCode: 'PKG-03', contractor: 'BuildCon Infrastructure',
+      handoverDate: '2026-08-15', dlpDuration: '24 Months (DLP)', warrantyMonths: 24,
+      dlpExpiry: '2028-08-15', openDefects: 2, closedDefects: 1, readiness: 75,
+      warrantyValue: '₹2,84,00,000', retentionAmount: '₹1,42,00,000',
+      handoverStatus: 'DLP Active', statusLabel: 'In Progress',
+      defectClaims: [
+        { id: 'dc2', description: 'Leak at HDPE fusion joint Ch-4+350, Zone 3 — hydrostatic test failure', severity: 'Critical', sla: '24 Hours', status: 'open', raisedBy: 'Mohit Jain', raisedAt: '2026-09-18' },
+        { id: 'dc3', description: 'SCADA pressure transmitter M-142 reading drift — recalibration required', severity: 'Moderate', sla: '48 Hours', status: 'open', raisedBy: 'Preet Hintonn', raisedAt: '2026-09-24' }
+      ],
+      createdAt: now, updatedAt: now
+    },
   ];
 
   // ═══════════════════════════════════════════════

@@ -37,29 +37,37 @@ loadScript('js/screens/tasks.js');
 
 console.log('=== TEST SUITE: PROJECT-BASED ASSIGNEE FILTERING IN TASK MODAL ===\n');
 
+// Set up team members in Store
+Store._data.members = [
+  { id: 'm1', name: 'Ayush Desai', role: 'Admin', color: '#EF4444', initials: 'AD' },
+  { id: 'm2', name: 'Preet', role: 'Member', designation: 'Developer', color: '#2563EB', initials: 'P' },
+  { id: 'm3', name: 'Max Jain', role: 'Member', designation: 'Developer', color: '#10B981', initials: 'MJ' },
+  { id: 'm4', name: 'Hirvi Sangavi', role: 'Member', designation: 'Developer', color: '#F59E0B', initials: 'HS' }
+];
+
 // Set up mock projects with distinct team members
 const pA = Store.createProject({ id: 'proj-crm', name: 'Hintonn CRM', memberIds: ['m2', 'm4'] }); // Preet & Hirvi only
-const pB = Store.createProject({ id: 'proj-infra', name: 'Infra Core', memberIds: ['m3'] }); // Mohit only
+const pB = Store.createProject({ id: 'proj-infra', name: 'Infra Core', memberIds: ['m3'] }); // Max Jain only
 const pC = Store.createProject({ id: 'proj-empty', name: 'Empty Team', memberIds: [] }); // No members
 
-// Test with Admin user
+// Test with Admin user (Ayush Desai)
 const adminUser = { id: 'admin', memberId: 'm1', role: 'Admin', name: 'Ayush Desai' };
 
-// 1. Selecting Hintonn CRM must only show Preet (m2) and Hirvi (m4), NOT Mohit (m3)
+// 1. Selecting Hintonn CRM must only show Preet (m2) and Hirvi (m4), NOT Max Jain (m3)
 const crmAssignees = TasksScreen._getSelectableAssignees('proj-crm', adminUser);
 console.log('--- 1. Project-specific assignees for Hintonn CRM (Admin User) ---');
 console.assert(crmAssignees.some(m => m.id === 'm2'), 'Preet (m2) is selectable for Hintonn CRM');
 console.assert(crmAssignees.some(m => m.id === 'm4'), 'Hirvi (m4) is selectable for Hintonn CRM');
-console.assert(!crmAssignees.some(m => m.id === 'm3'), 'Mohit (m3) is NOT selectable for Hintonn CRM');
+console.assert(!crmAssignees.some(m => m.id === 'm3'), 'Max Jain (m3) is NOT selectable for Hintonn CRM');
 console.log('✓ Hintonn CRM only returns assigned team members (m2, m4) and excludes unassigned members (m3)');
 
-// 2. Selecting Infra Core must only show Mohit (m3)
+// 2. Selecting Infra Core must only show Max Jain (m3)
 const infraAssignees = TasksScreen._getSelectableAssignees('proj-infra', adminUser);
 console.log('\n--- 2. Project-specific assignees for Infra Core ---');
-console.assert(infraAssignees.some(m => m.id === 'm3'), 'Mohit (m3) is selectable for Infra Core');
+console.assert(infraAssignees.some(m => m.id === 'm3'), 'Max Jain (m3) is selectable for Infra Core');
 console.assert(!infraAssignees.some(m => m.id === 'm2'), 'Preet (m2) is NOT selectable for Infra Core');
 console.assert(!infraAssignees.some(m => m.id === 'm4'), 'Hirvi (m4) is NOT selectable for Infra Core');
-console.log('✓ Infra Core only returns Mohit (m3)');
+console.log('✓ Infra Core only returns Max Jain (m3)');
 
 // 3. Selecting a project with no assigned members
 const emptyAssignees = TasksScreen._getSelectableAssignees('proj-empty', adminUser);

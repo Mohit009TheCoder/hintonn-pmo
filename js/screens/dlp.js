@@ -8,11 +8,12 @@ const DLPTimelinesScreen = {
     const items = this._getDLPData();
     const parseAmt = (s) => { if (!s) return 0; const str = String(s).replace(/[^0-9.MKmk]/g, ''); if (str.includes('M')||str.includes('m')) return parseFloat(str)*1000000; if (str.includes('K')||str.includes('k')) return parseFloat(str)*1000; return parseFloat(str)||0; };
     const fmtAmt = (n) => { if (!n || n === 0) return '₹0'; const s = Math.round(n).toString(); let result = ''; const len = s.length; if (len <= 3) return '₹' + s; result = s.slice(-3); let remaining = s.slice(0, -3); while (remaining.length > 2) { result = remaining.slice(-2) + ',' + result; remaining = remaining.slice(0, -2); } if (remaining.length > 0) result = remaining + ',' + result; return '₹' + result; };
-    const activeDLPCount = items.filter(d => d.readiness < 100).length;
-    const totalWarrantyVal = fmtAmt(items.reduce((s,d) => s + parseAmt(d.warrantyValue), 0));
-    const openDefectsCount = items.reduce((s,d) => s + (d.openDefects || 0), 0);
+    const activeDLPCount = items.filter(d => (d.readiness || 0) < 100).length;
+    const totalWarrantyVal = fmtAmt(items.reduce((s,d) => s + parseAmt(d.warrantyValue || d.retentionAmount), 0));
+    const totalWarrantyRetention = fmtAmt(items.reduce((s,d) => s + parseAmt(d.retentionAmount), 0));
+    const openDefectsCount = items.reduce((s,d) => s + (Number(d.openDefects) || 0), 0);
     const nearestExpiry = items.filter(d => d.dlpExpiry).sort((a,b) => new Date(a.dlpExpiry) - new Date(b.dlpExpiry))[0];
-    const nextExitDate = nearestExpiry ? `${Utils.formatDate(nearestExpiry.dlpExpiry)} (${nearestExpiry.countdownDays || '?'}d)` : '—';
+    const nextExitDate = nearestExpiry ? `${Utils.formatDate(nearestExpiry.dlpExpiry)} (${nearestExpiry.countdownDays != null ? nearestExpiry.countdownDays + 'd' : '?'})` : '—';
 
     return `
       <div class="page-header">
@@ -39,7 +40,7 @@ const DLPTimelinesScreen = {
           </div>
           <div class="kpi-value">${activeDLPCount} Packages</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-primary-700)">
-            ${totalWarrantyVal} Warranty Coverage Under Management
+            ${items.length > 0 ? `${totalWarrantyVal} Warranty Coverage Under Management` : 'No active warranty packages'}
           </div>
         </div>
 
@@ -50,8 +51,10 @@ const DLPTimelinesScreen = {
           </div>
           <div class="kpi-value" style="font-size:20px">${nextExitDate}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
-            <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Exit Pending</span>
-            PKG-05 (₹1.18Cr Retention)
+            ${nearestExpiry ? `
+              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Exit Pending</span>
+              ${nearestExpiry.packageCode || nearestExpiry.projectName || ''}${nearestExpiry.retentionAmount ? ` (${nearestExpiry.retentionAmount} Retention)` : ''}
+            ` : '<span style="font-size:12px;color:var(--color-text-muted)">No exits pending</span>'}
           </div>
         </div>
 
@@ -62,7 +65,7 @@ const DLPTimelinesScreen = {
           </div>
           <div class="kpi-value">${openDefectsCount} Claims</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            100% Within Contractor SLA (Avg 4.2d)
+            ${items.length === 0 ? 'No defect claims logged' : openDefectsCount === 0 ? 'All defect claims resolved' : `${openDefectsCount} pending contractor resolution`}
           </div>
         </div>
 
@@ -71,9 +74,9 @@ const DLPTimelinesScreen = {
             <span class="kpi-label">Warranty Retention</span>
             <div class="kpi-icon-wrap">${Icons.check}</div>
           </div>
-          <div class="kpi-value">₹5.92Cr</div>
+          <div class="kpi-value">${items.length > 0 ? totalWarrantyRetention : '₹0'}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            Guaranteed under DLP Bank Guarantees
+            ${items.length > 0 ? 'Guaranteed under DLP Bank Guarantees' : 'No retention at stake'}
           </div>
         </div>
       </div>

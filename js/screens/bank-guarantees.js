@@ -27,6 +27,10 @@ const BankGuaranteesScreen = {
     const criticalCount = allBGs.filter(b => b.risk === 'critical').length;
     const warningCount = allBGs.filter(b => b.risk === 'warning').length;
 
+    const criticalBGs = allBGs.filter(b => b.risk === 'critical');
+    const warningBGs = allBGs.filter(b => b.risk === 'warning');
+    const warningVal = fmtAmt(warningBGs.reduce((s,b) => s + parseAmt(b.amount), 0));
+
     return `
       <div class="page-header">
         <div class="page-header-left">
@@ -52,7 +56,7 @@ const BankGuaranteesScreen = {
           </div>
           <div class="kpi-value">${totalActive} Active BGs</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-primary-700)">
-            ${totalValue} Total Portfolio Guarantee Value
+            ${allBGs.length > 0 ? `${totalValue} Total Portfolio Guarantee Value` : 'No active guarantees'}
           </div>
         </div>
 
@@ -63,8 +67,10 @@ const BankGuaranteesScreen = {
           </div>
           <div class="kpi-value">${criticalCount} BG</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
-            <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Action Needed</span>
-            Expiring in &lt; 30 Days (BG-2026-001)
+            ${criticalCount > 0 ? `
+              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Action Needed</span>
+              Expiring in &lt; 30 Days (${criticalBGs[0].ref || criticalBGs[0].bgNumber || 'Critical Risk'})
+            ` : '<span style="font-size:12px;color:var(--color-text-muted)">No guarantees at critical risk</span>'}
           </div>
         </div>
 
@@ -75,7 +81,7 @@ const BankGuaranteesScreen = {
           </div>
           <div class="kpi-value">${warningCount} BGs</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            Expiring in 30–60 Days (₹4.03Cr)
+            ${warningCount > 0 ? `Expiring in 30–60 Days (${warningVal})` : 'No guarantees in 30–60 day window'}
           </div>
         </div>
 

@@ -14,6 +14,10 @@ const RetentionScreen = {
     const nextRelease = items.filter(r => r.releaseDueDate).sort((a,b) => new Date(a.releaseDueDate) - new Date(b.releaseDueDate))[0];
     const nextReleaseDate = nextRelease ? Utils.formatDate(nextRelease.releaseDueDate) : '—';
 
+    const activePackages = items.filter(r => r.status === 'on-schedule' || r.status === 'Partial' || r.status === 'Held');
+    const dlpReleases = items.filter(r => r.status === 'under-review' || r.status === 'release-initiated' || r.pendingRelease > 0);
+    const avgPercent = items.length ? (items.reduce((s,r) => s + (parseFloat(r.retentionPercent) || 0), 0) / items.length).toFixed(1) : 0;
+
     return `
       <div class="page-header">
         <div class="page-header-left">
@@ -39,7 +43,7 @@ const RetentionScreen = {
           </div>
           <div class="kpi-value">${totalRetention}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-primary-700)">
-            Cumulative 5.5% Across Portfolio
+            ${items.length > 0 ? `Cumulative ${avgPercent}% Across Portfolio` : 'No retention recorded'}
           </div>
         </div>
 
@@ -50,7 +54,7 @@ const RetentionScreen = {
           </div>
           <div class="kpi-value">${activeRetention}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            4 Active Construction Packages
+            ${items.length > 0 ? `${activePackages.length} Active Construction Packages` : 'No active construction packages'}
           </div>
         </div>
 
@@ -61,8 +65,10 @@ const RetentionScreen = {
           </div>
           <div class="kpi-value">${dlpRetention}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-ai-700)">
-            <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Action Needed</span>
-            1 Release Tranche Due in 38d
+            ${dlpReleases.length > 0 ? `
+              <span class="badge badge-high" style="font-size:10px;padding:2px 7px;font-weight:600">Action Needed</span>
+              ${dlpReleases.length} Release Tranche${dlpReleases.length > 1 ? 's' : ''} Pending
+            ` : '<span style="font-size:12px;color:var(--color-text-muted)">No release tranches pending</span>'}
           </div>
         </div>
 
@@ -73,7 +79,7 @@ const RetentionScreen = {
           </div>
           <div class="kpi-value" style="font-size:22px">${nextReleaseDate}</div>
           <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            ${nextRelease ? nextRelease.retentionHeld + ' · ' + (nextRelease.packageCode || nextRelease.projectName || '') : 'No releases scheduled'}
+            ${nextRelease ? (nextRelease.retentionHeld || nextRelease.pendingRelease || '') + ' · ' + (nextRelease.packageCode || nextRelease.projectName || '') : 'No releases scheduled'}
           </div>
         </div>
       </div>
@@ -82,7 +88,7 @@ const RetentionScreen = {
       <div class="section-card">
         <div class="section-card-header">
           <h3>${Icons.fileText} EPC Project Retention Ledger</h3>
-          <span class="badge badge-active" style="font-size:11.5px">5 Packages Monitored</span>
+          <span class="badge badge-active" style="font-size:11.5px">${items.length} Package${items.length === 1 ? '' : 's'} Monitored</span>
         </div>
 
         <div class="section-card-body no-pad">

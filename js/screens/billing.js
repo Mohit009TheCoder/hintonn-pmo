@@ -719,7 +719,7 @@ const BillingScreen = {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
           <div class="form-group">
             <label class="form-label" style="font-weight:600">Base Amount Due (₹)</label>
-            <input type="text" class="form-control" id="revise-base-amount" value="${inv.amountDue.replace('₹', '')}">
+            <input type="text" class="form-control" id="revise-base-amount" value="${(inv.amountDue || '').replace('₹', '')}">
           </div>
           <div class="form-group">
             <label class="form-label" style="font-weight:600">Tax / GST (18%) (₹)</label>

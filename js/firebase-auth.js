@@ -9,6 +9,10 @@ const FirebaseAuth = {
 
   init() {
     if (this._initialized) return;
+    if (typeof firebase === 'undefined' || !firebase.apps) {
+      console.warn('[FirebaseAuth] Firebase SDK not loaded yet');
+      return;
+    }
     const firebaseConfig = {
       apiKey: "AIzaSyBt1yVDlgfYaCMvWjbqrHGL1kpDudjKB5A",
       authDomain: "hintonn-pmo.firebaseapp.com",
@@ -19,13 +23,17 @@ const FirebaseAuth = {
       measurementId: "G-KZ4HC6C5VN"
     };
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      this._auth = firebase.auth();
+      this._db = firebase.firestore();
+      this._initialized = true;
+      this._listenToUsers();
+    } catch(err) {
+      console.warn('[FirebaseAuth] Init error:', err);
     }
-    this._auth = firebase.auth();
-    this._db = firebase.firestore();
-    this._initialized = true;
-    this._listenToUsers();
   },
 
   _listenToUsers() {
@@ -73,8 +81,11 @@ const FirebaseAuth = {
           }
         });
         Auth._saveUserDb();
-        if (typeof UserApprovalsScreen !== 'undefined' && UserApprovalsScreen.refresh) {
+        if (typeof UserApprovalsScreen !== 'undefined' && typeof App !== 'undefined' && App.currentScreen === 'user-approvals' && UserApprovalsScreen.refresh) {
           UserApprovalsScreen.refresh();
+        }
+        if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
+          App.updateNotifDot();
         }
       }, err => {
         // Permission denied (e.g. before admin sign-in) — silently retry after auth change
@@ -443,24 +454,33 @@ const FirebaseAuth = {
   }
 };
 
-FirebaseAuth.init();
-
-FirebaseAuth.handleRedirectResult().then(user => {
-  if (user) {
-    console.log('Google redirect login successful:', user.email);
-    window.location.hash = '#dashboard';
-    if (typeof App !== 'undefined' && App.handleRoute) App.handleRoute();
+if (typeof FirebaseAuth !== 'undefined') {
+  try {
+    FirebaseAuth.init();
+    if (typeof FirebaseAuth.handleRedirectResult === 'function') {
+      FirebaseAuth.handleRedirectResult().then(user => {
+        if (user) {
+          console.log('Google redirect login successful:', user.email);
+          window.location.hash = '#dashboard';
+          if (typeof App !== 'undefined' && App.handleRoute) App.handleRoute();
+        }
+      }).catch(err => {
+        console.warn('Redirect handling error:', err);
+      });
+    }
+  } catch (e) {
+    console.warn('[FirebaseAuth] Startup check error:', e);
   }
-}).catch(err => {
-  console.error('Redirect handling error:', err);
-});
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       console.log('[SW] Registered:', registration.scope);
-      if (typeof FCM !== 'undefined') registration.ready.then(() => FCM.init());
+      if (typeof FCM !== 'undefined') {
+        navigator.serviceWorker.ready.then(() => FCM.init());
+      }
     } catch (err) {
       console.warn('[SW] Registration failed:', err);
     }

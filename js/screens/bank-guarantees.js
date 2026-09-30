@@ -170,7 +170,7 @@ const BankGuaranteesScreen = {
                       <div style="display:flex;align-items:center;justify-content:center;gap:6px">
                         ${bg.status !== 'released' ? `
                           <button class="btn btn-outline btn-xs" 
-                                  onclick="DashboardScreen.requestRenewal('${bg.ref}', '${bg.projectName.replace(/'/g, "\\'")}', '${bg.amount}', '${bg.type}')">
+                                  onclick="DashboardScreen.requestRenewal('${bg.ref || ''}', '${(bg.projectName || '').replace(/'/g, "\\'")}', '${bg.amount || ''}', '${bg.type || ''}')">
                             Renew
                           </button>` : ''}
                         <button class="btn btn-ghost btn-xs" onclick="BankGuaranteesScreen.viewBGDetails('${bg.ref}')">
@@ -201,16 +201,16 @@ const BankGuaranteesScreen = {
         <div style="padding:12px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:11px;color:var(--color-text-muted);font-weight:600;text-transform:uppercase">Bank Guarantee Reference</div>
-            <div style="font-family:var(--font-mono, monospace);font-size:16px;font-weight:700;color:var(--color-text-primary)">${bg.ref}</div>
+            <div style="font-family:var(--font-mono, monospace);font-size:16px;font-weight:700;color:var(--color-text-primary)">${bg.ref || '—'}</div>
           </div>
-          <span class="badge ${bg.badgeClass}">${bg.statusLabel}</span>
+          <span class="badge ${bg.badgeClass || ''}">${bg.statusLabel || ''}</span>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
-          <div><span style="color:var(--color-text-muted)">Issuing Bank:</span> <strong>${bg.issuingBank}</strong></div>
-          <div><span style="color:var(--color-text-muted)">Guarantee Amount:</span> <strong style="font-size:14px;color:var(--color-primary-700)">${bg.amount}</strong></div>
-          <div><span style="color:var(--color-text-muted)">Project:</span> <strong>${bg.projectName}</strong></div>
-          <div><span style="color:var(--color-text-muted)">Guarantee Type:</span> <strong>${bg.type}</strong></div>
+          <div><span style="color:var(--color-text-muted)">Issuing Bank:</span> <strong>${bg.issuingBank || '—'}</strong></div>
+          <div><span style="color:var(--color-text-muted)">Guarantee Amount:</span> <strong style="font-size:14px;color:var(--color-primary-700)">${bg.amount || '₹0'}</strong></div>
+          <div><span style="color:var(--color-text-muted)">Project:</span> <strong>${bg.projectName || '—'}</strong></div>
+          <div><span style="color:var(--color-text-muted)">Guarantee Type:</span> <strong>${bg.type || 'BG'}</strong></div>
           <div><span style="color:var(--color-text-muted)">Issue Date:</span> <strong>${Utils.formatDate(bg.issueDate)}</strong></div>
           <div><span style="color:var(--color-text-muted)">Expiry Date:</span> <strong>${Utils.formatDate(bg.expiryDate)}</strong></div>
         </div>
@@ -224,9 +224,9 @@ const BankGuaranteesScreen = {
       </div>
     `;
 
-    Modal.open(`Guarantee Audit: ${bg.ref}`, html, `
+    Modal.open(`Guarantee Audit: ${bg.ref || ''}`, html, `
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Close</button>
-      <button class="btn btn-primary" onclick="DashboardScreen.requestRenewal('${bg.ref}', '${bg.projectName.replace(/'/g, "\\'")}', '${bg.amount}', '${bg.type}'); Modal.closeAll();">
+      <button class="btn btn-primary" onclick="DashboardScreen.requestRenewal('${bg.ref || ''}', '${(bg.projectName || '').replace(/'/g, "\\'")}', '${bg.amount || ''}', '${bg.type || ''}'); Modal.closeAll();">
         Initiate Extension
       </button>
     `);

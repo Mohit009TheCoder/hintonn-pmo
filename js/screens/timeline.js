@@ -338,12 +338,12 @@ const TimelineScreen = {
 
   initScrollListeners() {
     const canvas = document.querySelector('.timeline-macro-canvas');
-    if (!canvas || canvas._hasWheelListener) return;
+    if (!canvas || canvas._hasWheelListener || typeof canvas.addEventListener !== 'function') return;
     canvas._hasWheelListener = true;
     canvas.addEventListener('wheel', (e) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         canvas.scrollLeft += e.deltaY;
-        e.preventDefault();
+        if (e.preventDefault) e.preventDefault();
       }
     }, { passive: false });
   },
@@ -351,7 +351,11 @@ const TimelineScreen = {
   scrollTimeline(amount) {
     const canvas = document.querySelector('.timeline-macro-canvas');
     if (canvas) {
-      canvas.scrollBy({ left: amount, behavior: 'smooth' });
+      if (typeof canvas.scrollBy === 'function') {
+        canvas.scrollBy({ left: amount, behavior: 'smooth' });
+      } else {
+        canvas.scrollLeft += amount;
+      }
     }
   },
 
@@ -362,13 +366,21 @@ const TimelineScreen = {
     const todayMarker = document.querySelector('.timeline-macro-today-line');
     if (todayMarker) {
       const markerLeft = todayMarker.offsetLeft;
-      canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 2), behavior: 'smooth' });
+      if (typeof canvas.scrollTo === 'function') {
+        canvas.scrollTo({ left: Math.max(0, markerLeft - canvas.clientWidth / 2), behavior: 'smooth' });
+      } else {
+        canvas.scrollLeft = Math.max(0, markerLeft - canvas.clientWidth / 2);
+      }
       return;
     }
     // Fallback: scroll to 70% of canvas width (near today for current date)
     const totalWidth = canvas.scrollWidth - canvas.clientWidth;
     if (totalWidth > 0) {
-      canvas.scrollTo({ left: totalWidth * 0.5, behavior: 'smooth' });
+      if (typeof canvas.scrollTo === 'function') {
+        canvas.scrollTo({ left: totalWidth * 0.5, behavior: 'smooth' });
+      } else {
+        canvas.scrollLeft = totalWidth * 0.5;
+      }
     }
   },
 

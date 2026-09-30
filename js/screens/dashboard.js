@@ -295,7 +295,10 @@ const DashboardScreen = {
             <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
               <div>
                 <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);line-height:1.2">${data.totalActiveBGs} Active Guarantees</div>
-                <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px">${data.bgsExpiring30Days > 0 ? `Next expiry in ${Math.min(...data.bgTimeline.filter(b=>b.daysLeft>0).map(b=>b.daysLeft))} days` : 'No upcoming expiries'}</div>
+                <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px">${(() => {
+                  const upcoming = (data.bgTimeline || []).filter(b => b.daysLeft > 0).map(b => b.daysLeft);
+                  return (data.bgsExpiring30Days > 0 && upcoming.length > 0) ? `Next expiry in ${Math.min(...upcoming)} days` : 'No upcoming expiries';
+                })()}</div>
               </div>
               <button class="btn btn-outline btn-xs" onclick="DashboardScreen.openBatchRenewal()">
                 Renew All Due
@@ -309,21 +312,21 @@ const DashboardScreen = {
                   <div class="bg-card-header">
                     <div class="bg-card-id-wrap">
                       <span class="bg-micro-icon">${Icons.shield}</span>
-                      <span class="bg-id-text">${bg.bgId}</span>
+                      <span class="bg-id-text">${bg.bgId || ''}</span>
                     </div>
-                    <span class="badge ${bg.riskBadgeClass}">${bg.riskText}</span>
+                    <span class="badge ${bg.riskBadgeClass || ''}">${bg.riskText || ''}</span>
                   </div>
                   <div class="bg-card-body">
-                    <div class="bg-card-project" title="${bg.projectName}">${bg.projectName}</div>
-                    <div class="bg-card-value">${bg.amount} · ${bg.type}</div>
+                    <div class="bg-card-project" title="${bg.projectName || ''}">${bg.projectName || '—'}</div>
+                    <div class="bg-card-value">${bg.amount || '₹0'} · ${bg.type || 'BG'}</div>
                   </div>
                   <div class="bg-card-footer">
                     <div class="bg-card-date">
                       ${Icons.clock}
-                      <span>Due: <strong>${bg.expiryDate}</strong></span>
+                      <span>Due: <strong>${bg.expiryDate || '—'}</strong></span>
                     </div>
                     <button class="btn btn-outline btn-xs" 
-                            onclick="DashboardScreen.requestRenewal('${bg.bgId}', '${bg.projectName.replace(/'/g, "\\'")}', '${bg.amount}', '${bg.type}')">
+                            onclick="DashboardScreen.requestRenewal('${bg.bgId || ''}', '${(bg.projectName || '').replace(/'/g, "\\'")}', '${bg.amount || ''}', '${bg.type || ''}')">
                       Renew
                     </button>
                   </div>

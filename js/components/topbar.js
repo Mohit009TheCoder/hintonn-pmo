@@ -14,7 +14,7 @@ const Topbar = {
       billing: 'Billing & Invoices', invoices: 'Billing & Invoices',
       retention: 'Retention Summary', bg: 'Bank Guarantees (BG)',
       'bank-guarantees': 'Bank Guarantees (BG)', dlp: 'DLP Timelines',
-      'dlp-timelines': 'DLP Timelines'
+      'dlp-timelines': 'DLP Timelines', 'user-approvals': 'User Approvals'
     };
     let label = labels[screen] || 'Dashboard';
     if (screen === 'project-detail' && App.currentProjectId) {

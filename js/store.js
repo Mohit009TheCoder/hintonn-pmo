@@ -207,8 +207,8 @@ const Store = {
   _genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
 
   // Projects
-  getProjects() { return this._data.projects; },
-  getProject(id) { return this._data.projects.find(p => p.id === id); },
+  getProjects() { return (this._data && this._data.projects) || []; },
+  getProject(id) { return ((this._data && this._data.projects) || []).find(p => p.id === id); },
   createProject(d) {
     const p = { id: this._genId(), name: d.name, description: d.description||'', type: d.type||'Business',
       status: 'planning', priority: d.priority||'medium', progress: 0,
@@ -249,8 +249,11 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId) { return projectId ? this._data.tasks.filter(t => t.projectId === projectId && !t.isPersonal) : this._data.tasks; },
-  getTask(id) { return this._data.tasks.find(t => t.id === id); },
+  getTasks(projectId) {
+    const tasks = (this._data && this._data.tasks) || [];
+    return projectId ? tasks.filter(t => t.projectId === projectId && !t.isPersonal) : tasks;
+  },
+  getTask(id) { return ((this._data && this._data.tasks) || []).find(t => t.id === id); },
   createTask(d) {
     let assigneeIds = [];
     if (Array.isArray(d.assigneeIds)) {
@@ -412,11 +415,11 @@ const Store = {
   },
 
   // Members
-  getMembers() { return this._data.members; },
-  getAssignees() { return (this._data.members || []).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
+  getMembers() { return (this._data && this._data.members) || []; },
+  getAssignees() { return ((this._data && this._data.members) || []).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
   getMember(id) {
     if (!id) return null;
-    return this._data.members.find(m =>
+    return ((this._data && this._data.members) || []).find(m =>
       m.id === id ||
       (m.id === 'm1' && (id === 'ayush' || id === 'AD')) ||
       (m.id === 'm2' && id === 'preet') ||
@@ -745,7 +748,10 @@ const Store = {
   },
 
   // Milestones
-  getMilestones(projectId) { return projectId ? this._data.milestones.filter(m => m.projectId === projectId) : this._data.milestones; },
+  getMilestones(projectId) {
+    const list = (this._data && this._data.milestones) || [];
+    return projectId ? list.filter(m => m.projectId === projectId) : list;
+  },
   createMilestone(d) {
     const m = { id: this._genId(), projectId: d.projectId, name: d.name, dueDate: d.dueDate||'',
       status: d.status||'pending', taskIds: d.taskIds||[],
@@ -782,7 +788,10 @@ const Store = {
   },
 
   // Issues
-  getIssues(projectId) { return projectId ? this._data.issues.filter(i => i.projectId === projectId) : this._data.issues; },
+  getIssues(projectId) {
+    const list = (this._data && this._data.issues) || [];
+    return projectId ? list.filter(i => i.projectId === projectId) : list;
+  },
   createIssue(d) {
     const i = { id: this._genId(), projectId: d.projectId, title: d.title, description: d.description||'',
       status: d.status||'open', priority: d.priority||'medium', assigneeId: d.assigneeId||'',

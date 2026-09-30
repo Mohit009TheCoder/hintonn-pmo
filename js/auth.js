@@ -26,6 +26,12 @@ const Auth = {
   setCurrentUser(u) {
     this.currentUser = u;
   },
+  isAuthenticated() {
+    return !!(this.currentUser && this.currentUser.approved !== false && this.currentUser.revoked !== true);
+  },
+  isLoggedIn() {
+    return this.isAuthenticated();
+  },
 
   // ─── Admin email whitelist — ONLY this email gets Admin role ───
   _ADMIN_EMAILS: ['mohithintonn@gmail.com'],

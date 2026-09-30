@@ -8,6 +8,9 @@ const UserApprovalsScreen = {
   },
 
   refresh() {
+    if (typeof App !== 'undefined' && App.currentScreen !== 'user-approvals') {
+      return;
+    }
     const content = document.getElementById('page-content');
     if (content) {
       content.innerHTML = this.render();

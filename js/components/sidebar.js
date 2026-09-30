@@ -5,7 +5,16 @@ const Sidebar = {
       { id: 'dashboard', icon: 'home', label: 'Dashboard' },
       { id: 'projects', icon: 'folder', label: 'Projects' },
       { id: 'tasks', icon: 'checkSquare', label: 'Tasks' },
-      { id: 'issues', icon: 'alertCircle', label: 'Issues', badge: () => Store.getIssues().filter(i => i.status === 'open').length },
+      { id: 'issues', icon: 'alertCircle', label: 'Issues', badge: () => {
+        const user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+        const isDev = user && user.role === 'AI Developer';
+        let issues = Store.getIssues().filter(i => i.status === 'open');
+        if (isDev) {
+          const memberId = user.memberId || (user.id === 'preet' ? 'm2' : user.id === 'mohit' ? 'm3' : user.id === 'hirvi' ? 'm4' : '');
+          issues = issues.filter(i => i.assigneeId === user.id || (memberId && i.assigneeId === memberId));
+        }
+        return issues.length;
+      }},
       { id: 'milestones', icon: 'flag', label: 'Milestones' },
       { id: 'calendar', icon: 'calendar', label: 'Calendar' },
       { id: 'timeline', icon: 'timeline', label: 'Timeline' },

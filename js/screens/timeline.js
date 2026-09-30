@@ -542,10 +542,7 @@ const TimelineScreen = {
         <!-- Page Header & Time Scale Selector Toolbar -->
         <div class="page-header" style="margin-bottom:16px">
           <div class="page-header-left">
-            <div style="display:flex;align-items:center;gap:10px">
-              <h1>Timeline & Executive Gantt</h1>
-              <span class="badge badge-primary" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;">Admin Suite</span>
-            </div>
+            <h1>Timeline & Executive Gantt</h1>
             <p>Multi-scale EPC execution roadmap, commercial horizon tracking, and active milestone monitor</p>
           </div>
           <div class="page-header-actions" style="display:flex;align-items:center;gap:12px">

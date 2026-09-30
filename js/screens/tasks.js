@@ -297,8 +297,30 @@ const TasksScreen = {
           const projectTasks = tasks.filter(t => !t.isPersonal && t.status === col.status);
           const colTotalCount = (!isAdmin && col.status === 'todo') ? (projectTasks.length + personalTasks.length) : projectTasks.length;
 
-          // "To Do" Column: Three clean sections (Assigned to Me, Project Tasks / Shared Work, Personal Tasks for standard users)
+          // "To Do" Column: For Admin - flat layout; For standard users - bifurcated (Assigned to Me, Shared Work, Personal Tasks)
           if (col.status === 'todo') {
+            // Admin: Simple flat layout, no sub-sections
+            if (isAdmin) {
+              return `
+                <div class="kanban-column">
+                  <div class="kanban-column-top-header" style="margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="width:10px;height:10px;border-radius:50%;background:${col.color};display:inline-block;"></span>
+                      <span class="kanban-column-title" style="font-size:14px;font-weight:700;">${col.label}</span>
+                    </div>
+                    <span class="kanban-column-count">${projectTasks.length}</span>
+                  </div>
+                  <div class="kanban-cards kanban-full-cards" data-status="todo"
+                    ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'todo')" ondragleave="TasksScreen.onDragLeave(event)">
+                    ${projectTasks.length === 0 ? `
+                      <div class="kanban-subcolumn-empty" style="margin-top:4px;">No tasks in to do</div>
+                    ` : projectTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
+                  </div>
+                </div>
+              `;
+            }
+
+            // Standard user: Bifurcated layout
             // Multi-assignee tasks go to Shared Work, even if current user is one of the assignees
             const assignedTasks = projectTasks.filter(t => {
               if (!this._isUserTask(t, currentUser)) return false;
@@ -360,7 +382,6 @@ const TasksScreen = {
                 </div>
 
                 <!-- BOTTOM SUB-SECTION: Personal Tasks (Standard User Role Only) -->
-                ${!isAdmin ? `
                 <div class="kanban-subcolumn-section" style="border-top:1px dashed var(--color-border);padding-top:10px;">
                   <div class="kanban-subcolumn-header">
                     <span class="kanban-subcolumn-title" style="color:#7E22CE;">
@@ -380,7 +401,6 @@ const TasksScreen = {
                     ` : personalTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderPersonalTaskCard(t)).join('')}
                   </div>
                 </div>
-                ` : ''}
 
               </div>
             `;

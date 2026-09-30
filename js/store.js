@@ -6,12 +6,12 @@ const Store = {
   _firestoreInitialized: false,
 
   init() {
-    // One-time clear of local storage for fresh application
-    if (!localStorage.getItem('hintonn_cleared_v5')) {
+    // One-time clear of local storage for fresh application (v6: purge legacy billing/BG/seed data)
+    if (!localStorage.getItem('hintonn_cleared_v6')) {
       localStorage.removeItem('hintonn-pm');
       localStorage.removeItem('hintonn-users-db');
       localStorage.removeItem('hintonn-auth-version');
-      localStorage.setItem('hintonn_cleared_v5', 'true');
+      localStorage.setItem('hintonn_cleared_v6', 'true');
     }
 
     const defaultMembers = [];
@@ -20,7 +20,7 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','bankGuarantees','dlpRecords','retentionRecords','companies']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty

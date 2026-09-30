@@ -185,7 +185,7 @@ const TimelineScreen = {
     }
     const fallback = {
       'm1': { id: 'm1', name: 'Ayush Desai', initials: 'AD', color: '#2563EB', role: 'Admin' },
-      'm2': { id: 'm2', name: 'Preet Bhavsar', initials: 'PB', color: '#9333EA', role: 'AI Developer' },
+      'm2': { id: 'm2', name: 'Preet Bhavsar', initials: 'PB', color: '#7C3AED', role: 'AI Developer' },
       'm3': { id: 'm3', name: 'Mohit Jain', initials: 'MJ', color: '#4F46E5', role: 'AI Developer' },
       'm4': { id: 'm4', name: 'Hirvi Sanghavi', initials: 'HS', color: '#1D4ED8', role: 'AI Developer' }
     };
@@ -410,8 +410,8 @@ const TimelineScreen = {
 
     const stageColors = {
       'Execution / Construction': '#2563EB',
-      'Handover & DLP Timelines': '#9333EA',
-      'Planning / Design': '#64748B'
+      'Handover & DLP Timelines': '#7C3AED',
+      'Planning / Design': '#475569'
     };
     const stageColor = stageColors[data.stage] || '#2563EB';
 
@@ -420,7 +420,7 @@ const TimelineScreen = {
         <span>Team:</span>
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
           ${data.assignees.map(a => `
-            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;padding:2px 7px;border-radius:4px;background:var(--neutral-100);color:var(--color-text-primary);border:1px solid var(--color-border)">
+            <span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#E2E8F0">
               <span style="width:6px;height:6px;border-radius:50%;background:${a.color}"></span>
               ${a.name}
             </span>
@@ -432,16 +432,16 @@ const TimelineScreen = {
     tooltip.innerHTML = `
       <div class="timeline-tt-header">
         <span>${data.name}</span>
-        <span class="timeline-tt-stage" style="background:${stageColor}18; color:${stageColor}; border:1px solid ${stageColor}40">${data.stageLabel || data.stage}</span>
+        <span class="timeline-tt-stage" style="background:${stageColor}25; color:${stageColor}; border:1px solid ${stageColor}55">${data.stageLabel || data.stage}</span>
       </div>
       <div class="timeline-tt-row">
         <span>Commercial Package:</span>
-        <span><strong>${data.packageNo || 'Package'}</strong> (${data.contractValue || '₹0'})</span>
+        <span><strong>${data.packageNo || 'EPC Package'}</strong> (${data.contractValue || '$3.8M'})</span>
       </div>
       <div class="timeline-tt-row">
         <span>Overall Completion:</span>
         <div style="display:flex;align-items:center;gap:6px">
-          <div style="width:60px;height:6px;background:var(--neutral-200);border-radius:3px;overflow:hidden">
+          <div style="width:60px;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
             <div style="width:${data.progress}%;height:100%;background:${stageColor};border-radius:3px"></div>
           </div>
           <span style="color:${stageColor};font-weight:700">${data.progress}%</span>
@@ -453,20 +453,20 @@ const TimelineScreen = {
       </div>
       <div class="timeline-tt-row">
         <span>Total Duration:</span>
-        <span style="color:var(--color-text-primary);font-weight:600">${data.durationDays || '90'} Days</span>
+        <span style="color:#F1F5F9;font-weight:600">${data.durationDays || '90'} Days</span>
       </div>
       <div class="timeline-tt-divider"></div>
       ${data.bgExpiry ? `
         <div class="timeline-tt-row">
           <span>Bank Guarantee:</span>
-          <span style="color:var(--color-text-secondary)">${data.bgExpiry}</span>
+          <span style="color:#CBD5E1">${data.bgExpiry}</span>
         </div>
       ` : ''}
       ${assigneesHtml}
       ${data.activeMilestone ? `
-        <div class="timeline-tt-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--color-border)">
-          <span style="color:var(--color-primary);font-weight:600">◆ Milestone:</span>
-          <span style="color:var(--color-primary-700);font-weight:600">${data.activeMilestone}</span>
+        <div class="timeline-tt-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.15)">
+          <span style="color:#FCD34D">◆ Milestone:</span>
+          <span style="color:#60A5FA;font-weight:600">${data.activeMilestone}</span>
         </div>
       ` : ''}
     `;
@@ -581,11 +581,11 @@ const TimelineScreen = {
                 <span>Execution / Construction</span>
               </div>
               <div class="timeline-legend-item">
-                <span class="timeline-legend-bar" style="background:linear-gradient(135deg, #2563EB 0%, #9333EA 100%)"></span>
+                <span class="timeline-legend-bar" style="background:#7C3AED"></span>
                 <span>Handover & DLP</span>
               </div>
               <div class="timeline-legend-item">
-                <span class="timeline-legend-bar" style="background:#64748B"></span>
+                <span class="timeline-legend-bar" style="background:#475569"></span>
                 <span>Planning / Design</span>
               </div>
             </div>
@@ -678,7 +678,7 @@ const TimelineScreen = {
 
           <!-- Today Marker Line -->
           <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">TODAY</div>
+            <div class="timeline-macro-today-badge">SEP 2026</div>
           </div>
 
           <!-- Body Rows -->
@@ -724,7 +724,7 @@ const TimelineScreen = {
 
           <!-- Today Marker Line -->
           <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">TODAY</div>
+            <div class="timeline-macro-today-badge">SEP 2026</div>
           </div>
 
           <!-- Body Rows -->
@@ -771,7 +771,7 @@ const TimelineScreen = {
 
           <!-- Today Marker Line -->
           <div class="timeline-macro-today-line" style="left:${todayLeftPct}%">
-            <div class="timeline-macro-today-badge">TODAY</div>
+            <div class="timeline-macro-today-badge">SEP 2026</div>
           </div>
 
           <!-- Body Rows -->
@@ -860,11 +860,11 @@ const TimelineScreen = {
                      onmousemove="TimelineScreen.moveTooltip(event)"
                      onmouseleave="TimelineScreen.hideTooltip()">
                   
-                  <!-- Clean Solid Bar with Subtle Inner Progress Fill -->
+                  <!-- Clean Solid Bar with Subtle Inner Progress Fill (Zero Overlay Icons) -->
                   <div class="timeline-bar-slim ${p.barClass}">
                     <div class="timeline-bar-fill ${p.fillClass}" style="width:${p.progress}%"></div>
+                    <span class="timeline-bar-progress-text">${p.progress}%</span>
                   </div>
-                  <span class="timeline-bar-progress-text">${p.progress}%</span>
                 </div>
               ` : ''}
             </div>
@@ -900,8 +900,8 @@ const TimelineScreen = {
                            onmouseleave="TimelineScreen.hideTooltip()">
                         <div class="timeline-bar-phase-slim ${p.barClass}">
                           <div class="timeline-bar-fill ${p.fillClass}" style="width:${ph.progress}%"></div>
+                          <span class="timeline-bar-progress-text">${ph.progress}%</span>
                         </div>
-                        <span class="timeline-bar-progress-text">${ph.progress}%</span>
                       </div>
                     ` : ''}
                   </div>

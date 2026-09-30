@@ -991,36 +991,40 @@ const BillingScreen = {
     const companies = this._getCompanies();
     const defaultComp = companies[0] || null;
 
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const initialCode = 'CLIENT';
+    // Proper sequential bill number / quotation ref (per client, per year)
+    const invoiceNumber = Store.generateBillNumber('CLIENT', today);
+    const refQuotation = Store.generateQuotationRef('CLIENT', today);
 
     this._createModalState = {
       clientMode: 'other', // 'other' | 'existing'
       selectedCompanyId: defaultComp ? defaultComp.id : '',
+      // Project-based billing — linked to a REAL project from the workspace
+      projectId: '',
+      milestoneId: '',
       clientLegalName: '',
       clientAddr1: '',
       clientAddr2: '',
-      clientState: 'Gujarat, India',
+      clientState: '',
       clientGstin: '',
       saveCompany: true,
-      invoiceNumber: `HIN-PI-${initialCode}-2026-${randomSuffix}`,
+      invoiceNumber: invoiceNumber,
       invoiceDate: dateStr,
       validUntil: validStr,
-      refQuotation: `HIN-CL-${initialCode}-2026-001`,
+      refQuotation: refQuotation,
       currency: 'INR (₹)',
       modulesTag: '[R1 • R2 • R3]',
       items: [
         {
           id: 1,
-          name: 'AI Solution Platform & Custom Workflow Automation',
+          name: 'Service Delivery — as per agreed scope of work',
           desc: 'One-time development • incl. 1 month post-go-live fine-tuning',
-          gross: 500000,
+          gross: 0,
           discountPct: 15
         }
       ],
       includeRecurring: true,
       recurringItem: {
-        module: 'Hintonn AI Enterprise Platform SLA',
+        module: 'Annual Maintenance & Support (SLA)',
         desc: 'Annual Maintenance, Security Patches & Cloud Ops',
         basis: 'Flat annual package',
         freq: 'Annual',
@@ -1149,6 +1153,47 @@ const BillingScreen = {
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 1b. PROJECT-BASED BILLING — link to an EXISTING workspace project -->
+        <div class="section-card no-pad" style="border:1px solid var(--color-border);border-radius:8px;padding:16px;background:var(--color-surface)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid var(--color-border);padding-bottom:10px;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:4px;height:16px;background:#059669;border-radius:2px;display:inline-block"></span>
+              <span style="font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--color-text-primary)">
+                Project-Based Billing — Link to Existing Project
+              </span>
+            </div>
+            <span class="badge" style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;font-size:10.5px;font-weight:700;padding:2px 8px">
+              Generated from live project data
+            </span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.4fr 1.4fr 1fr;gap:12px;align-items:end">
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="font-weight:600;font-size:12px">Existing Project</label>
+              <select class="form-control" id="inv-project" onchange="BillingScreen._onProjectChange(this.value)">
+                <option value="">— General invoice (no project link) —</option>
+                ${(Store.getProjects() || []).map(p => `
+                  <option value="${p.id}" ${s.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}${p.status ? ` (${p.status})` : ''}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="font-weight:600;font-size:12px">Milestone (from project)</label>
+              <select class="form-control" id="inv-milestone" onchange="BillingScreen._onMilestoneChange(this.value)">
+                ${this._renderMilestoneOptions(s.projectId, s.milestoneId)}
+              </select>
+            </div>
+            <div id="inv-project-info" style="min-height:38px;display:flex;align-items:center;font-size:11.5px;color:var(--color-text-muted);padding-bottom:2px">
+              ${s.projectId ? this._projectInfoHtml(s.projectId) : 'No project selected — invoice will be logged as a general client bill.'}
+            </div>
+          </div>
+          ${(Store.getProjects() || []).length === 0 ? `
+            <div style="margin-top:10px;padding:8px 12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:6px;font-size:11.5px;color:#92400E">
+              No projects exist yet. Create a project first (Projects screen) to bill against it — or continue with a general invoice below.
+            </div>
+          ` : ''}
         </div>
 
         <!-- 2. INVOICE REFERENCES & METADATA -->
@@ -1337,6 +1382,7 @@ const BillingScreen = {
         <tr data-item-idx="${idx}" style="border-bottom:1px solid var(--color-border)">
           <td style="padding:6px 8px">
             <input type="text" class="form-control" style="font-weight:600;font-size:12px;margin-bottom:4px" 
+                   id="item-name-${idx}"
                    value="${Utils.escapeHtml(it.name || '')}" placeholder="Module / Service Name"
                    oninput="BillingScreen._onItemFieldChange(${idx}, 'name', this.value)">
             <input type="text" class="form-control" style="font-size:11px;color:var(--color-text-secondary)" 
@@ -1380,6 +1426,73 @@ const BillingScreen = {
     }).join('');
   },
 
+  // ─── Project-Based Billing Handlers (existing projects only) ───
+  _renderMilestoneOptions(projectId, selectedId) {
+    const milestones = projectId ? Store.getMilestones(projectId) : [];
+    if (!projectId) return `<option value="">— Select a project first —</option>`;
+    return `
+      <option value="">— General (no milestone) —</option>
+      ${milestones.map(m => `<option value="${m.id}" ${selectedId===m.id?'selected':''}>${Utils.escapeHtml(m.name)}${m.dueDate ? ` — due ${m.dueDate}` : ''}</option>`).join('')}
+    `;
+  },
+  _projectInfoHtml(projectId) {
+    const p = Store.getProject(projectId);
+    if (!p) return '';
+    const msCount = Store.getMilestones(projectId).length;
+    const taskCount = Store.getTasks(projectId).length;
+    const progress = p.progress != null ? p.progress : 0;
+    return `<span>📊 <strong>${Utils.escapeHtml(p.name)}</strong> — ${progress}% complete · ${taskCount} tasks · ${msCount} milestones</span>`;
+  },
+  _onProjectChange(projectId) {
+    if (!this._createModalState) return;
+    const s = this._createModalState;
+    s.projectId = projectId || '';
+    s.milestoneId = '';
+
+    // Rebuild milestone dropdown from the REAL project's milestones
+    const msSelect = document.getElementById('inv-milestone');
+    if (msSelect) msSelect.innerHTML = this._renderMilestoneOptions(s.projectId, '');
+
+    // Update project info line
+    const info = document.getElementById('inv-project-info');
+    if (info) {
+      info.innerHTML = s.projectId
+        ? this._projectInfoHtml(s.projectId)
+        : 'No project selected — invoice will be logged as a general client bill.';
+    }
+
+    // Prefill the first line item with the real project name (unless user typed a custom one)
+    const proj = s.projectId ? Store.getProject(s.projectId) : null;
+    if (proj && s.items && s.items.length && !s._itemTouched) {
+      s.items[0].name = `${proj.name} — Service Delivery`;
+      const nameInput = document.getElementById(`item-name-0`);
+      if (nameInput) nameInput.value = s.items[0].name;
+    }
+    this._recalcCreateModal();
+  },
+  _onMilestoneChange(milestoneId) {
+    if (!this._createModalState) return;
+    const s = this._createModalState;
+    s.milestoneId = milestoneId || '';
+
+    const proj = s.projectId ? Store.getProject(s.projectId) : null;
+    const ms = milestoneId ? Store.getMilestones(s.projectId).find(m => m.id === milestoneId) : null;
+
+    // Prefill line item with project + real milestone name
+    if (proj && s.items && s.items.length && !s._itemTouched) {
+      s.items[0].name = ms ? `${proj.name} — ${ms.name}` : `${proj.name} — Service Delivery`;
+      const nameInput = document.getElementById(`item-name-0`);
+      if (nameInput) nameInput.value = s.items[0].name;
+    }
+
+    // Suggest valid-until = milestone due date when available
+    if (ms && ms.dueDate) {
+      s.validUntil = ms.dueDate;
+      const vuInput = document.getElementById('inv-valid-until');
+      if (vuInput) vuInput.value = ms.dueDate;
+    }
+    this._recalcCreateModal();
+  },
   _toggleClientMode(mode) {
     if (!this._createModalState) return;
     this._createModalState.clientMode = mode;
@@ -1420,29 +1533,36 @@ const BillingScreen = {
     if (stateInput) stateInput.value = comp.stateCountry || 'Gujarat, India';
     if (gstinInput) gstinInput.value = comp.gstin || '';
 
-    const initials = comp.name.replace(/[^A-Za-z]/g, '').slice(0, 5).toUpperCase() || 'CLIENT';
     const invInput = document.getElementById('inv-number');
     const quotInput = document.getElementById('inv-ref-quotation');
-    if (invInput) {
-      const suffix = Math.floor(100 + Math.random() * 900);
-      invInput.value = `HIN-PI-${initials}-2026-${suffix}`;
-    }
-    if (quotInput) {
-      quotInput.value = `HIN-CL-${initials}-2026-001`;
+    const autoInv = Store.generateBillNumber(comp.name, new Date());
+    const autoQuot = Store.generateQuotationRef(comp.name, new Date());
+    if (invInput) invInput.value = autoInv;
+    if (quotInput) quotInput.value = autoQuot;
+    if (this._createModalState) {
+      this._createModalState._autoInvNumber = autoInv;
+      this._createModalState._autoQuotRef = autoQuot;
     }
   },
 
   _onClientNameInput(name) {
     if (!name) return;
+    const s = this._createModalState || {};
     const invInput = document.getElementById('inv-number');
     const quotInput = document.getElementById('inv-ref-quotation');
-    const clean = name.replace(/[^A-Za-z0-9]/g, '').slice(0, 5).toUpperCase() || 'CLIENT';
-    if (invInput && (invInput.value.includes('CLIENT') || invInput.value.startsWith('HIN-PI-'))) {
-      const suffix = Math.floor(100 + Math.random() * 900);
-      invInput.value = `HIN-PI-${clean}-2026-${suffix}`;
+    // Only regenerate when the field still holds an auto-generated value
+    // (a manual override by the user is always preserved)
+    const invIsAuto = invInput && (!invInput.value || invInput.value === s._autoInvNumber || invInput.value.includes('CLIENT'));
+    const quotIsAuto = quotInput && (!quotInput.value || quotInput.value === s._autoQuotRef || quotInput.value.includes('CLIENT'));
+    if (invIsAuto) {
+      const autoInv = Store.generateBillNumber(name, new Date());
+      invInput.value = autoInv;
+      s._autoInvNumber = autoInv;
     }
-    if (quotInput && (quotInput.value.includes('CLIENT') || quotInput.value.startsWith('HIN-CL-'))) {
-      quotInput.value = `HIN-CL-${clean}-2026-001`;
+    if (quotIsAuto) {
+      const autoQuot = Store.generateQuotationRef(name, new Date());
+      quotInput.value = autoQuot;
+      s._autoQuotRef = autoQuot;
     }
   },
 
@@ -1475,6 +1595,7 @@ const BillingScreen = {
   _onItemFieldChange(idx, field, value) {
     if (!this._createModalState || !this._createModalState.items[idx]) return;
     this._createModalState.items[idx][field] = value;
+    if (field === 'name') this._createModalState._itemTouched = true; // stop auto-prefill from project/milestone
     this._recalcCreateModal();
   },
 

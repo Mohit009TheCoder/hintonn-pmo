@@ -5,7 +5,10 @@ const tests = [
   'scratch/test_tasks_and_connectors.js',
   'scratch/test_reports_and_rbac.js',
   'scratch/test_multi_assignee_and_shared_visibility.js',
-  'scratch/test_admin_personal_tasks_and_team_cards.js'
+  'scratch/test_admin_personal_tasks_and_team_cards.js',
+  'scratch/test_admin_layout_privacy_and_realtime_sync.js',
+  'scratch/test_admin_task_review_and_notification.js',
+  'scratch/test_tasks_list_view.js'
 ];
 
 for (const t of tests) {

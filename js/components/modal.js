@@ -37,6 +37,10 @@ const Modal = {
     document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
   },
 
+  isOpen() {
+    return this._stack.length > 0 || Boolean(document.querySelector('.modal-overlay'));
+  },
+
   confirm(title, message, onConfirm, opts = {}) {
     // Close any existing modals first to prevent stacking
     this.closeAll();

@@ -82,7 +82,10 @@ const App = {
         if (typeof Topbar !== 'undefined') Topbar.closeUserMenu();
       }
     });
-    Store.subscribe(() => { this.updateNotifDot(); });
+    Store.subscribe(() => { 
+      this.updateNotifDot(); 
+      this.refreshCurrentScreen();
+    });
     this.updateNotifDot();
 
     // Global click listener to close notification dropdown & profile dropdown when clicking outside
@@ -330,6 +333,17 @@ const App = {
     this.updateMobileNav();
   },
 
+  refreshCurrentScreen() {
+    if (this.currentScreen === 'tasks' && typeof TasksScreen !== 'undefined' && typeof TasksScreen.updateTasksContainer === 'function') {
+      TasksScreen.updateTasksContainer();
+      return;
+    }
+    const modalOpen = typeof Modal !== 'undefined' && typeof Modal.isOpen === 'function' ? Modal.isOpen() : false;
+    if (!modalOpen && ['dashboard', 'projects', 'team', 'project-detail', 'reports'].includes(this.currentScreen)) {
+      this.refresh();
+    }
+  },
+
   openSidebar() {
     const sidebar = document.getElementById('sidebar');
     const backdrop = document.getElementById('sidebar-backdrop');
@@ -498,7 +512,7 @@ const App = {
 
     const notifications = Store.getNotifications();
     const standardHtml = notifications.map(n => `
-      <div class="notification-item ${n.read?'':'unread'}" onclick="Store.markRead('${n.id}');App.renderNotifications();App.updateNotifDot()">
+      <div class="notification-item ${n.read?'':'unread'}" onclick="Store.markRead('${n.id}');App.renderNotifications();App.updateNotifDot();${n.taskId ? `App.closeNotifications();if(window.location.hash!=='#tasks')window.location.hash='#tasks';setTimeout(()=>TasksScreen.openDetailModal('${n.taskId}'),250);` : ''}">
         ${!n.read ? '<div class="notification-dot"></div>' : '<div style="width:8px"></div>'}
         <div class="notification-content">
           <div class="notification-text">${n.text}</div>

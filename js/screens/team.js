@@ -368,18 +368,21 @@ const TeamScreen = {
     this.refresh();
   },
 
-  // ─── Get member's tasks matched by various ID schemes ───
+  // ─── Get member's tasks matched by various ID schemes (Strictly project tasks) ───
   _getMemberTasks(member) {
-    const tasks = Store.getTasks();
-    return tasks.filter(t =>
-      t.assigneeId === member.id ||
-      (member.id === 'm2' && t.assigneeId === 'preet') ||
-      (member.id === 'm3' && t.assigneeId === 'mohit') ||
-      (member.id === 'm4' && t.assigneeId === 'hirvi') ||
-      (member.name.includes('Preet') && t.assigneeId === 'preet') ||
-      (member.name.includes('Mohit') && t.assigneeId === 'mohit') ||
-      (member.name.includes('Hirvi') && t.assigneeId === 'hirvi')
-    );
+    const tasks = Store.getTasks().filter(t => !t.isPersonal);
+    return tasks.filter(t => {
+      const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+      return ids.some(id =>
+        id === member.id ||
+        (member.id === 'm2' && id === 'preet') ||
+        (member.id === 'm3' && id === 'mohit') ||
+        (member.id === 'm4' && id === 'hirvi') ||
+        (member.name && member.name.includes('Preet') && id === 'preet') ||
+        (member.name && member.name.includes('Mohit') && id === 'mohit') ||
+        (member.name && member.name.includes('Hirvi') && id === 'hirvi')
+      );
+    });
   },
 
   // ─── Group tasks by project ───
@@ -555,7 +558,7 @@ const TeamScreen = {
 
   render() {
     const teamMembers = Store.getMembers();
-    const tasks = Store.getTasks();
+    const tasks = Store.getTasks().filter(t => !t.isPersonal);
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
 
@@ -563,10 +566,10 @@ const TeamScreen = {
     let myProjectIds = new Set();
     if (!isAdmin && currentUser) {
       const userMemberId = currentUser.memberId || '';
-      const myTasks = tasks.filter(t =>
-        t.assigneeId === currentUser.id ||
-        (userMemberId && t.assigneeId === userMemberId)
-      );
+      const myTasks = tasks.filter(t => {
+        const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        return ids.includes(currentUser.id) || (userMemberId && ids.includes(userMemberId));
+      });
       myProjectIds = new Set(myTasks.map(t => t.projectId).filter(Boolean));
     }
 

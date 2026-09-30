@@ -249,7 +249,7 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId) { return projectId ? this._data.tasks.filter(t => t.projectId === projectId) : this._data.tasks; },
+  getTasks(projectId) { return projectId ? this._data.tasks.filter(t => t.projectId === projectId && !t.isPersonal) : this._data.tasks; },
   getTask(id) { return this._data.tasks.find(t => t.id === id); },
   createTask(d) {
     let assigneeIds = [];
@@ -276,6 +276,7 @@ const Store = {
     const authUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const creatorId = d.creatorId || (authUser ? (authUser.id || authUser.memberId || '') : '');
     const createdBy = d.createdBy || (authUser ? (authUser.name || '') : '');
+    const userId = d.userId || (authUser ? authUser.id : '') || creatorId;
 
     const t = { id: this._genId(), projectId: d.projectId || '', title: d.title, description: d.description||'',
       isPersonal: isPersonal,
@@ -283,6 +284,7 @@ const Store = {
       status: d.status || (completed ? 'done' : 'todo'), priority: d.priority||'medium',
       assigneeId: assigneeId,
       assigneeIds: assigneeIds,
+      userId: userId,
       creatorId: creatorId,
       createdBy: createdBy,
       subtasks: subtasks,
@@ -688,6 +690,9 @@ const Store = {
     this._syncToFirestore('comments', c.id, c);
     return c;
   },
+  createComment(taskId, authorId, text) {
+    return this.addComment(taskId, authorId, text);
+  },
 
   // Notifications
   getNotifications() {
@@ -703,16 +708,19 @@ const Store = {
 
     if (user && user.role === 'AI Developer') {
       const userMemberId = user.memberId || (user.id === 'preet' ? 'm2' : user.id === 'mohit' ? 'm3' : user.id === 'hirvi' ? 'm4' : '');
-      const myTasks = this.getTasks().filter(t => 
-        t.assigneeId === user.id ||
-        (userMemberId && t.assigneeId === userMemberId) ||
-        (user.id === 'preet' && t.assigneeId === 'm2') ||
-        (user.id === 'mohit' && t.assigneeId === 'm3') ||
-        (user.id === 'hirvi' && t.assigneeId === 'm4') ||
-        (user.memberId === 'm2' && t.assigneeId === 'preet') ||
-        (user.memberId === 'm3' && t.assigneeId === 'mohit') ||
-        (user.memberId === 'm4' && t.assigneeId === 'hirvi')
-      );
+      const myTasks = this.getTasks().filter(t => {
+        const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+        return ids.some(id =>
+          id === user.id ||
+          (userMemberId && id === userMemberId) ||
+          (user.id === 'preet' && id === 'm2') ||
+          (user.id === 'mohit' && id === 'm3') ||
+          (user.id === 'hirvi' && id === 'm4') ||
+          (user.memberId === 'm2' && id === 'preet') ||
+          (user.memberId === 'm3' && id === 'mohit') ||
+          (user.memberId === 'm4' && id === 'hirvi')
+        );
+      });
       const myTaskTitles = new Set(myTasks.map(t => t.title.toLowerCase()));
 
       const myIssues = this.getIssues().filter(i => 
@@ -732,6 +740,15 @@ const Store = {
       const myMilestoneNames = new Set(myMilestones.map(m => m.name.toLowerCase()));
 
       notifs = notifs.filter(n => {
+        // Direct target match by member or user ID
+        if (n.targetMemberId && (n.targetMemberId === userMemberId || n.targetMemberId === user.id)) return true;
+        if (Array.isArray(n.targetMemberIds)) {
+          if (n.targetMemberIds.some(mid => mid === userMemberId || mid === user.id || (user.id === 'preet' && mid === 'm2') || (user.id === 'mohit' && mid === 'm3') || (user.id === 'hirvi' && mid === 'm4'))) {
+            return true;
+          }
+        }
+        if (n.targetUserId && (n.targetUserId === user.id || n.targetUserId === userMemberId)) return true;
+
         const text = n.text.toLowerCase();
         // If explicitly assigned to other developer, exclude
         const otherDevs = ['mohit', 'preet', 'hirvi'].filter(name => name !== user.id.toLowerCase());
@@ -762,9 +779,8 @@ const Store = {
   getUnreadCount() { return this.getNotifications().filter(n => !n.read).length; },
   markRead(id) { const n = this._data.notifications.find(x=>x.id===id); if(n) n.read=true; this._save(); this._notify(); },
   markAllRead() { this._data.notifications.forEach(n => n.read = true); this._save(); this._notify(); },
-  _addNotification(type, text) {
-    this._data.notifications.unshift({ id: this._genId(), type, text, read: false, createdAt: new Date().toISOString() });
-    if (this._data.notifications.length > 100) this._data.notifications = this._data.notifications.slice(0, 100);
+  _addNotification(type, text, extra = {}) {
+    return this.addNotification({ type, text, ...extra });
   },
 
   // Activities
@@ -813,6 +829,12 @@ const Store = {
       type: notification.type || 'system',
       text: notification.text || '',
       read: notification.read || false,
+      targetMemberIds: notification.targetMemberIds || null,
+      targetMemberId: notification.targetMemberId || null,
+      targetUserId: notification.targetUserId || null,
+      taskId: notification.taskId || null,
+      projectId: notification.projectId || null,
+      reviewNotes: notification.reviewNotes || null,
       createdAt: new Date().toISOString()
     };
     this._data.notifications.unshift(n);
@@ -1147,3 +1169,19 @@ const Store = {
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };
+
+// ─── Shared Dynamic State Management (appState.tasks) ───
+if (typeof globalThis !== 'undefined') {
+  globalThis.appState = {
+    get tasks() {
+      return (typeof Store !== 'undefined' && Store._data && Array.isArray(Store._data.tasks)) ? Store._data.tasks : [];
+    },
+    set tasks(val) {
+      if (typeof Store !== 'undefined' && Store._data) {
+        Store._data.tasks = Array.isArray(val) ? val : [];
+        Store._save();
+        Store._notify();
+      }
+    }
+  };
+}

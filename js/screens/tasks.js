@@ -24,6 +24,21 @@ const TasksScreen = {
     );
   },
 
+  _isOwnPersonalTask(t, currentUser) {
+    if (!t || !t.isPersonal || !currentUser) return false;
+    if (currentUser.role === 'Admin') return false;
+    const uid = currentUser.id;
+    const mid = currentUser.memberId || (uid === 'preet' ? 'm2' : uid === 'mohit' ? 'm3' : uid === 'hirvi' ? 'm4' : '');
+
+    // Strict Personal Task Privacy: Accessible ONLY by the individual standard user who created it
+    if (t.userId && (t.userId === uid || (mid && t.userId === mid))) return true;
+    if (t.creatorId && (t.creatorId === uid || (mid && t.creatorId === mid))) return true;
+    if (t.assigneeId && (t.assigneeId === uid || (mid && t.assigneeId === mid))) return true;
+    if (Array.isArray(t.assigneeIds) && (t.assigneeIds.includes(uid) || (mid && t.assigneeIds.includes(mid)))) return true;
+    if (t.createdBy && currentUser.name && t.createdBy === currentUser.name) return true;
+    return false;
+  },
+
   _isUserCollaboratorOnProject(projectId, currentUser) {
     if (!projectId || !currentUser) return false;
     if (currentUser.role === 'Admin') return true;
@@ -47,26 +62,29 @@ const TasksScreen = {
     let tasks = Store.getTasks();
 
     if (isAdmin) {
+      // Admin monitors all project tasks; personal tasks strictly omitted
       tasks = tasks.filter(t => !t.isPersonal);
     } else if (isStandardUser) {
       if (this._filter.project) {
         // Shared Project Visibility: Any user assigned to this project can view all tasks in this project
+        // Personal tasks are strictly excluded from project-specific filtered views
         const isMember = this._isUserCollaboratorOnProject(this._filter.project, currentUser);
         tasks = tasks.filter(t => 
-          (t.projectId === this._filter.project && isMember) || 
-          (t.isPersonal && this._isUserTask(t, currentUser))
+          t.projectId === this._filter.project && isMember && !t.isPersonal
         );
       } else {
-        // "All Projects" view: show tasks assigned to user + tasks from shared projects they belong to + user's personal tasks
+        // "All Projects" view: show tasks assigned to user + tasks from shared projects they belong to + user's own private personal tasks
         tasks = tasks.filter(t => 
-          (t.isPersonal && this._isUserTask(t, currentUser)) ||
-          this._isUserTask(t, currentUser) ||
-          (t.projectId && this._isUserCollaboratorOnProject(t.projectId, currentUser))
+          (t.isPersonal && this._isOwnPersonalTask(t, currentUser)) ||
+          (!t.isPersonal && (
+            this._isUserTask(t, currentUser) ||
+            (t.projectId && this._isUserCollaboratorOnProject(t.projectId, currentUser))
+          ))
         );
       }
     }
 
-    if (this._filter.project) tasks = tasks.filter(t => t.projectId === this._filter.project || (!isAdmin && t.isPersonal));
+    if (this._filter.project) tasks = tasks.filter(t => t.projectId === this._filter.project && !t.isPersonal);
     if (this._filter.status) tasks = tasks.filter(t => t.status === this._filter.status);
     if (this._filter.priority) tasks = tasks.filter(t => t.priority === this._filter.priority);
     if (isAdmin && this._filter.assignee) {
@@ -134,8 +152,8 @@ const TasksScreen = {
         </div>
         <div class="page-header-actions">
           <div style="display:flex;gap:4px">
-            <button id="tasks-view-board-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('kanban')" style="${this._view==='kanban'?'background:var(--color-surface-subtle)':''}">Board</button>
-            <button id="tasks-view-list-btn" class="btn btn-ghost btn-sm" onclick="TasksScreen.handleViewChange('list')" style="${this._view==='list'?'background:var(--color-surface-subtle)':''}">List</button>
+            <button id="tasks-view-board-btn" class="btn btn-ghost btn-sm ${this._view==='kanban'?'active':''}" onclick="TasksScreen.handleViewChange('kanban')" style="${this._view==='kanban'?'background:var(--color-surface-subtle)':''}">Board</button>
+            <button id="tasks-view-list-btn" class="btn btn-ghost btn-sm ${this._view==='list'?'active':''}" onclick="TasksScreen.handleViewChange('list')" style="${this._view==='list'?'background:var(--color-surface-subtle)':''}">List</button>
           </div>
           <button id="tasks-create-btn" class="btn btn-primary" onclick="TasksScreen.openCreateModal()">${Icons.plus} Create Task</button>
         </div>
@@ -217,6 +235,13 @@ const TasksScreen = {
     if (boardBtn && listBtn) {
       boardBtn.style.background = view === 'kanban' ? 'var(--color-surface-subtle)' : '';
       listBtn.style.background = view === 'list' ? 'var(--color-surface-subtle)' : '';
+      if (view === 'kanban') {
+        boardBtn.classList.add('active');
+        listBtn.classList.remove('active');
+      } else {
+        listBtn.classList.add('active');
+        boardBtn.classList.remove('active');
+      }
     }
     this.updateTasksContainer();
   },
@@ -281,7 +306,7 @@ const TasksScreen = {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
     const columns = [
-      { status: 'todo', label: 'To Do', color: 'var(--color-text-disabled)' },
+      { status: 'todo', label: isAdmin ? 'Project Tasks' : 'To Do', color: 'var(--color-text-disabled)' },
       { status: 'in-progress', label: 'In Progress', color: 'var(--color-primary)' },
       { status: 'review', label: 'Review', color: 'var(--color-ai)' },
       { status: 'done', label: 'Done', color: 'var(--color-success-500)' }
@@ -295,32 +320,36 @@ const TasksScreen = {
         ${columns.map(col => {
           // Official project tasks for this specific column
           const projectTasks = tasks.filter(t => !t.isPersonal && t.status === col.status);
-          const colTotalCount = (!isAdmin && col.status === 'todo') ? (projectTasks.length + personalTasks.length) : projectTasks.length;
 
-          // "To Do" Column: For Admin - flat layout; For standard users - bifurcated (Assigned to Me, Shared Work, Personal Tasks)
-          if (col.status === 'todo') {
-            // Admin: Simple flat layout, no sub-sections
-            if (isAdmin) {
-              return `
-                <div class="kanban-column">
-                  <div class="kanban-column-top-header" style="margin-bottom:8px;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                      <span style="width:10px;height:10px;border-radius:50%;background:${col.color};display:inline-block;"></span>
-                      <span class="kanban-column-title" style="font-size:14px;font-weight:700;">${col.label}</span>
-                    </div>
-                    <span class="kanban-column-count">${projectTasks.length}</span>
+          // 1. Admin Role: Direct Board View across ALL columns ("Project Tasks", "In Progress", "Review", "Done")
+          // Completely REMOVES "PERSONAL TASKS", "+ Add Personal Task", "ASSIGNED TO ME", and "PROJECT TASKS / SHARED WORK" sub-headers
+          // Renders all project tasks directly under main status headers in a single vertical list without inner sub-sections or divider lines
+          if (isAdmin) {
+            return `
+              <div class="kanban-column" data-status="${col.status}">
+                
+                <!-- Main Column Status Header -->
+                <div class="kanban-column-top-header" style="margin-bottom:8px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:10px;height:10px;border-radius:50%;background:${col.color};display:inline-block;"></span>
+                    <span class="kanban-column-title" style="font-size:14px;font-weight:700;">${col.label}</span>
                   </div>
-                  <div class="kanban-cards kanban-full-cards" data-status="todo"
-                    ondragover="TasksScreen.onDragOver(event)" ondrop="TasksScreen.onDrop(event,'todo')" ondragleave="TasksScreen.onDragLeave(event)">
-                    ${projectTasks.length === 0 ? `
-                      <div class="kanban-subcolumn-empty" style="margin-top:4px;">No tasks in to do</div>
-                    ` : projectTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
-                  </div>
+                  <span class="kanban-column-count">${projectTasks.length}</span>
                 </div>
-              `;
-            }
 
-            // Standard user: Bifurcated layout
+                <!-- Direct Full-Height Cards Container for Unified Project Monitoring -->
+                <div class="kanban-cards kanban-full-cards" data-status="${col.status}">
+                  ${projectTasks.length === 0 ? `
+                    <div class="kanban-subcolumn-empty" style="margin-top:4px;">No ${col.status === 'todo' ? 'project tasks' : 'tasks in ' + col.label.toLowerCase()}</div>
+                  ` : projectTasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => this._renderKanbanCard(t)).join('')}
+                </div>
+
+              </div>
+            `;
+          }
+
+          // 2. Standard User Role: "To Do" Column with bifurcated sub-sections
+          if (col.status === 'todo') {
             // Multi-assignee tasks go to Shared Work, even if current user is one of the assignees
             const assignedTasks = projectTasks.filter(t => {
               if (!this._isUserTask(t, currentUser)) return false;
@@ -332,6 +361,7 @@ const TasksScreen = {
               const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
               return ids.length > 1; // Multi-assignee tasks go to "Shared Work"
             });
+            const colTotalCount = projectTasks.length + personalTasks.length;
 
             return `
               <div class="kanban-bifurcated-column">
@@ -381,7 +411,7 @@ const TasksScreen = {
                   </div>
                 </div>
 
-                <!-- BOTTOM SUB-SECTION: Personal Tasks (Standard User Role Only) -->
+                <!-- BOTTOM SUB-SECTION: Personal Tasks (Strictly for Standard User Role) -->
                 <div class="kanban-subcolumn-section" style="border-top:1px dashed var(--color-border);padding-top:10px;">
                   <div class="kanban-subcolumn-header">
                     <span class="kanban-subcolumn-title" style="color:#7E22CE;">
@@ -406,9 +436,9 @@ const TasksScreen = {
             `;
           }
 
-          // "In Progress", "Review", "Done" Columns: Clean Single Layout (All project tasks directly under header)
+          // 3. Standard User Role: "In Progress", "Review", "Done" Columns: Clean Single Layout
           return `
-            <div class="kanban-column">
+            <div class="kanban-column" data-status="${col.status}">
               
               <!-- Main Column Status Header -->
               <div class="kanban-column-top-header" style="margin-bottom:8px;">
@@ -481,8 +511,11 @@ const TasksScreen = {
       `;
     }
 
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+
     return `
-      <div class="kanban-card" draggable="true" data-task-id="${t.id}"
+      <div class="kanban-card ${isAdmin ? 'observer-card' : ''}" draggable="${isAdmin ? 'false' : 'true'}" data-task-id="${t.id}"
         ondragstart="TasksScreen.onDragStart(event,'${t.id}')" ondragend="TasksScreen.onDragEnd(event)"
         onclick="TasksScreen.openDetailModal('${t.id}')">
         
@@ -512,6 +545,23 @@ const TasksScreen = {
           </div>
 
         </div>
+
+        ${(isAdmin && t.status === 'review' && !t.isPersonal) ? `
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--color-border-subtle);width:100%;">
+            <button type="button" class="btn btn-xs" onclick="event.stopPropagation();TasksScreen.openReviewModal('${t.id}')" style="width:100%;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);font-weight:600;font-size:11px;padding:5px 8px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+              <span>Review Changes</span>
+            </button>
+          </div>
+        ` : ''}
+        ${(t.reviewNotes && t.status === 'in-progress') ? `
+          <div style="margin-top:6px;width:100%;">
+            <span style="background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+              Changes Requested
+            </span>
+          </div>
+        ` : ''}
       </div>
     `;
   },
@@ -574,6 +624,10 @@ const TasksScreen = {
 
   // ─── List View Rendering ───
   _renderList(tasks) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isStandardUser = !isAdmin;
+
     return `
       <div class="section-card">
         <div class="section-card-body no-pad">
@@ -581,7 +635,7 @@ const TasksScreen = {
             <table class="table">
               <thead>
                 <tr>
-                  <th></th>
+                  <th style="width:36px"></th>
                   <th>Task</th>
                   <th>Scope</th>
                   <th>Assignee</th>
@@ -589,11 +643,11 @@ const TasksScreen = {
                   <th>Status</th>
                   <th>Subtasks</th>
                   <th>Due</th>
-                  <th></th>
+                  <th style="width:40px"></th>
                 </tr>
               </thead>
               <tbody>
-                ${tasks.sort((a,b)=>(a.order||0)-(b.order||0)).map(t => {
+                ${[...tasks].sort((a,b)=>(a.order||0)-(b.order||0)).map(t => {
                   const assigneeIds = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
                   const members = assigneeIds.map(id => Store.getMember(id)).filter(Boolean);
                   const m = members[0];
@@ -653,9 +707,23 @@ const TasksScreen = {
                       </td>
                       <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
                       <td>
-                        <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
-                          ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${(isDone && s==='done') || t.status===s ? 'selected' : ''}>${Utils.humanize(s)}</option>`).join('')}
-                        </select>
+                        ${isAdmin && !t.isPersonal ? `
+                          <div style="display:flex;align-items:center;gap:6px;">
+                            <span class="badge" style="font-size:11px;padding:3px 8px;background:var(--color-surface-subtle);color:var(--color-text-primary);border:1px solid var(--color-border);">${Utils.humanize(t.status)}</span>
+                            ${t.status === 'review' ? `
+                              <button type="button" class="btn btn-xs" onclick="TasksScreen.openReviewModal('${t.id}')" style="background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:2px 8px;font-size:10.5px;font-weight:600;border-radius:4px;cursor:pointer;">Review Changes</button>
+                            ` : ''}
+                          </div>
+                        ` : (t.isPersonal ? `
+                          <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
+                            <option value="todo" ${!isDone ? 'selected' : ''}>To Do</option>
+                            <option value="done" ${isDone ? 'selected' : ''}>Done</option>
+                          </select>
+                        ` : `
+                          <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
+                            ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${(isDone && s==='done') || t.status===s ? 'selected' : ''}>${Utils.humanize(s)}</option>`).join('')}
+                          </select>
+                        `)}
                       </td>
                       <td>
                         ${totalSt > 0 ? `
@@ -679,8 +747,14 @@ const TasksScreen = {
     `;
   },
 
-  // Drag & Drop (Only for Project Tasks)
+  // Drag & Drop (Only for Project Tasks, Developer Execution Role)
   onDragStart(e, taskId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (currentUser && currentUser.role === 'Admin') {
+      e.preventDefault();
+      if (typeof Toast !== 'undefined') Toast.show('Admins monitor task progress in observer mode. Status updates are performed by assigned developers.', 'info');
+      return false;
+    }
     const task = Store.getTask(taskId);
     if (task && task.isPersonal) {
       e.preventDefault();
@@ -696,6 +770,11 @@ const TasksScreen = {
   onDrop(e, status) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (currentUser && currentUser.role === 'Admin') {
+      this._dragTask = null;
+      return;
+    }
     if (this._dragTask) {
       const task = Store.getTask(this._dragTask);
       if (task && task.isPersonal) {
@@ -708,9 +787,25 @@ const TasksScreen = {
   },
 
   updateStatus(taskId, status) {
+    const task = Store.getTask(taskId);
+    const prevStatus = task ? task.status : '';
     const completed = status === 'done';
     Store.updateTask(taskId, { status, completed });
     Toast.show(`Task moved to ${Utils.humanize(status)}`);
+
+    // When assignee brings task to review phase, notify admin
+    if (status === 'review' && prevStatus !== 'review') {
+      const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+      const devName = currentUser ? currentUser.name : 'Assigned developer';
+      Store.addNotification({
+        type: 'task',
+        text: `📋 Task "<strong>${task ? task.title : 'Task'}</strong>" submitted for review by ${devName}. Ready for admin review.`,
+        taskId: taskId,
+        projectId: task ? task.projectId : '',
+        read: false
+      });
+    }
+
     this.updateTasksContainer();
   },
 
@@ -780,6 +875,7 @@ const TasksScreen = {
   _createPersonalTaskDirect(title) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const userMemberId = currentUser ? (currentUser.memberId || currentUser.id) : '';
+    const userId = currentUser ? currentUser.id : '';
     Store.createTask({
       title,
       description: '',
@@ -789,6 +885,9 @@ const TasksScreen = {
       dueDate: new Date().toISOString().split('T')[0],
       projectId: '',
       isPersonal: true,
+      userId: userId,
+      creatorId: userId,
+      createdBy: currentUser ? (currentUser.name || '') : '',
       assigneeId: userMemberId,
       subtasks: []
     });
@@ -1254,9 +1353,21 @@ const TasksScreen = {
         assigneeId,
         assigneeIds,
         priority: priorityEl?.value || 'medium',
-        status: statusEl?.value || 'todo',
+        status: (isAdmin && existingTask && !existingTask.isPersonal) ? existingTask.status : (statusEl?.value || 'todo'),
         dueDate: dueEl?.value || ''
       };
+
+      // Detect if developer moved task to review in modal
+      if (!isAdmin && existingTask && updatePayload.status === 'review' && existingTask.status !== 'review') {
+        const devName = currentUser ? currentUser.name : 'Assigned developer';
+        Store.addNotification({
+          type: 'task',
+          text: `📋 Task "<strong>${title}</strong>" submitted for review by ${devName}. Ready for admin review.`,
+          taskId: id,
+          projectId: updatePayload.projectId,
+          read: false
+        });
+      }
 
       Store.updateTask(id, updatePayload);
       Toast.show('Task updated');
@@ -1287,7 +1398,6 @@ const TasksScreen = {
     const t = Store.getTask(taskId);
     if (!t) return;
     const projects = Store.getProjects();
-    const comments = Store.getComments(taskId);
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
     const isStandardUser = !isAdmin;
@@ -1340,10 +1450,11 @@ const TasksScreen = {
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
-          <label class="form-label">Status</label>
-          <select class="form-select" id="detail-status">
+          <label class="form-label">Status ${isAdmin ? '<span style="font-weight:400;color:var(--color-text-muted);font-size:11px;">(Observer Mode)</span>' : ''}</label>
+          <select class="form-select" id="detail-status" ${isAdmin ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;" title="Execution status is updated by assigned developers"' : ''}>
             ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${t.status===s?'selected':''}>${Utils.humanize(s)}</option>`).join('')}
           </select>
+          ${isAdmin ? `<small style="font-size:11px;color:var(--color-text-muted);display:block;margin-top:2px;">Live execution status updated by assigned developers.</small>` : ''}
         </div>
         <div class="form-group">
           <label class="form-label">Priority</label>
@@ -1352,42 +1463,36 @@ const TasksScreen = {
           </select>
         </div>
       </div>
+
+      <!-- Review Feedback Callout Banner (Visible when task has review feedback) -->
+      ${(t.reviewNotes && (t.status === 'in-progress' || !isAdmin)) ? `
+        <div class="review-feedback-banner" style="background:var(--color-primary-50);border:1px solid var(--color-primary-200);border-left:3px solid var(--color-primary);border-radius:6px;padding:12px 14px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--color-primary-800);margin-bottom:4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+            <span>Review Changes Requested ${t.lastReviewedBy ? `by ${Utils.escapeHtml(t.lastReviewedBy)}` : ''} ${t.lastReviewAt ? `· ${Utils.timeAgo(t.lastReviewAt)}` : ''}</span>
+          </div>
+          <div style="font-size:13px;color:var(--color-text-primary);line-height:1.45;white-space:pre-wrap;">${Utils.escapeHtml(t.reviewNotes)}</div>
+        </div>
+      ` : ''}
+
       <div class="form-group" style="margin-bottom:18px">
         <label class="form-label">Due Date</label>
         <input type="date" class="form-input" id="detail-due" value="${t.dueDate || ''}">
       </div>
 
       <!-- Interactive Subtasks Checklist Section with Visual Progress Bar -->
-      <div id="detail-subtasks-wrapper" style="border-top:1px solid var(--color-border);padding-top:16px;margin-bottom:20px;">
+      <div id="detail-subtasks-wrapper" style="border-top:1px solid var(--color-border);padding-top:16px;">
         ${this._buildSubtasksHtml(taskId, subtasks)}
       </div>
-
-      <!-- Comments Section (Project tasks) -->
-      ${!t.isPersonal ? `
-        <div style="border-top:1px solid var(--color-border);padding-top:16px">
-          <label class="form-label" style="margin-bottom:12px">Comments (${comments.length})</label>
-          <div class="comment-list" style="margin-bottom:16px">
-            ${comments.map(c => {
-              const author = Store.getMember(c.authorId);
-              return `<div class="comment-item">
-                <div class="avatar avatar-sm" style="background:${author?author.color:'#94A3B8'}">${author?author.name.split(' ').map(w=>w[0]).join('').slice(0,2):'??'}</div>
-                <div class="comment-body">
-                  <div class="comment-header"><span class="comment-author">${author?author.name:'Unknown'}</span><span class="comment-time">${Utils.timeAgo(c.createdAt)}</span></div>
-                  <div class="comment-text">${Utils.escapeHtml(c.text)}</div>
-                </div>
-              </div>`;
-            }).join('') || '<div style="font-size:13px;color:var(--color-text-muted);padding:12px 0">No comments yet</div>'}
-          </div>
-          <div style="display:flex;gap:8px">
-            <input type="text" class="form-input" id="new-comment" placeholder="Add a comment..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.addComment('${taskId}');}">
-            <button class="btn btn-primary btn-sm" onclick="TasksScreen.addComment('${taskId}')">Post</button>
-          </div>
-        </div>
-      ` : ''}
     `;
 
     const footer = `
       ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="${t.isPersonal ? `TasksScreen.deletePersonalTask('${taskId}')` : `TasksScreen.deleteTask('${taskId}')`}" style="margin-right:auto">Delete</button>` : ''}
+      ${(isAdmin && t.status === 'review' && !t.isPersonal) ? `
+        <button class="btn btn-primary btn-sm" onclick="TasksScreen.openReviewModal('${taskId}')" style="font-weight:600;display:inline-flex;align-items:center;gap:5px;">
+          Review Changes
+        </button>
+      ` : ''}
       <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
       <button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save Changes</button>`;
     
@@ -1495,6 +1600,112 @@ const TasksScreen = {
     Toast.show('Comment added');
     Modal.closeAll();
     this.openDetailModal(taskId);
+  },
+
+  openReviewModal(taskId) {
+    const task = Store.getTask(taskId);
+    if (!task) return;
+
+    const body = `
+      <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.5;">
+        Specify the requested changes or review feedback for <strong style="color:var(--color-text-primary);">${Utils.escapeHtml(task.title)}</strong>. Submitting will move the task back to <strong>In Progress</strong> and notify the assigned developer(s).
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="font-weight:600;margin-bottom:6px;">
+          Review Comments / Required Changes <span style="color:var(--color-danger);">*</span>
+        </label>
+        <textarea class="form-textarea" id="admin-review-input" rows="4" placeholder="Explain the specific changes, fixes, or additions needed..." style="resize:vertical;">${Utils.escapeHtml(task.reviewNotes || '')}</textarea>
+        <div id="admin-review-error" style="color:var(--color-danger);font-size:11.5px;font-weight:500;margin-top:6px;display:none;"></div>
+      </div>
+    `;
+
+    const footer = `
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button class="btn btn-primary" onclick="TasksScreen.submitAdminReview('${taskId}')">Submit Changes</button>
+    `;
+
+    Modal.open('Review Changes', body, footer);
+  },
+
+  submitAdminReview(taskId) {
+    const task = Store.getTask(taskId);
+    if (!task) return;
+
+    const input = document.getElementById('admin-review-input');
+    const errorEl = document.getElementById('admin-review-error');
+    const reviewText = input ? input.value.trim() : '';
+
+    if (!reviewText) {
+      if (errorEl) {
+        errorEl.textContent = 'Please enter review comments or required changes.';
+        errorEl.style.display = 'block';
+      }
+      if (typeof Toast !== 'undefined') {
+        Toast.show('Please enter review comments before requesting changes', 'error');
+      }
+      if (input) {
+        input.classList.add('error');
+        input.focus();
+      }
+      return;
+    }
+
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const adminName = currentUser ? (currentUser.name || 'Admin') : 'Admin';
+    const assigneeIds = Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0
+      ? task.assigneeIds
+      : (task.assigneeId ? [task.assigneeId] : []);
+
+    const reviewHistory = Array.isArray(task.reviewHistory) ? [...task.reviewHistory] : [];
+    reviewHistory.unshift({
+      text: reviewText,
+      reviewedBy: adminName,
+      reviewedAt: new Date().toISOString()
+    });
+
+    // Move task back to In Progress with review feedback
+    Store.updateTask(taskId, {
+      status: 'in-progress',
+      completed: false,
+      reviewNotes: reviewText,
+      lastReviewAt: new Date().toISOString(),
+      lastReviewedBy: adminName,
+      reviewHistory
+    });
+
+    // Notify assignee(s)
+    const notifText = `⚠️ <strong>Changes requested on "${task.title}"</strong> by ${adminName}: <strong>"${reviewText}"</strong>. Task moved back to In Progress.`;
+    Store.addNotification({
+      type: 'task',
+      text: notifText,
+      taskId: task.id,
+      projectId: task.projectId,
+      targetMemberIds: assigneeIds,
+      reviewNotes: reviewText,
+      read: false
+    });
+
+    // Activity log
+    const assigneeNames = assigneeIds.map(mid => {
+      const mem = Store.getMember(mid);
+      return mem ? mem.name : mid;
+    }).filter(Boolean);
+
+    Store._addActivity(
+      'task',
+      `Admin <strong>${adminName}</strong> requested changes on task <strong>${task.title}</strong>${assigneeNames.length > 0 ? ` (assigned to ${assigneeNames.join(', ')})` : ''}: "${Utils.escapeHtml(reviewText)}"`
+    );
+
+    if (typeof Toast !== 'undefined') {
+      Toast.show(`Review submitted. Task moved back to In Progress and assignee(s) notified.`, 'success');
+    }
+
+    Modal.closeAll();
+    this.updateTasksContainer();
+    if (typeof App !== 'undefined') {
+      App.refresh();
+      App.updateNotifDot();
+    }
   },
 
   deleteTask(id) {

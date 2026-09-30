@@ -149,7 +149,7 @@ const NotificationsScreen = {
       'bankGuarantee': ['bankGuarantee', 'bg'],
       'bg': ['bankGuarantee', 'bg'],
       'dlp': ['dlpRecord', 'dlp'],
-      'task': ['task'],
+      'task': ['task', 'task-review'],
       'milestone': ['milestone'],
       'project': ['project'],
       'issue': ['issue'],
@@ -176,11 +176,13 @@ const NotificationsScreen = {
   },
 
   _handleClick(id, type) {
+    const notif = Store.getNotifications().find(n => n.id === id);
     Store.markRead(id);
     App.updateNotifDot();
     // Navigate to relevant screen based on notification type
     const routes = {
       'task': '#tasks',
+      'task-review': '#tasks',
       'issue': '#issues',
       'milestone': '#milestones',
       'project': '#projects',
@@ -191,6 +193,9 @@ const NotificationsScreen = {
     const route = routes[type];
     if (route) {
       window.location.hash = route;
+      if ((type === 'task' || type === 'task-review') && notif && notif.taskId && typeof TasksScreen !== 'undefined') {
+        setTimeout(() => TasksScreen.openDetailModal(notif.taskId), 300);
+      }
     } else {
       this._refresh();
     }
@@ -204,6 +209,7 @@ const NotificationsScreen = {
   _icon(type) {
     const icons = {
       task: '📋',
+      'task-review': '⚠️',
       project: '📁',
       issue: '🔴',
       milestone: '🏁',

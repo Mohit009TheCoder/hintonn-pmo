@@ -17,7 +17,7 @@ const DashboardScreen = {
   // Commercial Data Model & Calculations — fully dynamic from Store
   _getCommercialData() {
     const rawProjects = Store.getProjects();
-    const allTasks = Store.getTasks();
+    const allTasks = Store.getTasks().filter(t => !t.isPersonal);
     const allBGs = Store.getBankGuarantees();
     const allInvoices = Store.getInvoices();
     const allDLP = Store.getDlpRecords();
@@ -160,7 +160,7 @@ const DashboardScreen = {
     const timeGreeting = now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening';
     const firstName = user.name ? user.name.split(' ')[0] : 'Ayush';
     const assignees = Store.getAssignees();
-    const allTasks = Store.getTasks();
+    const allTasks = Store.getTasks().filter(t => !t.isPersonal);
 
     return `
       <div class="page-header">
@@ -454,7 +454,7 @@ const DashboardScreen = {
 
   // ─── 2. Personalized AI Developer Dashboard ───
   _renderDeveloperDashboard(user) {
-    const allTasks = Store.getTasks();
+    const allTasks = Store.getTasks().filter(t => !t.isPersonal);
     const allIssues = Store.getIssues();
     const allProjects = Store.getProjects();
     const now = new Date();
@@ -462,17 +462,22 @@ const DashboardScreen = {
     const firstName = user.name ? user.name.split(' ')[0] : 'there';
     const todayStr = now.toISOString().split('T')[0];
 
-    // Helper: Determine if item is assigned to current user
+    // Helper: Determine if item is assigned to current user (supporting multi-assignees)
     const isAssigned = (item) => {
       if (!item) return false;
-      return item.assigneeId === user.id ||
-             item.assigneeId === user.memberId ||
-             (user.id === 'preet' && item.assigneeId === 'm2') ||
-             (user.id === 'mohit' && item.assigneeId === 'm3') ||
-             (user.id === 'hirvi' && item.assigneeId === 'm4') ||
-             (user.memberId === 'm2' && item.assigneeId === 'preet') ||
-             (user.memberId === 'm3' && item.assigneeId === 'mohit') ||
-             (user.memberId === 'm4' && item.assigneeId === 'hirvi');
+      const ids = Array.isArray(item.assigneeIds) && item.assigneeIds.length > 0
+        ? item.assigneeIds
+        : (item.assigneeId ? [item.assigneeId] : []);
+      return ids.some(id =>
+        id === user.id ||
+        id === user.memberId ||
+        (user.id === 'preet' && id === 'm2') ||
+        (user.id === 'mohit' && id === 'm3') ||
+        (user.id === 'hirvi' && id === 'm4') ||
+        (user.memberId === 'm2' && id === 'preet') ||
+        (user.memberId === 'm3' && id === 'mohit') ||
+        (user.memberId === 'm4' && id === 'hirvi')
+      );
     };
 
     // Personalized Metrics strictly filtered by currentUser.id / memberId

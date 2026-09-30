@@ -26,7 +26,7 @@ const ReportsScreen = {
 
     const isUserTask = (t) => this._isUserTask(t, currentUser);
 
-    const allTasks = Store.getTasks();
+    const allTasks = Store.getTasks().filter(t => !t.isPersonal);
     const allProjects = Store.getProjects();
     const s = Store.getStats();
 
@@ -597,7 +597,7 @@ const ReportsScreen = {
   },
 
   _calculateReportData(config) {
-    const allTasks = Store.getTasks();
+    const allTasks = Store.getTasks().filter(t => !t.isPersonal);
     const allMilestones = Store.getMilestones ? Store.getMilestones() : [];
     const allProjects = Store.getProjects();
 

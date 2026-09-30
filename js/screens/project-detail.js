@@ -40,7 +40,7 @@ const ProjectDetailScreen = {
              (currentUser?.memberId === 'm4' && t.assigneeId === 'hirvi');
     };
 
-    let allProjectTasks = Store.getTasks(projectId);
+    let allProjectTasks = Store.getTasks(projectId).filter(t => !t.isPersonal);
 
     // Strict RBAC: Standard user must be a member or have assigned tasks in project to view it
     if (isStandardUser) {
@@ -292,7 +292,10 @@ const ProjectDetailScreen = {
   _renderTeam(members, project) {
     return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">
       ${members.map(m => {
-        const memberTasks = Store.getTasks(project.id).filter(t => t.assigneeId === m.id);
+        const memberTasks = Store.getTasks(project.id).filter(t => !t.isPersonal && (
+          t.assigneeId === m.id ||
+          (Array.isArray(t.assigneeIds) && t.assigneeIds.includes(m.id))
+        ));
         return `<div class="section-card" style="padding:20px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
             <div class="avatar avatar-lg" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>

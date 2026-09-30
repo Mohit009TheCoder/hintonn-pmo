@@ -14,17 +14,20 @@ const ProjectsScreen = {
 
     // Strict RBAC: Non-admin users only see projects where they are listed as an active team member or have tasks
     if (isStandardUser) {
-      const allTasks = Store.getTasks();
-      const myTasks = allTasks.filter(task =>
-        task.assigneeId === currentUser?.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser?.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser?.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser?.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser?.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser?.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser?.memberId === 'm4' && task.assigneeId === 'hirvi')
-      );
+      const allTasks = Store.getTasks().filter(t => !t.isPersonal);
+      const myTasks = allTasks.filter(task => {
+        const ids = Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0 ? task.assigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+        return ids.some(id =>
+          id === currentUser?.id ||
+          (userMemberId && id === userMemberId) ||
+          (currentUser?.id === 'preet' && id === 'm2') ||
+          (currentUser?.id === 'mohit' && id === 'm3') ||
+          (currentUser?.id === 'hirvi' && id === 'm4') ||
+          (currentUser?.memberId === 'm2' && id === 'preet') ||
+          (currentUser?.memberId === 'm3' && id === 'mohit') ||
+          (currentUser?.memberId === 'm4' && id === 'hirvi')
+        );
+      });
       const myTaskProjectIds = new Set(myTasks.map(t => t.projectId));
 
       // Also include projects where user is a listed team member

@@ -20,7 +20,7 @@ const MilestonesScreen = {
       const myProjectIds = new Set(myTasks.map(t => t.projectId));
 
       // Also include projects where user is a member
-      allProjects = allProjects || Store.getProjects();
+      const allProjects = Store.getProjects();
       allProjects.filter(p =>
         Array.isArray(p.memberIds) && (
           p.memberIds.includes(userMemberId) ||

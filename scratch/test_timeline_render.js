@@ -41,11 +41,14 @@ eval(fs.readFileSync(path.join(root, 'js', 'screens', 'timeline.js'), 'utf8') + 
 
 // ── Seed REAL data via Store API (no fabricated fields) ──
 Store.init();
+// Non-admin member — Store.createTask filters Admin assignees out, so use a real developer
+Store.createMember({ id: 'm7', name: 'Hirvi Sanghavi', role: 'AI Developer', initials: 'HS', color: '#1D4ED8' });
 const proj = Store.createProject({ name: 'Hintonn PMO' }); // no startDate/endDate on purpose
 const today = new Date().toISOString().split('T')[0];
 const plus = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; };
-Store.createTask({ projectId: proj.id, title: 'Dashboard QA pass', status: 'in-progress', startDate: today, dueDate: plus(2), assigneeIds: ['m3'] });
-Store.createTask({ projectId: proj.id, title: 'Invoice engine tests', status: 'todo', startDate: plus(1), dueDate: plus(5), assigneeIds: ['m4'] });
+Store.createTask({ projectId: proj.id, title: 'Dashboard QA pass', status: 'in-progress', startDate: today, dueDate: plus(2), assigneeIds: ['m7'] });
+Store.createTask({ projectId: proj.id, title: 'Invoice engine tests', status: 'todo', startDate: plus(1), dueDate: plus(5), assigneeIds: ['m7'] });
+Store.createTask({ projectId: proj.id, title: 'Firestore rules review', status: 'in-progress', startDate: today, dueDate: today, assigneeIds: ['m7'] });
 Store.createMilestone({ projectId: proj.id, name: 'Phase 1 sign-off', dueDate: today });
 Store.createMilestone({ projectId: proj.id, name: 'Go-live', dueDate: plus(10) });
 
@@ -95,13 +98,14 @@ check('fallback endDate picked from latest milestone due', p.endDate === plus(10
 
 // ── Team-on-day + completion checks (task-driven timeline) ──
 check('task bars carry assignee mini-avatars', dayExpanded.includes('timeline-avatar-mini'));
-check('avatar shows member initials (MJ)', dayExpanded.includes('MJ'));
+check('avatar shows member initials (HS)', dayExpanded.includes('>HS<'));
 check('due-today task bar highlighted (tk-today)', dayExpanded.includes('tk-today'));
-check('project row assigneeIds include task assignees (union)', p.assigneeIds.includes('m3') && p.assigneeIds.includes('m4'));
+check('project row assigneeIds include task assignees (union)', p.assigneeIds.includes('m7'));
 check('sidebar collapsed shows task-assignee avatar (MJ/HS)', sidebarHtml.includes('timeline-assignee-avatar'));
 
 // Done task: create one completed task and verify proper completion rendering
-Store.createTask({ projectId: proj.id, title: 'Old research spike', status: 'done', completed: true, startDate: plus(-3), dueDate: plus(-1), assigneeIds: ['m3'] });
+TimelineScreen._viewScale = 'day';
+Store.createTask({ projectId: proj.id, title: 'Old research spike', status: 'done', completed: true, startDate: plus(-3), dueDate: plus(-1), assigneeIds: ['m7'] });
 const data2 = TimelineScreen._getFilteredData();
 const dayDone = TimelineScreen._renderDayView(data2.list);
 const sideDone = TimelineScreen._renderLeftSidebar(data2.list);

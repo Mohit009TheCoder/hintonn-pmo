@@ -5125,3 +5125,38 @@ input[type="number"].form-control {
   background: var(--color-error-soft);
 }
 .timeline-ms-sidebar-row .timeline-phase-name { color: var(--color-primary-700); font-weight: 600; }
+
+/* ─── Timeline task bars: team avatars, due-today highlight, completion ─── */
+.timeline-task-bar-team {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 6px;
+  flex-shrink: 0;
+}
+.timeline-avatar-mini {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 7.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #FFFFFF;
+  margin-left: -4px;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+.timeline-task-bar.tk-today {
+  box-shadow: 0 0 0 2px var(--color-primary), var(--shadow-xs);
+}
+.timeline-task-bar.tk-done .timeline-task-bar-label {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.timeline-phase-name.tk-done-name {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}

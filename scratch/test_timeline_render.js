@@ -93,5 +93,21 @@ const p = data.list[0];
 check('fallback startDate is real createdAt date', /^\d{4}-\d{2}-\d{2}$/.test(p.startDate));
 check('fallback endDate picked from latest milestone due', p.endDate === plus(10));
 
+// ── Team-on-day + completion checks (task-driven timeline) ──
+check('task bars carry assignee mini-avatars', dayExpanded.includes('timeline-avatar-mini'));
+check('avatar shows member initials (MJ)', dayExpanded.includes('MJ'));
+check('due-today task bar highlighted (tk-today)', dayExpanded.includes('tk-today'));
+check('project row assigneeIds include task assignees (union)', p.assigneeIds.includes('m3') && p.assigneeIds.includes('m4'));
+check('sidebar collapsed shows task-assignee avatar (MJ/HS)', sidebarHtml.includes('timeline-assignee-avatar'));
+
+// Done task: create one completed task and verify proper completion rendering
+Store.createTask({ projectId: proj.id, title: 'Old research spike', status: 'done', completed: true, startDate: plus(-3), dueDate: plus(-1), assigneeIds: ['m3'] });
+const data2 = TimelineScreen._getFilteredData();
+const dayDone = TimelineScreen._renderDayView(data2.list);
+const sideDone = TimelineScreen._renderLeftSidebar(data2.list);
+check('done task renders with tk-done class', dayDone.includes('tk-done'));
+check('done task label prefixed with check', dayDone.includes('✓ Old research spike'));
+check('sidebar done task struck through', sideDone.includes('tk-done-name'));
+
 console.log(`\n${fail === 0 ? '✅ All timeline render checks passed' : '❌ ' + fail + ' checks failed'}`);
 process.exit(fail === 0 ? 0 : 1);

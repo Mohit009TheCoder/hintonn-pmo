@@ -110,7 +110,7 @@ const TimelineScreen = {
         startDate,
         endDate,
         bgExpiry: '',
-        assigneeIds: p.memberIds || [],
+        assigneeIds: [...new Set([...(p.memberIds || []), ...taskItems.flatMap(t => t.assigneeIds || [])])],
         phases,
         milestones,
         taskItems
@@ -882,7 +882,7 @@ const TimelineScreen = {
                   const isOverdue = tk.status !== 'done' && tk.end < new Date().toISOString().split('T')[0];
                   return `
                   <div class="timeline-phase-row" title="${tk.title} · due ${tk.end}">
-                    <span class="timeline-phase-name"><span class="timeline-task-dot ${stCls}"></span>${tk.title}</span>
+                    <span class="timeline-phase-name ${tk.status === 'done' ? 'tk-done-name' : ''}"><span class="timeline-task-dot ${stCls}"></span>${tk.status === 'done' ? '✓ ' : ''}${tk.title}</span>
                     <div class="timeline-phase-meta-right">
                       <span class="timeline-task-due ${isOverdue ? 'overdue' : ''}">${tk.end.slice(5)}</span>
                       ${this._renderAvatars(tk.assigneeIds)}
@@ -995,8 +995,11 @@ const TimelineScreen = {
                            onmouseenter="TimelineScreen.showTooltip(event, '${tkTip}')"
                            onmousemove="TimelineScreen.moveTooltip(event)"
                            onmouseleave="TimelineScreen.hideTooltip()">
-                        <div class="timeline-task-bar ${stCls}">
+                        <div class="timeline-task-bar ${stCls} ${tk.status !== 'done' && tk.end === todayStr ? 'tk-today' : ''} ${tk.status === 'done' ? 'tk-done' : ''}">
                           <span class="timeline-task-bar-label">${tk.status === 'done' ? '✓ ' : ''}${tk.title}</span>
+                          <span class="timeline-task-bar-team">
+                            ${(tkAssignees || []).slice(0, 3).map(m => `<span class="timeline-avatar-mini" style="background:${m.color}" title="${m.name} — ${tk.status === 'done' ? 'completed' : 'due ' + tk.end}">${m.initials}</span>`).join('')}
+                          </span>
                         </div>
                       </div>
                     ` : ''}

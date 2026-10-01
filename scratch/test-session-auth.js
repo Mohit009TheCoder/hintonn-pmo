@@ -75,6 +75,10 @@ function createEnvironment(initialSessionData = {}, initialLocalData = {}) {
     Sidebar: { render: () => {} },
     Topbar: { render: () => {}, closeUserMenu: () => {} },
     Command: { close: () => {} },
+    DashboardScreen: { render: () => '<div>Dashboard</div>' },
+    ProjectsScreen: { render: () => '<div>Projects</div>' },
+    TasksScreen: { render: () => '<div>Tasks</div>' },
+    RetentionScreen: { render: () => '<div>Retention</div>' },
     firebase: {
       apps: [{ name: '[DEFAULT]' }],
       auth: () => ({

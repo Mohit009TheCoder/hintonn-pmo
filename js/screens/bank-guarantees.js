@@ -6,7 +6,57 @@ const BankGuaranteesScreen = {
     return Store.getBankGuarantees();
   },
 
+  getUnseenCount() {
+    const allBGs = this._getBGs();
+    if (!allBGs || allBGs.length === 0) return 0;
+
+    // If user is currently viewing the Bank Guarantees screen, mark as seen and return 0
+    if (typeof App !== 'undefined' && (App.currentScreen === 'bg' || App.currentScreen === 'bank-guarantees')) {
+      this.markAllAsSeen();
+      return 0;
+    }
+
+    try {
+      if (typeof localStorage === 'undefined') return 0;
+      const raw = localStorage.getItem('hintonn_seen_bg_ids');
+      if (raw === null) {
+        // Initial state: mark current existing BGs as seen so no stale badge is displayed
+        const initialIds = allBGs.map(b => String(b.id || b.ref));
+        localStorage.setItem('hintonn_seen_bg_ids', JSON.stringify(initialIds));
+        return 0;
+      }
+      const seenIds = new Set(JSON.parse(raw).map(String));
+      const unseen = allBGs.filter(b => {
+        const id = String(b.id || b.ref);
+        return !seenIds.has(id);
+      });
+      return unseen.length;
+    } catch (e) {
+      return 0;
+    }
+  },
+
+  markAllAsSeen() {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const allBGs = this._getBGs();
+      const allIds = allBGs.map(b => String(b.id || b.ref));
+      localStorage.setItem('hintonn_seen_bg_ids', JSON.stringify(allIds));
+
+      // Remove badge from DOM immediately if present in the sidebar
+      const nav = document.getElementById('sidebar-nav');
+      if (nav) {
+        const bgLink = nav.querySelector('a[href="#bg"]');
+        if (bgLink) {
+          const badgeEl = bgLink.querySelector('.badge-count');
+          if (badgeEl) badgeEl.remove();
+        }
+      }
+    } catch (e) {}
+  },
+
   render() {
+    this.markAllAsSeen();
     const allBGs = this._getBGs();
     let bgs = allBGs;
 
@@ -31,6 +81,18 @@ const BankGuaranteesScreen = {
     const warningBGs = allBGs.filter(b => b.risk === 'warning');
     const warningVal = fmtAmt(warningBGs.reduce((s,b) => s + parseAmt(b.amount), 0));
 
+    // Dynamic Issuing Banks calculation from active Bank Guarantees dataset
+    const bankList = allBGs
+      .map(b => (b.issuingBank || b.bank || '').trim())
+      .filter(Boolean);
+    const uniqueBanks = Array.from(new Set(bankList));
+    const bankCount = uniqueBanks.length;
+    const bankSummaryText = bankCount > 0
+      ? (bankCount <= 4
+          ? uniqueBanks.join(', ')
+          : `${uniqueBanks.slice(0, 3).join(', ')} +${bankCount - 3} more`)
+      : 'No issuing banks registered';
+
     return `
       <div class="page-header">
         <div class="page-header-left">
@@ -49,7 +111,7 @@ const BankGuaranteesScreen = {
 
       <!-- Top Summary KPI Row -->
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="BankGuaranteesScreen.setFilter('all')" style="cursor:pointer">
           <div class="kpi-header">
             <span class="kpi-label">Active Guarantees</span>
             <div class="kpi-icon-wrap">${Icons.shield}</div>
@@ -60,7 +122,7 @@ const BankGuaranteesScreen = {
           </div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="BankGuaranteesScreen.setFilter('critical')" style="cursor:pointer">
           <div class="kpi-header">
             <span class="kpi-label">Critical Expiry</span>
             <div class="kpi-icon-wrap alert">${Icons.alertCircle}</div>
@@ -74,7 +136,7 @@ const BankGuaranteesScreen = {
           </div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="BankGuaranteesScreen.setFilter('warning')" style="cursor:pointer">
           <div class="kpi-header">
             <span class="kpi-label">Warning Expiry</span>
             <div class="kpi-icon-wrap">${Icons.clock}</div>
@@ -85,14 +147,14 @@ const BankGuaranteesScreen = {
           </div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="BankGuaranteesScreen.setFilter('all')" style="cursor:pointer">
           <div class="kpi-header">
             <span class="kpi-label">Issuing Banks</span>
             <div class="kpi-icon-wrap">${Icons.folder}</div>
           </div>
-          <div class="kpi-value">5 Institutions</div>
-          <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
-            Standard Chartered, HSBC, Barclays, Citi
+          <div class="kpi-value">${bankCount} ${bankCount === 1 ? 'Institution' : 'Institutions'}</div>
+          <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)" title="${uniqueBanks.join(', ')}">
+            ${bankSummaryText}
           </div>
         </div>
       </div>
@@ -128,7 +190,7 @@ const BankGuaranteesScreen = {
                   <th>Issuing Bank</th>
                   <th>Project / Package</th>
                   <th>Guarantee Type</th>
-                  <th class="num">Amount ($)</th>
+                  <th class="num">Amount (₹)</th>
                   <th>Issue Date</th>
                   <th>Expiry Date</th>
                   <th class="center">Risk / Status</th>
@@ -145,7 +207,7 @@ const BankGuaranteesScreen = {
                       </span>
                     </td>
                     <td style="font-weight:600;color:var(--color-text-primary)">
-                      ${bg.issuingBank}
+                      ${bg.issuingBank || bg.bank || '—'}
                     </td>
                     <td>
                       <div style="font-weight:600;color:var(--color-text-primary);font-size:13px">${bg.projectName}</div>
@@ -207,7 +269,7 @@ const BankGuaranteesScreen = {
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md)">
-          <div><span style="color:var(--color-text-muted)">Issuing Bank:</span> <strong>${bg.issuingBank || '—'}</strong></div>
+          <div><span style="color:var(--color-text-muted)">Issuing Bank:</span> <strong>${bg.issuingBank || bg.bank || '—'}</strong></div>
           <div><span style="color:var(--color-text-muted)">Guarantee Amount:</span> <strong style="font-size:14px;color:var(--color-primary-700)">${bg.amount || '₹0'}</strong></div>
           <div><span style="color:var(--color-text-muted)">Project:</span> <strong>${bg.projectName || '—'}</strong></div>
           <div><span style="color:var(--color-text-muted)">Guarantee Type:</span> <strong>${bg.type || 'BG'}</strong></div>
@@ -237,37 +299,115 @@ const BankGuaranteesScreen = {
   },
 
   openNewBGModal() {
+    const projects = (typeof Store !== 'undefined' && Store.getProjects) ? Store.getProjects() : [];
     const html = `
-      <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;flex-direction:column;gap:14px">
         <div class="form-group">
           <label class="form-label">Project</label>
           <select class="form-control" id="new-bg-proj">
-            <option value="p1">Hintonn AI Core Platform</option>
-            <option value="p2">Client Substation Package</option>
-            <option value="p3">Utilities & Plant Balance</option>
-            <option value="p4">Grid Automation & LoRA AI</option>
+            ${projects.length > 0 ? projects.map(p => `
+              <option value="${p.id}">${p.name} ${p.code ? `(${p.code})` : ''}</option>
+            `).join('') : `
+              <option value="p1">Hintonn AI Core Platform</option>
+              <option value="p2">Client Substation Package</option>
+              <option value="p3">Utilities & Plant Balance</option>
+              <option value="p4">Grid Automation & LoRA AI</option>
+            `}
           </select>
         </div>
+
         <div class="form-group">
-          <label class="form-label">Issuing Commercial Bank</label>
-          <input type="text" class="form-control" id="new-bg-bank" placeholder="e.g. Standard Chartered / HSBC">
+          <label class="form-label">Issuing Commercial Bank (Indian Scheduled Banks)</label>
+          <select class="form-control" id="new-bg-bank" onchange="const customWrap = document.getElementById('new-bg-custom-bank-wrap'); if(customWrap) customWrap.style.display = this.value === 'Other Indian Scheduled Bank' ? 'block' : 'none';">
+            <option value="" disabled selected>Select Issuing Indian Bank...</option>
+            
+            <optgroup label="Public Sector Banks (PSU)">
+              <option value="State Bank of India">State Bank of India (SBI)</option>
+              <option value="Punjab National Bank">Punjab National Bank (PNB)</option>
+              <option value="Bank of Baroda">Bank of Baroda (BOB)</option>
+              <option value="Canara Bank">Canara Bank</option>
+              <option value="Union Bank of India">Union Bank of India</option>
+              <option value="Bank of India">Bank of India (BOI)</option>
+              <option value="Indian Bank">Indian Bank</option>
+              <option value="Central Bank of India">Central Bank of India</option>
+              <option value="Indian Overseas Bank">Indian Overseas Bank (IOB)</option>
+              <option value="UCO Bank">UCO Bank</option>
+              <option value="Bank of Maharashtra">Bank of Maharashtra</option>
+              <option value="Punjab & Sind Bank">Punjab & Sind Bank</option>
+            </optgroup>
+
+            <optgroup label="Leading Private Sector Banks">
+              <option value="HDFC Bank">HDFC Bank</option>
+              <option value="ICICI Bank">ICICI Bank</option>
+              <option value="Axis Bank">Axis Bank</option>
+              <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+              <option value="IndusInd Bank">IndusInd Bank</option>
+              <option value="IDBI Bank">IDBI Bank</option>
+              <option value="Yes Bank">Yes Bank</option>
+              <option value="Federal Bank">Federal Bank</option>
+              <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
+              <option value="South Indian Bank">South Indian Bank</option>
+              <option value="RBL Bank">RBL Bank</option>
+              <option value="Bandhan Bank">Bandhan Bank</option>
+              <option value="City Union Bank">City Union Bank</option>
+              <option value="Karur Vysya Bank">Karur Vysya Bank</option>
+              <option value="Karnataka Bank">Karnataka Bank</option>
+              <option value="Tamilnad Mercantile Bank">Tamilnad Mercantile Bank</option>
+              <option value="Jammu & Kashmir Bank">Jammu & Kashmir Bank (J&K Bank)</option>
+              <option value="CSB Bank">CSB Bank</option>
+              <option value="Dhanlaxmi Bank">Dhanlaxmi Bank</option>
+              <option value="DCB Bank">DCB Bank</option>
+            </optgroup>
+
+            <optgroup label="Development & Specialized Institutions">
+              <option value="Export-Import Bank of India (EXIM)">Export-Import Bank of India (EXIM Bank)</option>
+              <option value="SIDBI">Small Industries Development Bank of India (SIDBI)</option>
+              <option value="NABARD">NABARD</option>
+            </optgroup>
+
+            <optgroup label="Foreign Scheduled Commercial Banks (Operating in India)">
+              <option value="Standard Chartered Bank">Standard Chartered Bank (India)</option>
+              <option value="HSBC India">HSBC India</option>
+              <option value="Citibank India">Citibank India</option>
+              <option value="Deutsche Bank India">Deutsche Bank India</option>
+              <option value="Barclays Bank India">Barclays Bank India</option>
+              <option value="DBS Bank India">DBS Bank India</option>
+              <option value="BNP Paribas India">BNP Paribas India</option>
+              <option value="SMBC Bank India">Sumitomo Mitsui Banking Corp (SMBC India)</option>
+              <option value="MUFG Bank India">MUFG Bank India</option>
+              <option value="Mizuho Bank India">Mizuho Bank India</option>
+            </optgroup>
+
+            <optgroup label="Other">
+              <option value="Other Indian Scheduled Bank">Other Indian Scheduled Bank...</option>
+            </optgroup>
+          </select>
         </div>
+
+        <div class="form-group" id="new-bg-custom-bank-wrap" style="display:none">
+          <label class="form-label">Specify Bank Name</label>
+          <input type="text" class="form-control" id="new-bg-custom-bank" placeholder="Enter bank name...">
+        </div>
+
         <div class="form-group">
           <label class="form-label">Guarantee Amount (₹)</label>
-          <input type="text" class="form-control" id="new-bg-amount" placeholder="e.g. 350,000">
+          <input type="text" class="form-control" id="new-bg-amount" placeholder="e.g. 14,250,000">
         </div>
+
         <div class="form-group">
           <label class="form-label">Guarantee Type</label>
           <select class="form-control" id="new-bg-type">
-            <option>Performance Guarantee (10%)</option>
-            <option>Advance Payment Guarantee (10%)</option>
-            <option>Defects Liability (DLP) BG (10%)</option>
-            <option>Retention Guarantee</option>
+            <option value="Performance BG">Performance Guarantee (PBG - 10%)</option>
+            <option value="Advance BG">Advance Payment Guarantee (ABG - 10%)</option>
+            <option value="Defects Liability (DLP) BG">Defects Liability (DLP) BG (10%)</option>
+            <option value="Retention BG">Retention Money Guarantee (RBG)</option>
+            <option value="Financial BG">Financial Guarantee / Bid Bond</option>
           </select>
         </div>
+
         <div class="form-group">
           <label class="form-label">Expiry Date</label>
-          <input type="date" class="form-control" id="new-bg-expiry" value="2027-04-30">
+          <input type="date" class="form-control" id="new-bg-expiry" value="${new Date(Date.now() + 180*24*60*60*1000).toISOString().slice(0, 10)}">
         </div>
       </div>
     `;
@@ -279,22 +419,108 @@ const BankGuaranteesScreen = {
   },
 
   _saveBG() {
-    const projectId = document.getElementById('new-bg-proj') ? document.getElementById('new-bg-proj').value : 'p1';
-    const bank = document.getElementById('new-bg-bank') ? document.getElementById('new-bg-bank').value : '';
-    const amount = document.getElementById('new-bg-amount') ? document.getElementById('new-bg-amount').value : '';
-    const type = document.getElementById('new-bg-type') ? document.getElementById('new-bg-type').value : '';
+    const projSelect = document.getElementById('new-bg-proj');
+    const projectId = projSelect ? projSelect.value : 'p1';
+    const proj = (typeof Store !== 'undefined' && Store.getProject) ? Store.getProject(projectId) : null;
+    const projectName = proj ? proj.name : (projSelect && projSelect.options[projSelect.selectedIndex] ? projSelect.options[projSelect.selectedIndex].text : 'General Project');
+    const packageCode = proj ? (proj.packageCode || proj.code || 'PKG-01') : 'PKG-01';
+
+    const bankSelect = document.getElementById('new-bg-bank');
+    let bank = bankSelect ? bankSelect.value : '';
+    if (bank === 'Other Indian Scheduled Bank') {
+      const custom = document.getElementById('new-bg-custom-bank') ? document.getElementById('new-bg-custom-bank').value.trim() : '';
+      if (custom) bank = custom;
+    }
+
+    if (!bank) {
+      if (typeof Toast !== 'undefined' && Toast.show) Toast.show('Please select an issuing Indian bank.', 'warning');
+      return;
+    }
+
+    const amountRaw = document.getElementById('new-bg-amount') ? document.getElementById('new-bg-amount').value.trim() : '';
+    if (!amountRaw) {
+      if (typeof Toast !== 'undefined' && Toast.show) Toast.show('Please enter the guarantee amount.', 'warning');
+      return;
+    }
+
+    const cleanAmt = amountRaw.replace(/[^0-9.]/g, '');
+    const numAmt = parseFloat(cleanAmt) || 0;
+    const fmtINR = (n) => {
+      if (!n || n === 0) return '₹0';
+      const s = Math.round(n).toString();
+      let result = s.slice(-3);
+      let remaining = s.slice(0, -3);
+      while (remaining.length > 2) {
+        result = remaining.slice(-2) + ',' + result;
+        remaining = remaining.slice(0, -2);
+      }
+      if (remaining.length > 0) result = remaining + ',' + result;
+      return '₹' + result;
+    };
+    const formattedAmount = fmtINR(numAmt);
+
+    const type = document.getElementById('new-bg-type') ? document.getElementById('new-bg-type').value : 'Performance BG';
     const expiry = document.getElementById('new-bg-expiry') ? document.getElementById('new-bg-expiry').value : '';
 
+    if (!expiry) {
+      if (typeof Toast !== 'undefined' && Toast.show) Toast.show('Please select an expiry date.', 'warning');
+      return;
+    }
+
+    // Determine type code for BG reference
+    let typeCode = 'PBG';
+    const tl = type.toLowerCase();
+    if (tl.includes('advance')) typeCode = 'ABG';
+    else if (tl.includes('defects') || tl.includes('dlp')) typeCode = 'DLP';
+    else if (tl.includes('retention')) typeCode = 'RBG';
+    else if (tl.includes('financial') || tl.includes('bid')) typeCode = 'FBG';
+
+    const projectCode = proj ? (proj.code || (proj.name ? proj.name.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '') : 'PRJ')) : 'PRJ';
+    const bgRef = `BG/${projectCode}/${typeCode}/${String(Math.floor(100 + Math.random() * 900))}`;
+
+    // Risk and days left calculation
+    const expDate = new Date(expiry);
+    const today = new Date();
+    const daysLeft = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+    let risk = 'safe';
+    let badgeClass = 'badge-success';
+    let statusLabel = 'Active';
+    if (daysLeft < 0) {
+      risk = 'expired';
+      badgeClass = 'badge-danger';
+      statusLabel = 'Expired';
+    } else if (daysLeft <= 30) {
+      risk = 'critical';
+      badgeClass = 'badge-high';
+      statusLabel = 'Critical';
+    } else if (daysLeft <= 60) {
+      risk = 'warning';
+      badgeClass = 'badge-warning';
+      statusLabel = 'Warning';
+    }
+
     Store.createBankGuarantee({
+      ref: bgRef,
       projectId,
+      projectName,
+      packageCode,
       issuingBank: bank,
-      amount: amount.startsWith('₹') ? amount : `₹${amount}`,
+      bank: bank,
+      amount: formattedAmount,
       type,
-      expiryDate: expiry
+      issueDate: new Date().toISOString().slice(0, 10),
+      expiryDate: expiry,
+      daysLeft,
+      risk,
+      status: 'active',
+      statusLabel,
+      badgeClass
     });
 
-    Modal.closeAll();
-    Toast.show('New Bank Guarantee registered and added to active risk monitor.', 'success', 4000);
-    App.refresh();
+    if (typeof Modal !== 'undefined' && Modal.closeAll) Modal.closeAll();
+    if (typeof Toast !== 'undefined' && Toast.show) {
+      Toast.show(`Bank Guarantee ${bgRef} from ${bank} registered successfully.`, 'success', 4000);
+    }
+    if (typeof App !== 'undefined' && App.refresh) App.refresh();
   }
 };

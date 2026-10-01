@@ -80,16 +80,55 @@ const BillingScreen = {
 
   setViewMode(mode) {
     this._viewMode = mode;
+    if (typeof document !== 'undefined') {
+      const btnCompany = document.getElementById('billing-btn-group-company');
+      const btnTable = document.getElementById('billing-btn-all-invoices');
+      if (btnCompany && btnTable) {
+        if (mode === 'company') {
+          btnCompany.classList.remove('btn-ghost');
+          btnCompany.classList.add('btn-primary');
+          btnCompany.setAttribute('aria-pressed', 'true');
+          btnTable.classList.remove('btn-primary');
+          btnTable.classList.add('btn-ghost');
+          btnTable.setAttribute('aria-pressed', 'false');
+        } else {
+          btnTable.classList.remove('btn-ghost');
+          btnTable.classList.add('btn-primary');
+          btnTable.setAttribute('aria-pressed', 'true');
+          btnCompany.classList.remove('btn-primary');
+          btnCompany.classList.add('btn-ghost');
+          btnCompany.setAttribute('aria-pressed', 'false');
+        }
+      }
+    }
     this.updateBillingContainer();
   },
 
   setCompanyFilter(companyId) {
     this._companyFilter = companyId;
+    if (typeof document !== 'undefined') {
+      const select = document.getElementById('billing-company-filter');
+      if (select && select.value !== companyId) {
+        select.value = companyId;
+      }
+    }
     this.updateBillingContainer();
   },
 
   setFilter(filter) {
     this._filter = filter;
+    if (typeof document !== 'undefined' && typeof document.querySelectorAll === 'function') {
+      const tabs = document.querySelectorAll('.timeline-stage-tab[data-billing-filter]');
+      if (tabs && tabs.forEach) {
+        tabs.forEach(tab => {
+          if (tab.getAttribute('data-billing-filter') === filter) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+      }
+    }
     this.updateBillingContainer();
   },
 
@@ -140,19 +179,19 @@ const BillingScreen = {
     const tabsContainer = document.getElementById('billing-stage-tabs');
     if (tabsContainer) {
       tabsContainer.innerHTML = `
-        <button class="timeline-stage-tab ${this._filter==='all'?'active':''}" onclick="BillingScreen.setFilter('all')">
+        <button type="button" class="timeline-stage-tab ${this._filter==='all'?'active':''}" data-billing-filter="all" onclick="BillingScreen.setFilter('all')">
           All Bills (${allInvoices.length})
         </button>
-        <button class="timeline-stage-tab ${this._filter==='pending'?'active':''}" onclick="BillingScreen.setFilter('pending')">
+        <button type="button" class="timeline-stage-tab ${this._filter==='pending'?'active':''}" data-billing-filter="pending" onclick="BillingScreen.setFilter('pending')">
           Pending Approval (${allInvoices.filter(i=>i.status!=='paid').length})
         </button>
-        <button class="timeline-stage-tab ${this._filter==='paid'?'active':''}" onclick="BillingScreen.setFilter('paid')">
+        <button type="button" class="timeline-stage-tab ${this._filter==='paid'?'active':''}" data-billing-filter="paid" onclick="BillingScreen.setFilter('paid')">
           Paid (${allInvoices.filter(i=>i.status==='paid').length})
         </button>
-        <button class="timeline-stage-tab ${this._filter==='revised'?'active':''}" onclick="BillingScreen.setFilter('revised')">
+        <button type="button" class="timeline-stage-tab ${this._filter==='revised'?'active':''}" data-billing-filter="revised" onclick="BillingScreen.setFilter('revised')">
           Revised (v1.1+) (${allInvoices.filter(i=>i.isRevised).length})
         </button>
-        <button class="timeline-stage-tab ${this._filter==='latest'?'active':''}" onclick="BillingScreen.setFilter('latest')">
+        <button type="button" class="timeline-stage-tab ${this._filter==='latest'?'active':''}" data-billing-filter="latest" onclick="BillingScreen.setFilter('latest')">
           Latest Active Only
         </button>
       `;
@@ -261,32 +300,38 @@ const BillingScreen = {
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
               
               <!-- View Mode Selector -->
-              <div class="btn-group" style="display:inline-flex;background:var(--color-bg-page);padding:2px;border-radius:var(--radius-sm);border:1px solid var(--color-border)">
-                <button class="btn btn-xs ${this._viewMode==='company'?'btn-primary':'btn-ghost'}" 
-                        onclick="BillingScreen.setViewMode('company')" style="font-weight:600">
+              <div class="btn-group" id="billing-view-mode-group" style="display:inline-flex;align-items:center;background:var(--color-bg-page);padding:2px;border-radius:var(--radius-sm);border:1px solid var(--color-border);flex-shrink:0;box-sizing:border-box;gap:2px">
+                <button type="button" id="billing-btn-group-company"
+                        class="btn btn-xs ${this._viewMode==='company'?'btn-primary':'btn-ghost'}" 
+                        onclick="BillingScreen.setViewMode('company')" 
+                        style="font-weight:600;transform:none!important;cursor:pointer;white-space:nowrap;line-height:22px;height:26px;padding:0 12px;box-sizing:border-box;margin:0"
+                        aria-pressed="${this._viewMode==='company'}">
                   Group by Company
                 </button>
-                <button class="btn btn-xs ${this._viewMode==='table'?'btn-primary':'btn-ghost'}" 
-                        onclick="BillingScreen.setViewMode('table')" style="font-weight:600">
+                <button type="button" id="billing-btn-all-invoices"
+                        class="btn btn-xs ${this._viewMode==='table'?'btn-primary':'btn-ghost'}" 
+                        onclick="BillingScreen.setViewMode('table')" 
+                        style="font-weight:600;transform:none!important;cursor:pointer;white-space:nowrap;line-height:22px;height:26px;padding:0 12px;box-sizing:border-box;margin:0"
+                        aria-pressed="${this._viewMode==='table'}">
                   All Invoices
                 </button>
               </div>
 
               <!-- Status & Version Filter Tabs -->
-              <div class="timeline-stage-tabs" id="billing-stage-tabs" style="margin:0">
-                <button class="timeline-stage-tab ${this._filter==='all'?'active':''}" onclick="BillingScreen.setFilter('all')">
+              <div class="timeline-stage-tabs" id="billing-stage-tabs" style="margin:0;flex-shrink:0">
+                <button type="button" class="timeline-stage-tab ${this._filter==='all'?'active':''}" data-billing-filter="all" onclick="BillingScreen.setFilter('all')">
                   All Bills (${allInvoices.length})
                 </button>
-                <button class="timeline-stage-tab ${this._filter==='pending'?'active':''}" onclick="BillingScreen.setFilter('pending')">
+                <button type="button" class="timeline-stage-tab ${this._filter==='pending'?'active':''}" data-billing-filter="pending" onclick="BillingScreen.setFilter('pending')">
                   Pending Approval (${allInvoices.filter(i=>i.status!=='paid').length})
                 </button>
-                <button class="timeline-stage-tab ${this._filter==='paid'?'active':''}" onclick="BillingScreen.setFilter('paid')">
+                <button type="button" class="timeline-stage-tab ${this._filter==='paid'?'active':''}" data-billing-filter="paid" onclick="BillingScreen.setFilter('paid')">
                   Paid (${allInvoices.filter(i=>i.status==='paid').length})
                 </button>
-                <button class="timeline-stage-tab ${this._filter==='revised'?'active':''}" onclick="BillingScreen.setFilter('revised')">
+                <button type="button" class="timeline-stage-tab ${this._filter==='revised'?'active':''}" data-billing-filter="revised" onclick="BillingScreen.setFilter('revised')">
                   Revised (v1.1+) (${allInvoices.filter(i=>i.isRevised).length})
                 </button>
-                <button class="timeline-stage-tab ${this._filter==='latest'?'active':''}" onclick="BillingScreen.setFilter('latest')">
+                <button type="button" class="timeline-stage-tab ${this._filter==='latest'?'active':''}" data-billing-filter="latest" onclick="BillingScreen.setFilter('latest')">
                   Latest Active Only
                 </button>
               </div>
@@ -296,7 +341,7 @@ const BillingScreen = {
             <!-- Right: Company Filter Dropdown & Instant Search -->
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
               
-              <select class="form-select form-control-sm" style="width:200px;height:32px;font-size:12.5px" 
+              <select id="billing-company-filter" class="form-select form-control-sm" style="width:200px;height:32px;font-size:12.5px" 
                       onchange="BillingScreen.setCompanyFilter(this.value)">
                 <option value="all" ${this._companyFilter==='all'?'selected':''}>Filter by Company (${companies.length})</option>
                 ${companies.map(c => `

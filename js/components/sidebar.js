@@ -23,7 +23,7 @@ const Sidebar = {
     { section: 'COMMERCIAL', isCommercial: true, items: [
       { id: 'billing', icon: 'fileText', label: 'Billing & Invoices' },
       { id: 'retention', icon: 'dollarSign', label: 'Retention Summary' },
-      { id: 'bg', icon: 'shield', label: 'Bank Guarantees (BG)', badge: () => 2 },
+      { id: 'bg', icon: 'shield', label: 'Bank Guarantees (BG)', badge: () => (typeof BankGuaranteesScreen !== 'undefined' && BankGuaranteesScreen.getUnseenCount ? BankGuaranteesScreen.getUnseenCount() : 0) },
       { id: 'dlp', icon: 'clock', label: 'DLP Timelines' },
     ]},
     { section: 'AI & Intelligence', isAi: true, items: [
@@ -90,7 +90,7 @@ const Sidebar = {
         const isAiItem = section.isAi;
         const isCommercial = section.isCommercial;
         
-        html += `<a href="#${item.id}" class="sidebar-item ${active ? 'active' : ''} ${isAiItem ? 'ai-item' : ''} ${isCommercial ? 'commercial-item' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
+        html += `<a href="#${item.id}" class="sidebar-item ${active ? 'active' : ''} ${isAiItem ? 'ai-item' : ''} ${isCommercial ? 'commercial-item' : ''}" onclick="${item.id === 'bg' ? 'if(typeof BankGuaranteesScreen!==\'undefined\'&&BankGuaranteesScreen.markAllAsSeen)BankGuaranteesScreen.markAllAsSeen();' : ''}if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons[item.icon] || Icons.hexagonSm}
           <span>${item.label}</span>
           ${badge > 0 ? `<span class="badge-count">${badge}</span>` : ''}

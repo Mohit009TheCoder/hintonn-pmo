@@ -96,34 +96,39 @@ function createEnvironment(initialSessionData = {}, initialLocalData = {}) {
 
   // Load app scripts in order
   const pmoDir = path.resolve(__dirname, '..');
-  const storeCode = fs.readFileSync(path.join(pmoDir, 'js/store.js'), 'utf8');
   const authCode = fs.readFileSync(path.join(pmoDir, 'js/auth.js'), 'utf8');
+  const storeCode = fs.readFileSync(path.join(pmoDir, 'js/store.js'), 'utf8');
   const loginCode = fs.readFileSync(path.join(pmoDir, 'js/screens/login.js'), 'utf8');
   const appCode = fs.readFileSync(path.join(pmoDir, 'js/app.js'), 'utf8');
 
-  vm.runInContext(storeCode, ctx);
   vm.runInContext(authCode, ctx);
+  vm.runInContext(storeCode, ctx);
   vm.runInContext(loginCode, ctx);
   vm.runInContext(appCode, ctx);
 
-  return { ctx, windowObj, sessionStorageData, localStorageData, domElements };
+  const Auth = vm.runInContext('Auth', ctx);
+  const Store = vm.runInContext('Store', ctx);
+  const LoginScreen = vm.runInContext('LoginScreen', ctx);
+  const App = vm.runInContext('App', ctx);
+
+  return { ctx, Auth, Store, LoginScreen, App, windowObj, sessionStorageData, localStorageData, domElements };
 }
 
 async function runTests() {
   console.log('--- Test 1: Fresh System Start Without Session ---');
   {
-    const { ctx, windowObj } = createEnvironment({}, {});
-    ctx.Store.init();
-    ctx.Auth.init();
-    assert.strictEqual(ctx.Auth.currentUser, null, 'Auth.currentUser must be null on fresh start');
-    assert.strictEqual(ctx.Auth.isAuthenticated(), false, 'Auth.isAuthenticated() must be false on fresh start');
+    const { Auth, Store, App, windowObj } = createEnvironment({}, {});
+    Store.init();
+    Auth.init();
+    assert.strictEqual(Auth.currentUser, null, 'Auth.currentUser must be null on fresh start');
+    assert.strictEqual(Auth.isAuthenticated(), false, 'Auth.isAuthenticated() must be false on fresh start');
 
     // Route check: User tries to directly access dashboard
     windowObj.location.hash = '#dashboard';
-    ctx.App.handleRoute();
+    App.handleRoute();
 
     assert.strictEqual(windowObj.location.hash, '#login', 'Direct access to #dashboard must be blocked and redirected to #login');
-    assert.strictEqual(ctx.App.currentScreen, 'login', 'App currentScreen must be login');
+    assert.strictEqual(App.currentScreen, 'login', 'App currentScreen must be login');
     console.log('  ✓ System starts with login, direct access blocked');
   }
 

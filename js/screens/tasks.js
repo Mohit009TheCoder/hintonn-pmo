@@ -960,6 +960,9 @@ const TasksScreen = {
       <div class="assignee-pills-wrap" id="${prefix}-assignee-pills" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
         ${availableMembers.map(m => {
           const isSelected = selectedMemberIds.includes(m.id) ||
+                             selectedMemberIds.includes(String(m.id)) ||
+                             (m.memberId && selectedMemberIds.includes(m.memberId)) ||
+                             (m.userId && selectedMemberIds.includes(m.userId)) ||
                              (m.id === 'm2' && selectedMemberIds.includes('preet')) ||
                              (m.id === 'm3' && selectedMemberIds.includes('mohit')) ||
                              (m.id === 'm4' && selectedMemberIds.includes('hirvi'));
@@ -967,10 +970,10 @@ const TasksScreen = {
           const color = m.color || '#2563EB';
           return `
             <label class="assignee-pill-btn ${isSelected ? 'selected' : ''}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid ${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-border)'};background:${isSelected ? 'rgba(37,99,235,0.08)' : 'var(--color-surface)'};cursor:pointer;user-select:none;transition:all 0.15s ease;">
-              <input type="checkbox" class="task-assignee-cb" value="${m.id}" ${isSelected ? 'checked' : ''} onchange="TasksScreen.handleAssigneePillToggle(this)" style="display:none;">
-              <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">${initials}</span>
-              <span style="font-size:12.5px;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-text-primary)'};">${m.name}</span>
-              <span class="assignee-check-indicator" style="font-size:12px;color:var(--color-primary);font-weight:bold;margin-left:2px;display:${isSelected ? 'inline-block' : 'none'};">✓</span>
+              <input type="checkbox" class="task-assignee-cb" value="${m.id}" ${isSelected ? 'checked' : ''} onchange="TasksScreen.handleAssigneePillToggle(this)" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+              <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;">${initials}</span>
+              <span style="font-size:12.5px;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-text-primary)'};pointer-events:none;">${m.name}</span>
+              <span class="assignee-check-indicator" style="font-size:12px;color:var(--color-primary);font-weight:bold;margin-left:2px;pointer-events:none;display:${isSelected ? 'inline-block' : 'none'};">✓</span>
             </label>
           `;
         }).join('')}
@@ -980,11 +983,11 @@ const TasksScreen = {
 
   _renderReadOnlyAssigneePills(selectedMemberIds = []) {
     if (!selectedMemberIds || selectedMemberIds.length === 0) {
-      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;">Unassigned</div>`;
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">Unassigned</div>`;
     }
     const members = selectedMemberIds.map(id => Store.getMember(id)).filter(Boolean);
     if (members.length === 0) {
-      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;">Unassigned</div>`;
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">Unassigned</div>`;
     }
     return `
       <div class="assignee-pills-wrap" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
@@ -1003,16 +1006,24 @@ const TasksScreen = {
   },
 
   handleAssigneePillToggle(input) {
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    if (!currentUser || currentUser.role !== 'Admin') {
-      if (input && typeof input.checked === 'boolean') {
-        input.checked = !input.checked;
-      }
-      if (typeof Toast !== 'undefined') Toast.show('Only Admin can assign or change team members.', 'warning');
-      return;
-    }
     if (!input || typeof input.closest !== 'function') return;
+    const label = input.closest('.assignee-pill-btn');
     if (!label) return;
+
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = !currentUser || currentUser.role === 'Admin' || (typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function' && Auth.isAdmin());
+
+    if (!isAdmin) {
+      const isPersonalTaskModal = document.getElementById('personal-task-title') !== null;
+      if (!isPersonalTaskModal) {
+        if (input && typeof input.checked === 'boolean') {
+          input.checked = !input.checked;
+        }
+        if (typeof Toast !== 'undefined') Toast.show('Only Admin can assign or change team members.', 'warning');
+        return;
+      }
+    }
+
     const isChecked = input.checked;
     if (isChecked) {
       label.classList.add('selected');

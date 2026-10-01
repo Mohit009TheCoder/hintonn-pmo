@@ -125,7 +125,10 @@ const App = {
       if (!Auth.isAuthenticated()) {
         const targetView = authRoutes.includes(rawHash) ? rawHash : 'login';
         this.currentScreen = targetView;
-        if (loc.hash && !loc.hash.startsWith('#' + targetView)) {
+        if (loc.hash !== '#' + targetView) {
+          if (typeof window !== 'undefined' && window.location) {
+            window.location.hash = '#' + targetView;
+          }
           loc.hash = '#' + targetView;
         }
         this.renderLogin(targetView);

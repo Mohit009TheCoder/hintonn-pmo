@@ -610,7 +610,14 @@ const LoginScreen = {
     };
 
     Auth.currentUser = adminUser;
-    localStorage.setItem('hintonn-current-user', JSON.stringify(adminUser));
+    if (typeof Auth !== 'undefined' && typeof Auth._setSessionUser === 'function') {
+      Auth._setSessionUser(adminUser);
+    } else {
+      try {
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('hintonn-current-user', JSON.stringify(adminUser));
+        if (typeof localStorage !== 'undefined') localStorage.removeItem('hintonn-current-user');
+      } catch (e) {}
+    }
     if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
       Store._data.settings.currentUser = 'm3';
     }

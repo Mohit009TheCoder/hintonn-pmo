@@ -28,8 +28,31 @@ const FirebaseAuth = {
         firebase.initializeApp(firebaseConfig);
       }
       this._auth = firebase.auth();
+      // Enforce SESSION persistence so credentials are only stored for current tab/session
+      if (typeof firebase.auth.Auth !== 'undefined' && firebase.auth.Auth.Persistence) {
+        this._auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(err => {
+          console.warn('[FirebaseAuth] setPersistence notice:', err);
+        });
+      }
       this._db = firebase.firestore();
       this._initialized = true;
+
+      // On fresh tab start (no active session in sessionStorage):
+      // Purge any lingering Firebase background auth so user is prompted to log in!
+      const hasActiveSession = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hintonn-current-user');
+      if (!hasActiveSession) {
+        if (this._auth.currentUser) {
+          this._auth.signOut().catch(() => {});
+        } else {
+          const unsubInitAuth = this._auth.onAuthStateChanged(u => {
+            if (u && !(typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hintonn-current-user'))) {
+              this._auth.signOut().catch(() => {});
+            }
+            if (typeof unsubInitAuth === 'function') unsubInitAuth();
+          });
+        }
+      }
+
       this._listenToUsers();
     } catch(err) {
       console.warn('[FirebaseAuth] Init error:', err);
@@ -115,6 +138,9 @@ const FirebaseAuth = {
   async signInEmail(email, password) {
     this._ensureInit();
     try {
+      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence) {
+        await this._auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
+      }
       const userCredential = await this._auth.signInWithEmailAndPassword(email, password);
       const savedUser = await this._saveOrUpdateUserSession(userCredential.user, 'password');
       return savedUser || null;
@@ -127,6 +153,9 @@ const FirebaseAuth = {
   async signUpEmail(name, email, password) {
     this._ensureInit();
     try {
+      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence) {
+        await this._auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
+      }
       const userCredential = await this._auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
       await user.updateProfile({ displayName: name });
@@ -140,6 +169,9 @@ const FirebaseAuth = {
   // ── Google Sign-In (Popup preferred, redirect fallback) ──
   async signInGoogle() {
     this._ensureInit();
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence) {
+      await this._auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
+    }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.addScope('email');
     provider.addScope('profile');
@@ -341,7 +373,14 @@ const FirebaseAuth = {
       approved: true
     };
 
-    try { localStorage.setItem('hintonn-current-user', JSON.stringify(localUser)); } catch (e) {}
+    if (typeof Auth !== 'undefined' && typeof Auth._setSessionUser === 'function') {
+      Auth._setSessionUser(localUser);
+    } else {
+      try {
+        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('hintonn-current-user', JSON.stringify(localUser));
+        if (typeof localStorage !== 'undefined') localStorage.removeItem('hintonn-current-user');
+      } catch (e) {}
+    }
 
     if (typeof Auth !== 'undefined') {
       Auth.currentUser = localUser;
@@ -376,7 +415,14 @@ const FirebaseAuth = {
       } else {
         // Sync memberId if member was found by email but has different ID
         localUser.memberId = existingMember.id;
-        try { localStorage.setItem('hintonn-current-user', JSON.stringify(localUser)); } catch (e) {}
+        if (typeof Auth !== 'undefined' && typeof Auth._setSessionUser === 'function') {
+          Auth._setSessionUser(localUser);
+        } else {
+          try {
+            if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('hintonn-current-user', JSON.stringify(localUser));
+            if (typeof localStorage !== 'undefined') localStorage.removeItem('hintonn-current-user');
+          } catch (e) {}
+        }
         if (typeof Auth !== 'undefined') Auth.currentUser = localUser;
       }
     }

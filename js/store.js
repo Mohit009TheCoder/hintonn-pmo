@@ -83,9 +83,6 @@ const Store = {
 
       const auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
       if (auth) {
-        if (!auth.currentUser) {
-          auth.signInAnonymously().catch(() => {});
-        }
         auth.onAuthStateChanged(user => {
           if (user) {
             console.log('⚡ [Hintonn Cloud Sync] Auth state active:', user.email || user.uid);

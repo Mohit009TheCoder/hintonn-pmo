@@ -257,12 +257,13 @@ const Auth = {
     // 1. If valid email and FirebaseAuth is initialized, try Firebase Authentication
     if (isEmail && typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.signInEmail === 'function') {
       try {
-        const fbUser = await FirebaseAuth.signInEmail(raw, rawPass);
-        if (fbUser) {
-          if (fbUser.revoked === true) {
+        const fbRes = await FirebaseAuth.signInEmail(raw, rawPass);
+        if (fbRes) {
+          const fbUser = fbRes.user || fbRes;
+          if (fbRes.revoked === true || fbUser.revoked === true) {
             return { success: false, error: 'Your access has been revoked by an administrator. Please contact admin to regain access.' };
           }
-          if (fbUser.approved === false) {
+          if (fbRes.approved === false || fbUser.approved === false) {
             return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: fbUser };
           }
           this._enforceAdminRole(fbUser);

@@ -43,10 +43,10 @@ const FirebaseAuth = {
       if (!hasActiveSession) {
         if (this._auth.currentUser) {
           this._auth.signOut().catch(() => {});
-        } else {
+        } else if (typeof this._auth.onAuthStateChanged === 'function') {
           const unsubInitAuth = this._auth.onAuthStateChanged(u => {
             if (u && !(typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hintonn-current-user'))) {
-              this._auth.signOut().catch(() => {});
+              if (typeof this._auth.signOut === 'function') this._auth.signOut().catch(() => {});
             }
             if (typeof unsubInitAuth === 'function') unsubInitAuth();
           });

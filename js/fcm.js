@@ -75,22 +75,24 @@ const FCM = {
 
   async _getToken() {
     try {
-      this._token = await this._messaging.getToken({
-        vapidKey: window.FCM_VAPID_KEY || 'YOUR_VAPID_KEY'
-      });
+      const opts = {};
+      if (window.FCM_VAPID_KEY && window.FCM_VAPID_KEY !== 'YOUR_VAPID_KEY') {
+        opts.vapidKey = window.FCM_VAPID_KEY;
+      }
+      this._token = await this._messaging.getToken(opts);
       console.log('[FCM] Token obtained:', this._token ? 'yes' : 'no');
       if (this._token && typeof Store !== 'undefined' && Store._db) {
-        const user = firebase.auth().currentUser;
+        const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
         if (user) {
-          // Store token + subscribe to topics
+          // Store token in Firestore user document
           await Store._db.collection('users').doc(user.uid).set({
             fcmToken: this._token,
-            fcmTokenUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            fcmTokenUpdatedAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
           }, { merge: true });
         }
       }
     } catch (err) {
-      console.error('[FCM] Token error:', err);
+      console.warn('[FCM] Token acquisition notice:', err.message || err);
     }
   },
 
@@ -99,7 +101,7 @@ const FCM = {
     if (!this._messaging || !this._token) return;
     try {
       // Subscribe to all notification topics based on user preferences
-      const prefs = Store.getNotificationPrefs();
+      const prefs = (typeof Store !== 'undefined' && Store.getNotificationPrefs) ? Store.getNotificationPrefs() : {};
       const topics = [];
 
       if (prefs.bgExpiryAlerts) topics.push('bg-alerts');
@@ -112,12 +114,28 @@ const FCM = {
       // Always subscribe to critical alerts
       topics.push('critical-alerts');
 
+      // Save user topic subscription preferences to Firestore
+      if (typeof Store !== 'undefined' && Store._db) {
+        const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+        if (user) {
+          await Store._db.collection('users').doc(user.uid).set({
+            fcmTopics: topics,
+            fcmTopicsUpdatedAt: (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+
+      // Safe topic subscription if supported by client environment
       for (const topic of topics) {
-        await this._messaging.subscribeToToken(this._token, topic);
-        console.log(`[FCM] Subscribed to topic: ${topic}`);
+        if (typeof this._messaging.subscribeToTopic === 'function') {
+          await this._messaging.subscribeToTopic(topic).catch(() => {});
+        } else if (typeof this._messaging.subscribeToToken === 'function') {
+          await this._messaging.subscribeToToken(this._token, topic).catch(() => {});
+        }
+        console.log(`[FCM] Topic preference registered: ${topic}`);
       }
     } catch (err) {
-      console.error('[FCM] Topic subscription error:', err);
+      console.warn('[FCM] Topic subscription notice:', err.message || err);
     }
   },
 

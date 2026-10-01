@@ -142,6 +142,28 @@ const LoginScreen = {
           </button>
         </form>
 
+        <!-- Quick Demo Credentials Helper -->
+        <div style="margin-top:14px;padding:10px 12px;background:var(--color-bg-page,#F8FAFC);border:1px solid var(--color-border,#E2E8F0);border-radius:8px;font-size:12px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-weight:600;color:var(--color-text-secondary,#64748B);display:flex;align-items:center;justify-content:space-between">
+            <span>Quick Sign-In Credentials</span>
+            <span style="font-size:11px;color:var(--color-primary,#2563EB);font-weight:600">Click to fill</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="LoginScreen.fillCredentials('mohithintonn@gmail.com', 'Mohit@123')">
+              👑 Admin (Mohit)
+            </button>
+            <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="LoginScreen.fillCredentials('admin@hintonn.com', 'admin@123')">
+              🛡️ Admin (Alias)
+            </button>
+            <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="LoginScreen.fillCredentials('preethintonn@gmail.com', 'Preet@123')">
+              💻 Preet (Developer)
+            </button>
+            <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:11px;border-radius:4px" onclick="LoginScreen.fillCredentials('hirvihintonn@gmail.com', 'Hirvi@123')">
+              💻 Hirvi (Developer)
+            </button>
+          </div>
+        </div>
+
         <div class="login-divider"><span>OR</span></div>
 
         <button type="button" class="login-google-btn" id="google-login-btn" onclick="LoginScreen.handleGoogleLogin()">
@@ -425,6 +447,14 @@ const LoginScreen = {
     `;
   },
 
+  fillCredentials(email, password) {
+    const idEl = document.getElementById('login-id');
+    const passEl = document.getElementById('login-password');
+    if (idEl) idEl.value = email;
+    if (passEl) passEl.value = password;
+    this.clearError();
+  },
+
   // ─── Handlers ───
   async handleLogin() {
     const idEl = document.getElementById('login-id');
@@ -433,13 +463,13 @@ const LoginScreen = {
     const password = passEl ? passEl.value : '';
 
     if (!loginId || !password) {
-      this.showError('Please enter both email and password.');
+      this.showError('Please enter both email/login ID and password.');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(loginId)) {
-      this.showError('Please enter a valid email address. Mobile/phone login is not supported.');
+    // Reject phone numbers as mobile login is not supported
+    if (/^\+?[\d\s-]{7,15}$/.test(loginId) && !loginId.includes('@')) {
+      this.showError('Mobile/phone login is not supported. Please enter your email address or login ID.');
       return;
     }
 

@@ -213,8 +213,9 @@ const FirebaseAuth = {
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
 
     // ─── ADMIN APPROVAL GATE ───
+    let existingUser = null;
     if (typeof Auth !== 'undefined') {
-      const existingUser = Auth.users.find(u => 
+      existingUser = Auth.users.find(u => 
         (u.email && u.email.toLowerCase() === emailLower) ||
         (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
       );

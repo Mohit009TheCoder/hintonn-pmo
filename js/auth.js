@@ -357,7 +357,7 @@ const Auth = {
     }
 
     // ── Ensure non-admin user has a member record in Store ──
-    if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function' && user.role !== 'Admin') {
+    if (typeof Store !== 'undefined' && Store._data && Array.isArray(Store._data.members) && typeof Store.getMembers === 'function' && user.role !== 'Admin') {
       const members = Store.getMembers();
       const existingMember = members.find(m =>
         m.id === user.memberId ||

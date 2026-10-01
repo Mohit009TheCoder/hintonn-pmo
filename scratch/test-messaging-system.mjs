@@ -72,12 +72,13 @@ const { getFirestore } = await import('firebase-admin/firestore');
 const serviceAccount = JSON.parse(fs.readFileSync('service-account.json', 'utf8'));
 
 const admin = adminMod.default || adminMod;
-const apps = admin.apps || (admin.getApps ? admin.getApps() : []);
-if (!apps.length) {
+const { cert } = adminMod;
+try {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: cert(serviceAccount),
+    projectId: 'hintonn-pmo'
   });
-}
+} catch (e) {}
 const db = getFirestore();
 
 // Check Invoices count is 0

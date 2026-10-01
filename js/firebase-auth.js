@@ -38,13 +38,13 @@ const FirebaseAuth = {
 
   _listenToUsers() {
     if (!this._db || typeof Auth === 'undefined') return;
-    // Detach previous listener if any
-    if (this._unsubUsers) { try { this._unsubUsers(); } catch(e) {} }
     try {
-      this._unsubUsers = this._db.collection('users').onSnapshot(snap => {
-        snap.forEach(doc => {
-          const data = doc.data();
-          const emailLower = (data.email || '').toLowerCase();
+      const col = this._db.collection('users');
+      if (typeof col.onSnapshot === 'function') {
+        this._unsubUsers = col.onSnapshot(snap => {
+          snap.forEach(doc => {
+            const data = doc.data();
+            const emailLower = (data.email || '').toLowerCase();
           let existingUser = Auth.users.find(u => 
             (u.email && u.email.toLowerCase() === emailLower) ||
             (u.googleEmail && u.googleEmail.toLowerCase() === emailLower)
@@ -316,7 +316,14 @@ const FirebaseAuth = {
       }
     }
 
-    const localUser = {
+    const localUser = existingUser ? {
+      ...existingUser,
+      id: user.uid || existingUser.id,
+      name: existingUser.name || defaultName,
+      role: isAdmin ? 'Admin' : (existingUser.role || 'AI Developer'),
+      title: isAdmin ? 'Executive PMO & Lead' : (existingUser.title || 'AI Developer'),
+      approved: true
+    } : {
       id: user.uid,
       memberId: 'm_' + user.uid.slice(0, 6),
       loginId: (fallbackEmail ? fallbackEmail.split('@')[0] : defaultName),
@@ -375,20 +382,25 @@ const FirebaseAuth = {
     try {
       const userRef = this._db.collection('users').doc(user.uid);
       const doc = await userRef.get();
-      if (!doc.exists) {
-        await userRef.set({
-          uid: user.uid, name: defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
-          role: isAdmin ? 'Admin' : 'AI Developer', isActive: true, provider: providerType || 'password',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } else {
-        const existingData = doc.data() || {};
-        await userRef.set({
-          email: fallbackEmail, name: existingData.name || defaultName,
-          photoURL: existingData.photoURL || user.photoURL || null,
-          role: isAdmin ? 'Admin' : (existingData.role || 'AI Developer'),
-          isActive: true, lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const nowTs = (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue && typeof firebase.firestore.FieldValue.serverTimestamp === 'function')
+          ? firebase.firestore.FieldValue.serverTimestamp()
+          : new Date().toISOString();
+
+        if (!doc.exists) {
+          await userRef.set({
+            uid: user.uid, name: localUser.name || defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
+            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: true, provider: providerType || 'password',
+            createdAt: nowTs, lastLogin: nowTs
+          });
+        } else {
+          const existingData = doc.data() || {};
+          await userRef.set({
+            email: fallbackEmail, name: existingData.name || localUser.name || defaultName,
+            photoURL: existingData.photoURL || user.photoURL || null,
+            role: isAdmin ? 'Admin' : (existingData.role || localUser.role || 'AI Developer'),
+            isActive: true, lastLogin: nowTs
+          }, { merge: true });
+        }
       }
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);

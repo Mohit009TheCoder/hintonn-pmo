@@ -285,9 +285,6 @@ const ConnectorsScreen = {
         <!-- Files Upload & Document Manager Section -->
         ${this._shouldShowFilesArea() ? this._renderFilesUploadSection(isAdmin ? '04' : '03') : ''}
 
-        <!-- Knowledge Layer Architecture Pipeline Section -->
-        ${this._renderKnowledgeLayerSection(isAdmin)}
-
       </div>
     `;
   },
@@ -674,111 +671,9 @@ const ConnectorsScreen = {
     }
   },
 
-  _renderKnowledgeLayerSection(isAdmin = true) {
-    const sourcesDetail = isAdmin
-      ? 'FCM · Webhooks · Google Sheets · Jira · Slack · Files'
-      : 'FCM · Google Sheets · Jira · Slack · Files';
-    const streamCount = isAdmin ? '6 Data Streams' : '5 Data Streams';
-
-    return `
-      <div class="knowledge-layer-section">
-        <div class="knowledge-layer-card">
-          
-          <div class="knowledge-layer-header">
-            <div class="knowledge-badge-wrap">
-              <span class="knowledge-pill">Intelligent Data Pipeline</span>
-              <span class="knowledge-status-indicator">
-                <span class="pulse-dot"></span> Active Vector Retrieval
-              </span>
-            </div>
-            <h2 class="knowledge-card-title">Knowledge Layer & Data Flow</h2>
-            <p class="knowledge-card-desc">
-              Connected project information is processed through the Knowledge Layer and made available to the AI Assistant.
-            </p>
-          </div>
-
-          <!-- Visual Flow Diagram -->
-          <div class="knowledge-flow-diagram">
-            
-            <!-- Step 1: Connected Sources -->
-            <div class="flow-step-box">
-              <div class="flow-step-icon" style="background:var(--color-primary-50);color:var(--color-primary);">
-                ${Icons.connectors}
-              </div>
-              <div class="flow-step-content">
-                <div class="flow-step-tag">Step 1</div>
-                <div class="flow-step-name">Connected Sources</div>
-                <div class="flow-step-detail">${sourcesDetail}</div>
-              </div>
-              <div class="flow-step-status">
-                <span class="flow-status-dot"></span> ${streamCount}
-              </div>
-            </div>
-
-            <!-- Arrow 1 -->
-            <div class="flow-connector-arrow">
-              <div class="arrow-line"></div>
-              <div class="arrow-tip">${Icons.chevronRight}</div>
-            </div>
-
-            <!-- Step 2: Knowledge Layer -->
-            <div class="flow-step-box active-pulse-node">
-              <div class="flow-step-icon" style="background:#FAF5FF;color:var(--color-ai);">
-                ${Icons.database}
-              </div>
-              <div class="flow-step-content">
-                <div class="flow-step-tag">Step 2</div>
-                <div class="flow-step-name">Knowledge Layer</div>
-                <div class="flow-step-detail">Parsing · Semantic Chunking · Vector Embeddings · RAG</div>
-              </div>
-              <div class="flow-step-status">
-                <span class="flow-status-dot"></span> 12,480 Vectors
-              </div>
-            </div>
-
-            <!-- Arrow 2 -->
-            <div class="flow-connector-arrow">
-              <div class="arrow-line"></div>
-              <div class="arrow-tip">${Icons.chevronRight}</div>
-            </div>
-
-            <!-- Step 3: AI Assistant -->
-            <div class="flow-step-box">
-              <div class="flow-step-icon" style="background:#EFF6FF;color:#1D4ED8;">
-                ${Icons.assistant}
-              </div>
-              <div class="flow-step-content">
-                <div class="flow-step-tag">Step 3</div>
-                <div class="flow-step-name">AI Assistant</div>
-                <div class="flow-step-detail">Contextual Grounding · PM Copilot · Automated Insights</div>
-              </div>
-              <div class="flow-step-status">
-                <span class="flow-status-dot"></span> Copilot Ready
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Bottom Footer Action -->
-          <div class="knowledge-layer-footer">
-            <div class="knowledge-footer-info">
-              <div style="font-size:13.5px;font-weight:600;color:var(--color-text-primary)">
-                Ready for Natural Language Project Inquiries
-              </div>
-              <div style="font-size:12.5px;color:var(--color-text-muted)">
-                Ask the AI Assistant questions grounded in your synchronized documents, spreadsheets, and task backlogs.
-              </div>
-            </div>
-            <div class="knowledge-footer-actions">
-              <button class="btn btn-primary btn-sm" onclick="App.navigate('ai-assistant')">
-                ${Icons.assistant} Ask AI Copilot
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    `;
+  _renderKnowledgeLayerSection() {
+    // Knowledge Layer & Data Flow section removed as requested
+    return '';
   },
 
   // ─── Interaction Handlers & Filtering ───

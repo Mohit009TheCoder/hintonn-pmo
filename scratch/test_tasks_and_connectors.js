@@ -162,8 +162,8 @@ const nonAdminConnectorsHtml = ConnectorsScreen.render();
 
 assert(!nonAdminConnectorsHtml.includes("onclick=\"ConnectorsScreen.setTab('webhooks')\""), 'Non-Admin does not see Webhooks filter tab');
 assert(nonAdminConnectorsHtml.includes('All Connectors (5)'), 'Non-Admin sees "All Connectors (5)" dynamic count');
-assert(!nonAdminConnectorsHtml.includes('id="connector-card-webhooks"'), 'Non-Admin view omits System Alerts / Webhooks connector card');
-assert(nonAdminConnectorsHtml.includes('5 Data Streams'), 'Non-Admin sees 5 Data Streams in Knowledge Layer');
+assert(!nonAdminConnectorsHtml.includes('knowledge-layer-section'), 'Non-Admin view omits Knowledge Layer & Data Flow section');
+assert(!nonAdminConnectorsHtml.includes('Knowledge Layer & Data Flow'), 'Non-Admin view does not render Knowledge Layer title');
 
 // Admin view
 Auth.currentUser = { id: 'mohit', name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com' };
@@ -172,7 +172,8 @@ const adminConnectorsHtml = ConnectorsScreen.render();
 assert(adminConnectorsHtml.includes("onclick=\"ConnectorsScreen.setTab('webhooks')\""), 'Admin sees Webhooks filter tab');
 assert(adminConnectorsHtml.includes('All Connectors (6)'), 'Admin sees "All Connectors (6)" dynamic count');
 assert(adminConnectorsHtml.includes('id="connector-card-webhooks"'), 'Admin view includes System Alerts / Webhooks card');
-assert(adminConnectorsHtml.includes('6 Data Streams'), 'Admin sees 6 Data Streams in Knowledge Layer');
+assert(!adminConnectorsHtml.includes('knowledge-layer-section'), 'Admin view omits Knowledge Layer & Data Flow section');
+assert(!adminConnectorsHtml.includes('Knowledge Layer & Data Flow'), 'Admin view does not render Knowledge Layer title');
 
 console.log('\n=== TEST SUITE 4: CONNECTORS REORDERING & FIREBASE REMOVAL (#connectors) ===');
 Auth.currentUser = { id: 'dev_user', name: 'Developer User', role: 'AI Developer' };

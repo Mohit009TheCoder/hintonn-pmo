@@ -92,6 +92,7 @@ const FirebaseAuth = {
         console.warn('[FirebaseAuth] Users listener error (will retry on auth change):', err.code || err.message || err);
         this._usersListenerFailed = true;
       });
+      }
     } catch(e) {
       console.warn('[FirebaseAuth] Could not set up users listener:', e);
       this._usersListenerFailed = true;

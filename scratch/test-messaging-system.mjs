@@ -71,8 +71,9 @@ const adminMod = await import('firebase-admin');
 const { getFirestore } = await import('firebase-admin/firestore');
 const serviceAccount = JSON.parse(fs.readFileSync('service-account.json', 'utf8'));
 
-const admin = adminMod.default;
-if (!admin.apps.length) {
+const admin = adminMod.default || adminMod;
+const apps = admin.apps || (admin.getApps ? admin.getApps() : []);
+if (!apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });

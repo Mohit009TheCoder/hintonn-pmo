@@ -241,6 +241,23 @@ export const sendInvoiceNotification = onDocumentCreated(
         html: `<strong>New Invoice</strong> — ${billNumber} created for <em>${projectName}</em> (₹${amountDue.toLocaleString()})`,
         createdAt: FieldValue.serverTimestamp(),
       });
+
+      // FCM push for new invoice
+      try {
+        const messaging = getMessagingSafe();
+        if (messaging) {
+          await messaging.send({
+            topic: "invoice-alerts",
+            notification: {
+              title: "📄 New Invoice Created",
+              body: `${billNumber} for ${projectName} (₹${amountDue.toLocaleString()})`,
+            },
+            data: { invoiceId, type: "invoice", amount: String(amountDue) },
+          });
+        }
+      } catch (fcmErr) {
+        console.error("FCM send failed for invoice:", fcmErr.message);
+      }
     } catch (err) {
       console.error(`sendInvoiceNotification failed for ${invoiceId}:`, err);
     }
@@ -270,6 +287,23 @@ export const scheduleExpiryCheck = onDocumentCreated(
         bgId,
         createdAt: FieldValue.serverTimestamp(),
       });
+
+      // FCM push for approaching BG expiry
+      try {
+        const messaging = getMessagingSafe();
+        if (messaging) {
+          await messaging.send({
+            topic: "bg-alerts",
+            notification: {
+              title: "⚠️ BG Expiry Approaching",
+              body: `BG ${bg.ref || bgId} expires in ${daysLeft} days — Action required`,
+            },
+            data: { bgId, type: "bankGuarantee", daysLeft: String(daysLeft) },
+          });
+        }
+      } catch (fcmErr) {
+        console.error("FCM send failed for scheduleExpiryCheck:", fcmErr.message);
+      }
     } catch (err) {
       console.error(`scheduleExpiryCheck failed for ${bgId}:`, err);
     }
@@ -334,18 +368,21 @@ export const checkBgExpiry = onSchedule(
 
       // FCM push for critical BGs (topic broadcast)
       if (criticalAlerts.length > 0) {
-        for (const alert of criticalAlerts) {
-          try {
-            await getMessaging().send({
-              topic: "bg-alerts",
-              notification: {
-                title: alert.title,
-                body: alert.body,
-              },
-              data: { bgId: alert.bgId, type: "bankGuarantee" },
-            });
-          } catch (fcmErr) {
-            console.error("FCM send failed:", fcmErr.message);
+        const messaging = getMessagingSafe();
+        if (messaging) {
+          for (const alert of criticalAlerts) {
+            try {
+              await messaging.send({
+                topic: "bg-alerts",
+                notification: {
+                  title: alert.title,
+                  body: alert.body,
+                },
+                data: { bgId: alert.bgId, type: "bankGuarantee" },
+              });
+            } catch (fcmErr) {
+              console.error("FCM send failed:", fcmErr.message);
+            }
           }
         }
       }
@@ -397,6 +434,26 @@ export const checkDlpExpiry = onSchedule(
       }
 
       await batch.commit();
+
+      // FCM push for DLP records nearing expiry
+      if (alerts > 0) {
+        try {
+          const messaging = getMessagingSafe();
+          if (messaging) {
+            await messaging.send({
+              topic: "dlp-alerts",
+              notification: {
+                title: "⚠️ DLP Expiry Alert",
+                body: `${alerts} DLP warranty record(s) expire within 30 days`,
+              },
+              data: { type: "dlp", count: String(alerts) },
+            });
+          }
+        } catch (fcmErr) {
+          console.error("FCM send failed for DLP alert:", fcmErr.message);
+        }
+      }
+
       console.log(`checkDlpExpiry: processed ${snap.size} records, ${alerts} alerts.`);
     } catch (err) {
       console.error("checkDlpExpiry failed:", err);

@@ -30,17 +30,14 @@ const ProjectDetailScreen = {
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     const isUserTask = (t) => {
-      const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
-      return ids.some(id =>
-        id === currentUser?.id ||
-        (userMemberId && id === userMemberId) ||
-        (currentUser?.id === 'preet' && id === 'm2') ||
-        (currentUser?.id === 'mohit' && id === 'm3') ||
-        (currentUser?.id === 'hirvi' && id === 'm4') ||
-        (currentUser?.memberId === 'm2' && id === 'preet') ||
-        (currentUser?.memberId === 'm3' && id === 'mohit') ||
-        (currentUser?.memberId === 'm4' && id === 'hirvi')
-      );
+      return t.assigneeId === currentUser?.id ||
+             (userMemberId && t.assigneeId === userMemberId) ||
+             (currentUser?.id === 'preet' && t.assigneeId === 'm2') ||
+             (currentUser?.id === 'mohit' && t.assigneeId === 'm3') ||
+             (currentUser?.id === 'hirvi' && t.assigneeId === 'm4') ||
+             (currentUser?.memberId === 'm2' && t.assigneeId === 'preet') ||
+             (currentUser?.memberId === 'm3' && t.assigneeId === 'mohit') ||
+             (currentUser?.memberId === 'm4' && t.assigneeId === 'hirvi');
     };
 
     let allProjectTasks = Store.getTasks(projectId).filter(t => !t.isPersonal);
@@ -180,23 +177,6 @@ const ProjectDetailScreen = {
   },
 
   _renderTasks(projectId, tasks) {
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isAdmin = currentUser && currentUser.role === 'Admin';
-    const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
-    const isUserTask = (t) => {
-      const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
-      return ids.some(id =>
-        id === currentUser?.id ||
-        (userMemberId && id === userMemberId) ||
-        (currentUser?.id === 'preet' && id === 'm2') ||
-        (currentUser?.id === 'mohit' && id === 'm3') ||
-        (currentUser?.id === 'hirvi' && id === 'm4') ||
-        (currentUser?.memberId === 'm2' && id === 'preet') ||
-        (currentUser?.memberId === 'm3' && id === 'mohit') ||
-        (currentUser?.memberId === 'm4' && id === 'hirvi')
-      );
-    };
-
     if (!tasks.length) return `<div class="empty-state"><div class="empty-state-icon">${Icons.checkSquare}</div><h3>No tasks yet</h3><p>Create the first task for this project.</p><button class="btn btn-primary" onclick="TasksScreen.openCreateModal('${projectId}')">${Icons.plus} Add Task</button></div>`;
     return `<div class="table-wrap"><table class="table">
       <thead><tr><th style="width:40px"></th><th>Task</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
@@ -222,16 +202,12 @@ const ProjectDetailScreen = {
           ` : '<span style="color:var(--color-text-disabled);font-size:12px">Unassigned</span>')}</td>
           <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
           <td>
-            ${(isAdmin || isUserTask(t)) ? `
-              <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
-                ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${t.status===s?'selected':''}>${Utils.humanize(s)}</option>`).join('')}
-              </select>
-            ` : `
-              <span class="badge badge-${t.status}" style="font-size:11px;padding:2px 8px;">${Utils.humanize(t.status)}</span>
-            `}
+            <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
+              ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${t.status===s?'selected':''}>${Utils.humanize(s)}</option>`).join('')}
+            </select>
           </td>
           <td style="font-size:12px;color:${Utils.isOverdue(t.dueDate)?'var(--color-error-500)':'var(--color-text-muted)'}">${t.dueDate ? Utils.formatDate(t.dueDate) : '—'}</td>
-          <td><button class="btn btn-ghost btn-sm btn-icon" onclick="TasksScreen.openDetailModal('${t.id}')" title="${(isAdmin || isUserTask(t)) ? 'Edit' : 'View'}">${(isAdmin || isUserTask(t)) ? Icons.edit : Icons.eye}</button></td>
+          <td><button class="btn btn-ghost btn-sm btn-icon" onclick="TasksScreen.openDetailModal('${t.id}')" title="View">${Icons.edit}</button></td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>

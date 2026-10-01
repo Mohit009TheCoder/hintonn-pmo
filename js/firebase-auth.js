@@ -402,7 +402,6 @@ const FirebaseAuth = {
             isActive: true, lastLogin: nowTs
           }, { merge: true });
         }
-      }
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);
     }

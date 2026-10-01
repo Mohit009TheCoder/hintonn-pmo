@@ -129,8 +129,6 @@ const FCM = {
       for (const topic of topics) {
         if (typeof this._messaging.subscribeToTopic === 'function') {
           await this._messaging.subscribeToTopic(topic).catch(() => {});
-        } else if (typeof this._messaging.subscribeToToken === 'function') {
-          await this._messaging.subscribeToToken(this._token, topic).catch(() => {});
         }
         console.log(`[FCM] Topic preference registered: ${topic}`);
       }

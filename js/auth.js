@@ -1060,7 +1060,7 @@ const Auth = {
 
   logout() {
     this.currentUser = null;
-    try { localStorage.removeItem('hintonn-current-user'); } catch (e) {}
+    this._clearSessionUser();
     if (typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.signOut === 'function') {
       FirebaseAuth.signOut().catch(() => {});
     }

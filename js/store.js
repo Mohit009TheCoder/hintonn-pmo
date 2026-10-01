@@ -20,7 +20,7 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
@@ -64,43 +64,34 @@ const Store = {
   _initFirestoreSync() {
     if (this._firestoreInitialized) return;
     if (typeof firebase === 'undefined' || !firebase.firestore) {
-      setTimeout(() => this._initFirestoreSync(), 600);
+      setTimeout(() => this._initFirestoreSync(), 500);
       return;
     }
 
     try {
       this._db = firebase.firestore();
 
-      // Ensure Firebase Auth has a user (anonymous if no real user) so Firestore rules pass
-      const auth = firebase.auth();
       const startSync = () => {
+        if (this._firestoreInitialized) return;
         this._firestoreInitialized = true;
         console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: hintonn-pmo)');
         this._startFirestoreListeners();
       };
 
-      if (auth.currentUser) {
-        // Already authenticated (Google login or redirect result)
-        startSync();
-      } else {
-        // Sign in anonymously so Firestore rules (request.auth != null) are satisfied
-        auth.signInAnonymously().then(() => {
-          console.log('⚡ [Hintonn Cloud Sync] Anonymous auth for Firestore access');
-          startSync();
-        }).catch(err => {
-          console.warn('[Hintonn Cloud Sync] Anonymous auth failed:', err.code, err.message);
-          // Retry later in case Firebase Auth state changes (e.g. after Google login)
-          setTimeout(() => this._initFirestoreSync(), 5000);
-        });
+      // Start Firestore synchronization immediately
+      startSync();
 
-        // Also listen for auth state changes (e.g. Google login) to trigger sync
+      const auth = (firebase.auth && typeof firebase.auth === 'function') ? firebase.auth() : null;
+      if (auth) {
+        if (!auth.currentUser) {
+          auth.signInAnonymously().catch(() => {});
+        }
         auth.onAuthStateChanged(user => {
-          if (user && !this._firestoreInitialized) {
-            console.log('⚡ [Hintonn Cloud Sync] Auth state changed, initializing sync for:', user.email || user.uid);
+          if (user) {
+            console.log('⚡ [Hintonn Cloud Sync] Auth state active:', user.email || user.uid);
             startSync();
           }
         });
-        return;
       }
 
     } catch (err) {
@@ -111,14 +102,13 @@ const Store = {
   _startFirestoreListeners() {
     if (!this._db) return;
 
-    // Phase 6: Added 'notifications' for Cloud Function push + 'audit_logs' for admin audit trail
     const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
 
     syncCollections.forEach(colName => {
       this._db.collection(colName).onSnapshot(snapshot => {
         if (!snapshot) return;
 
-        // If collection is completely empty on remote, just accept it and clear local if necessary.
+        // If collection is completely empty on remote, update if remote is authoritative
         if (snapshot.empty) {
           this._data[colName] = [];
           this._save();
@@ -130,7 +120,10 @@ const Store = {
         const remoteItems = [];
         snapshot.forEach(doc => {
           const d = doc.data();
-          if (d) remoteItems.push(d);
+          if (d) {
+            if (!d.id) d.id = doc.id;
+            remoteItems.push(d);
+          }
         });
 
         if (remoteItems.length > 0) {
@@ -180,27 +173,60 @@ const Store = {
           this._notify();
         }
       } else if (this._data.settings) {
-        this._db.collection('settings').doc('workspace_settings').set(this._data.settings).catch(() => {});
+        this._db.collection('settings').doc('workspace_settings').set(this._sanitizeForFirestore(this._data.settings)).catch(() => {});
       }
     }, () => {});
   },
 
+  _sanitizeForFirestore(obj) {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+    if (Array.isArray(obj)) {
+      return obj
+        .filter(item => item !== undefined)
+        .map(item => this._sanitizeForFirestore(item));
+    }
+    const clean = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        clean[key] = (val && typeof val === 'object') ? this._sanitizeForFirestore(val) : val;
+      }
+    }
+    return clean;
+  },
+
   _syncToFirestore(collection, id, data) {
-    if (!this._db) return;
+    if (!this._db) return Promise.resolve();
     try {
-      this._db.collection(collection).doc(String(id)).set(data, { merge: true }).catch(err => {
-        console.warn(`[Hintonn Cloud Sync] Failed to sync ${collection}/${id}:`, err.message || err);
-      });
-    } catch (e) {}
+      const cleanData = this._sanitizeForFirestore(data);
+      return this._db.collection(collection).doc(String(id)).set(cleanData, { merge: true })
+        .then(() => {
+          console.log(`⚡ [Hintonn Cloud Sync] Synced ${collection}/${id}`);
+        })
+        .catch(err => {
+          console.error(`❌ [Hintonn Cloud Sync] Failed to sync ${collection}/${id}:`, err);
+        });
+    } catch (e) {
+      console.error(`❌ [Hintonn Cloud Sync] Error syncing ${collection}/${id}:`, e);
+      return Promise.resolve();
+    }
   },
 
   _deleteFromFirestore(collection, id) {
-    if (!this._db) return;
+    if (!this._db) return Promise.resolve();
     try {
-      this._db.collection(collection).doc(String(id)).delete().catch(err => {
-        console.warn(`[Hintonn Cloud Sync] Failed to delete ${collection}/${id}:`, err.message || err);
-      });
-    } catch (e) {}
+      return this._db.collection(collection).doc(String(id)).delete()
+        .then(() => {
+          console.log(`⚡ [Hintonn Cloud Sync] Deleted ${collection}/${id}`);
+        })
+        .catch(err => {
+          console.error(`❌ [Hintonn Cloud Sync] Failed to delete ${collection}/${id}:`, err);
+        });
+    } catch (e) {
+      console.error(`❌ [Hintonn Cloud Sync] Error deleting ${collection}/${id}:`, e);
+      return Promise.resolve();
+    }
   },
 
   // ─── CRUD helpers ───

@@ -394,6 +394,7 @@ const RetentionScreen = {
   },
 
   saveRetentionRecord(editId = null) {
+    if (editId === 'null' || editId === 'undefined' || !editId) editId = null;
     const projId = document.getElementById('ret-modal-project') ? document.getElementById('ret-modal-project').value : '';
     const proj = projId ? Store.getProject(projId) : null;
     const projectNameInput = document.getElementById('ret-modal-proj-name');

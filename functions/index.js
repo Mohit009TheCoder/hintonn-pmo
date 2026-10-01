@@ -16,6 +16,7 @@ import {
   Timestamp,
 } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+export { getMessaging };
 
 import {
   onDocumentWritten,
@@ -29,6 +30,19 @@ import { params } from "firebase-functions/v2";
 // ---------------------------------------------------------------------------
 initializeApp();
 const db = getFirestore();
+
+/** Safe accessor for FCM Messaging instance */
+let _messagingInstance = null;
+export function getMessagingSafe() {
+  if (_messagingInstance) return _messagingInstance;
+  try {
+    _messagingInstance = getMessaging();
+    return _messagingInstance;
+  } catch (err) {
+    console.warn("FCM getMessaging() initialization warning:", err.message);
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

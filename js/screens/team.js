@@ -68,6 +68,12 @@ const TeamScreen = {
   },
 
   openAddMemberModal() {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can add team members', 'error');
+      return;
+    }
     const presets = [
       'AI Developer', 'Senior AI Engineer', 'Project Manager',
       'Data Engineer', 'QA Specialist', 'UI/UX Designer'
@@ -123,6 +129,12 @@ const TeamScreen = {
   },
 
   saveNewMember() {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can add team members', 'error');
+      return;
+    }
     const nameInput = document.getElementById('member-name');
     const emailInput = document.getElementById('member-email');
     const roleSelect = document.getElementById('member-role-select');
@@ -164,6 +176,12 @@ const TeamScreen = {
   },
 
   openEditRoleModal(memberId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can edit team member roles', 'error');
+      return;
+    }
     const m = Store.getMember(memberId);
     if (!m) { Toast.show('Member not found.', 'error'); return; }
     const currentDesignation = m.designation || m.role || 'AI Developer';
@@ -274,6 +292,12 @@ const TeamScreen = {
   openEditMemberModal(memberId) { this.openEditRoleModal(memberId); },
 
   saveMemberRole(memberId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can update team member roles', 'error');
+      return;
+    }
     const hiddenInput = document.getElementById('member-role-select');
     const customInput = document.getElementById('member-custom-designation');
     if (!hiddenInput) { Toast.show('Could not read role selection.', 'error'); return; }
@@ -315,6 +339,12 @@ const TeamScreen = {
 
   // ─── Remove Member ───
   openRemoveMemberModal(memberId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can remove team members', 'error');
+      return;
+    }
     const m = Store.getMember(memberId);
     if (!m) { Toast.show('Member not found.', 'error'); return; }
     const memberTasks = this._getMemberTasks(m);
@@ -352,6 +382,12 @@ const TeamScreen = {
   },
 
   confirmRemoveMember(memberId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin) {
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can remove team members', 'error');
+      return;
+    }
     const m = Store.getMember(memberId);
     if (!m) return;
 

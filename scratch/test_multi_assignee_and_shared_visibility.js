@@ -264,7 +264,7 @@ TasksScreen._filter.project = project1.id;
 let filteredTasks = TasksScreen._getFilteredTasks();
 
 assert(filteredTasks.some(t => t.id === taskAssignedToPreet.id), 'Project filter includes task assigned to Preet');
-assert(filteredTasks.some(t => t.id === taskAssignedToMohit.id), 'Project filter includes task assigned to Mohit (shared project collaborator)');
+assert(!filteredTasks.some(t => t.id === taskAssignedToMohit.id), 'Project filter strictly EXCLUDES task assigned to Mohit (role-based visibility)');
 assert(filteredTasks.some(t => t.id === taskMultiAssigned.id), 'Project filter includes multi-assigned task (Preet + Mohit)');
 assert(!filteredTasks.some(t => t.id === project2Task.id), 'Project 1 filter strictly excludes project 2 task');
 
@@ -279,9 +279,12 @@ assert(TasksScreen._isUserTask(taskAssignedToPreet, standardUser) === true, 'tas
 assert(TasksScreen._isUserTask(taskMultiAssigned, standardUser) === true, 'taskMultiAssigned is categorized as user task (multi-assignee includes Preet)');
 assert(TasksScreen._isUserTask(taskAssignedToMohit, standardUser) === false, 'taskAssignedToMohit is NOT a user task (assigned only to Mohit)');
 
-console.log('\n=== TEST SUITE 5: INTERACTIVE PERMISSIONS & DELETION RBAC ===');
+console.log('\n=== TEST SUITE 5: INTERACTIVE PERMISSIONS & PHASE MOVEMENT RBAC ===');
 
-// All collaborators can view details and toggle subtasks
+let toastMsg = '';
+Toast.show = (m, type) => { toastMsg = m; };
+
+// 1. Only assigned user can toggle subtasks (Preet cannot toggle Mohit's subtask)
 const subtaskTask = Store.createTask({
   title: 'Collaborative Signoff',
   projectId: project1.id,
@@ -291,26 +294,37 @@ const subtaskTask = Store.createTask({
   subtasks: [{ id: 'st-collab-1', title: 'Verify site clearance', completed: false }]
 });
 
-// Preet checks off subtask on Mohit\'s task in project1
 TasksScreen.handleToggleSubtask(subtaskTask.id, 'st-collab-1', true);
 const updatedSubtaskTask = Store.getTask(subtaskTask.id);
-assert(updatedSubtaskTask.subtasks[0].completed === true, 'Collaborator Preet can check off subtask on teammate\'s shared project task');
+assert(updatedSubtaskTask.subtasks[0].completed === false, 'Preet cannot check off subtask on teammate Mohit\'s task');
+assert(toastMsg.includes('Only the assigned team member can update subtasks'), 'Toast warns that only assigned member can update subtasks');
 
-// Task deletion RBAC:
-let toastMsg = '';
-Toast.show = (m, type) => { toastMsg = m; };
+// 2. Only assigned user can move task phase (Preet cannot move Mohit's task)
+TasksScreen.updateStatus(taskAssignedToMohit.id, 'in-progress');
+assert(Store.getTask(taskAssignedToMohit.id).status === 'todo', 'Mohit\'s task status is NOT moved by Preet');
+assert(toastMsg.includes('Only the assigned team member can move this task'), 'Toast warns that only assigned member can move task');
 
+// 3. Preet CAN move their own task
+TasksScreen.updateStatus(taskAssignedToPreet.id, 'in-progress');
+assert(Store.getTask(taskAssignedToPreet.id).status === 'in-progress', 'Preet CAN move their own task');
+
+// 4. Non-admin cannot reassign or change assignees on tasks
+TasksScreen.handleAssigneePillToggle({ checked: false });
+assert(toastMsg.includes('Only Admin can assign or change team members'), 'Non-admin gets blocked when attempting to toggle assignees');
+
+// 5. Task deletion RBAC:
+toastMsg = '';
 TasksScreen.deleteTask(taskAssignedToMohit.id);
 assert(toastMsg.includes('creator') || toastMsg.includes('administrator'), 'Standard user who is not creator cannot delete teammate task');
 assert(Store.getTask(taskAssignedToMohit.id) !== undefined, 'Teammate task was NOT deleted');
 
-// 2. Preet deletes taskAssignedToPreet (created by Preet)
+// 6. Preet deletes taskAssignedToPreet (created by Preet)
 Modal.confirm = (title, desc, onConfirm) => { onConfirm(); };
 Modal.closeAll = () => {};
 TasksScreen.deleteTask(taskAssignedToPreet.id);
 assert(Store.getTask(taskAssignedToPreet.id) === undefined, 'Task Creator (Preet) can delete their own task');
 
-// 3. Admin can delete any task
+// 7. Admin can delete any task
 Auth.getCurrentUser = () => ({ id: 'admin', memberId: 'm1', name: 'Ayush Desai', role: 'Admin' });
 TasksScreen.deleteTask(taskAssignedToMohit.id);
 assert(Store.getTask(taskAssignedToMohit.id) === undefined, 'Admin can delete any task');

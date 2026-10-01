@@ -62,24 +62,23 @@ const TasksScreen = {
     let tasks = Store.getTasks();
 
     if (isAdmin) {
-      // Admin monitors all project tasks; personal tasks strictly omitted
+      // Admin monitors all project tasks across the organization; personal tasks strictly omitted
       tasks = tasks.filter(t => !t.isPersonal);
     } else if (isStandardUser) {
       if (this._filter.project) {
-        // Shared Project Visibility: Any user assigned to this project can view all tasks in this project
-        // Personal tasks are strictly excluded from project-specific filtered views
-        const isMember = this._isUserCollaboratorOnProject(this._filter.project, currentUser);
+        // Project filter: strictly tasks assigned to the current user within this project
+        // Personal tasks are excluded from project-specific views
         tasks = tasks.filter(t => 
-          t.projectId === this._filter.project && isMember && !t.isPersonal
+          !t.isPersonal &&
+          t.projectId === this._filter.project &&
+          this._isUserTask(t, currentUser)
         );
       } else {
-        // "All Projects" view: show tasks assigned to user + tasks from shared projects they belong to + user's own private personal tasks
+        // All Projects view: strictly tasks assigned to the current user + user's own private personal tasks
+        // Strictly omits tasks assigned solely to other team members
         tasks = tasks.filter(t => 
           (t.isPersonal && this._isOwnPersonalTask(t, currentUser)) ||
-          (!t.isPersonal && (
-            this._isUserTask(t, currentUser) ||
-            (t.projectId && this._isUserCollaboratorOnProject(t.projectId, currentUser))
-          ))
+          (!t.isPersonal && this._isUserTask(t, currentUser))
         );
       }
     }
@@ -350,16 +349,16 @@ const TasksScreen = {
 
           // 2. Standard User Role: "To Do" Column with bifurcated sub-sections
           if (col.status === 'todo') {
-            // Multi-assignee tasks go to Shared Work, even if current user is one of the assignees
+            // Multi-assignee collaborative tasks go to Shared Work, solo tasks go to Assigned to Me
             const assignedTasks = projectTasks.filter(t => {
               if (!this._isUserTask(t, currentUser)) return false;
               const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
-              return ids.length <= 1; // Only solo-assigned tasks go to "Assigned to Me"
+              return ids.length <= 1; // Solo-assigned tasks go to "Assigned to Me"
             });
             const sharedTasks = projectTasks.filter(t => {
-              if (!this._isUserTask(t, currentUser)) return true; // Not assigned to me = shared/other
+              if (!this._isUserTask(t, currentUser)) return false;
               const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
-              return ids.length > 1; // Multi-assignee tasks go to "Shared Work"
+              return ids.length > 1; // Multi-assignee collaborative tasks
             });
             const colTotalCount = projectTasks.length + personalTasks.length;
 
@@ -513,9 +512,11 @@ const TasksScreen = {
 
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isAssigned = this._isUserTask(t, currentUser);
+    const canMoveTask = !isAdmin && isAssigned;
 
     return `
-      <div class="kanban-card ${isAdmin ? 'observer-card' : ''}" draggable="${isAdmin ? 'false' : 'true'}" data-task-id="${t.id}"
+      <div class="kanban-card ${!canMoveTask ? 'observer-card' : ''}" draggable="${canMoveTask ? 'true' : 'false'}" data-task-id="${t.id}"
         ondragstart="TasksScreen.onDragStart(event,'${t.id}')" ondragend="TasksScreen.onDragEnd(event)"
         onclick="TasksScreen.openDetailModal('${t.id}')">
         
@@ -719,11 +720,13 @@ const TasksScreen = {
                             <option value="todo" ${!isDone ? 'selected' : ''}>To Do</option>
                             <option value="done" ${isDone ? 'selected' : ''}>Done</option>
                           </select>
-                        ` : `
+                        ` : (this._isUserTask(t, currentUser) ? `
                           <select class="form-select" style="height:28px;font-size:11px;padding:0 24px 0 8px;width:auto;min-width:100px" onchange="TasksScreen.updateStatus('${t.id}',this.value)">
                             ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${(isDone && s==='done') || t.status===s ? 'selected' : ''}>${Utils.humanize(s)}</option>`).join('')}
                           </select>
-                        `)}
+                        ` : `
+                          <span class="badge" style="font-size:11px;padding:3px 8px;background:var(--color-surface-subtle);color:var(--color-text-primary);border:1px solid var(--color-border);">${Utils.humanize(t.status)}</span>
+                        `))}
                       </td>
                       <td>
                         ${totalSt > 0 ? `
@@ -747,17 +750,23 @@ const TasksScreen = {
     `;
   },
 
-  // Drag & Drop (Only for Project Tasks, Developer Execution Role)
+  // Drag & Drop (Only for assigned team members on project tasks)
   onDragStart(e, taskId) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    if (currentUser && currentUser.role === 'Admin') {
+    const task = Store.getTask(taskId);
+    if (!task) return false;
+    if (task.isPersonal) {
       e.preventDefault();
-      if (typeof Toast !== 'undefined') Toast.show('Admins monitor task progress in observer mode. Status updates are performed by assigned developers.', 'info');
       return false;
     }
-    const task = Store.getTask(taskId);
-    if (task && task.isPersonal) {
+    if (currentUser && currentUser.role === 'Admin') {
       e.preventDefault();
+      if (typeof Toast !== 'undefined') Toast.show('Admins monitor task progress in observer mode. Status updates are performed by assigned team members.', 'info');
+      return false;
+    }
+    if (!this._isUserTask(task, currentUser)) {
+      e.preventDefault();
+      if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can move this task.', 'warning');
       return false;
     }
     this._dragTask = taskId;
@@ -777,7 +786,12 @@ const TasksScreen = {
     }
     if (this._dragTask) {
       const task = Store.getTask(this._dragTask);
-      if (task && task.isPersonal) {
+      if (!task || task.isPersonal) {
+        this._dragTask = null;
+        return;
+      }
+      if (!this._isUserTask(task, currentUser)) {
+        if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can move this task.', 'warning');
         this._dragTask = null;
         return;
       }
@@ -787,7 +801,23 @@ const TasksScreen = {
   },
 
   updateStatus(taskId, status) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
     const task = Store.getTask(taskId);
+    if (!task) return;
+
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    const isAssigned = this._isUserTask(task, currentUser);
+
+    // Only assigned team member can update execution status (Admins review via review flow)
+    if (!isAdmin && !isAssigned) {
+      if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can move this task.', 'warning');
+      return;
+    }
+    if (isAdmin && !isAssigned && status !== 'in-progress' && status !== 'done') {
+      if (typeof Toast !== 'undefined') Toast.show('Admins monitor task progress in observer mode. Status updates are performed by assigned team members.', 'info');
+      return;
+    }
+
     const prevStatus = task ? task.status : '';
     const completed = status === 'done';
     Store.updateTask(taskId, { status, completed });
@@ -795,8 +825,7 @@ const TasksScreen = {
 
     // When assignee brings task to review phase, notify admin
     if (status === 'review' && prevStatus !== 'review') {
-      const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-      const devName = currentUser ? currentUser.name : 'Assigned developer';
+      const devName = currentUser ? currentUser.name : 'Assigned team member';
       Store.addNotification({
         type: 'task',
         text: `📋 Task "<strong>${task ? task.title : 'Task'}</strong>" submitted for review by ${devName}. Ready for admin review.`,
@@ -981,8 +1010,40 @@ const TasksScreen = {
     `;
   },
 
+  _renderReadOnlyAssigneePills(selectedMemberIds = []) {
+    if (!selectedMemberIds || selectedMemberIds.length === 0) {
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;">Unassigned</div>`;
+    }
+    const members = selectedMemberIds.map(id => Store.getMember(id)).filter(Boolean);
+    if (members.length === 0) {
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:4px 0;">Unassigned</div>`;
+    }
+    return `
+      <div class="assignee-pills-wrap" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
+        ${members.map(m => {
+          const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+          const color = m.color || '#2563EB';
+          return `
+            <div class="assignee-pill-readonly" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--color-border);background:var(--color-surface-subtle);cursor:default;" title="${m.name} (${m.role || 'Member'})">
+              <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">${initials}</span>
+              <span style="font-size:12.5px;font-weight:500;color:var(--color-text-primary);">${m.name}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+
   handleAssigneePillToggle(input) {
-    const label = input.closest('.assignee-pill-btn');
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (!currentUser || currentUser.role !== 'Admin') {
+      if (input && typeof input.checked === 'boolean') {
+        input.checked = !input.checked;
+      }
+      if (typeof Toast !== 'undefined') Toast.show('Only Admin can assign or change team members.', 'warning');
+      return;
+    }
+    if (!input || typeof input.closest !== 'function') return;
     if (!label) return;
     const isChecked = input.checked;
     if (isChecked) {
@@ -1094,15 +1155,37 @@ const TasksScreen = {
           </select>
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:14px">
-        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Assignee(s) <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span></span>
-        </label>
-        <div id="task-assignee-picker">
-          ${this._renderAssigneePills(selectableAssignees, initialSelectedAssignees, 'task')}
+      ${isAdmin ? `
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Assignee(s) <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span></span>
+          </label>
+          <div id="task-assignee-picker">
+            ${this._renderAssigneePills(selectableAssignees, initialSelectedAssignees, 'task')}
+          </div>
+          <input type="hidden" id="task-assignee" value="${initialSelectedAssignees[0] || ''}">
         </div>
-        <input type="hidden" id="task-assignee" value="${initialSelectedAssignees[0] || ''}">
-      </div>
+      ` : (function() {
+        const currentMember = userMemberId ? Store.getMember(userMemberId) : null;
+        const currentName = currentMember ? currentMember.name : (currentUser?.name || 'Self');
+        const currentInitials = currentMember ? (currentMember.initials || currentMember.name.split(' ').map(w=>w[0]).join('').slice(0,2)) : (currentUser?.name?.slice(0,2) || 'ME');
+        const currentColor = currentMember ? (currentMember.color || '#2563EB') : '#2563EB';
+        return `
+          <div class="form-group" style="margin-bottom:14px">
+            <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Assignee</span>
+              <span style="font-weight:normal;color:var(--color-text-muted);font-size:11px;">(Only Admin can assign or change team members)</span>
+            </label>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--color-surface-subtle);border:1px solid var(--color-border);border-radius:var(--radius-md);max-width:max-content;">
+              <div class="avatar avatar-xs" style="background:${currentColor};width:22px;height:22px;font-size:9.5px;font-weight:700;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">${currentInitials}</div>
+              <span style="font-size:13px;font-weight:600;color:var(--color-text-primary);">${currentName}</span>
+              <span style="font-size:10.5px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 6px;border-radius:var(--radius-pill);font-weight:600;">Self</span>
+            </div>
+            <input type="hidden" id="task-assignee" value="${userMemberId || currentUser?.id}">
+            <input type="checkbox" class="task-assignee-cb" value="${userMemberId || currentUser?.id}" checked style="display:none;">
+          </div>
+        `;
+      })()}
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
           <label class="form-label">Priority</label>
@@ -1348,29 +1431,39 @@ const TasksScreen = {
       return;
     }
 
-    // Collect multi-select assignees from picker
-    const checkedAssigneeBoxes = document.querySelectorAll('.task-assignee-cb:checked');
-    let assigneeIds = Array.from(checkedAssigneeBoxes).map(cb => cb.value);
-
-    // Fallbacks if no checkboxes checked
-    if (assigneeIds.length === 0) {
-      const fallbackAssignee = document.getElementById('task-assignee')?.value || document.getElementById('detail-assignee')?.value;
-      if (fallbackAssignee) {
-        assigneeIds = [fallbackAssignee];
-      } else if (existingTask && Array.isArray(existingTask.assigneeIds) && existingTask.assigneeIds.length > 0) {
-        assigneeIds = existingTask.assigneeIds;
-      } else if (existingTask && existingTask.assigneeId) {
-        assigneeIds = [existingTask.assigneeId];
-      } else if (isStandardUser && !id) {
-        assigneeIds = [userMemberId || currentUser?.id || ''];
+    // Role-based assignee enforcement: ONLY Admin can select or change team members
+    let assigneeIds = [];
+    if (isAdmin) {
+      const checkedAssigneeBoxes = document.querySelectorAll('.task-assignee-cb:checked');
+      assigneeIds = Array.from(checkedAssigneeBoxes).map(cb => cb.value);
+      if (assigneeIds.length === 0) {
+        const fallbackAssignee = document.getElementById('task-assignee')?.value || document.getElementById('detail-assignee')?.value;
+        if (fallbackAssignee) {
+          assigneeIds = [fallbackAssignee];
+        } else if (existingTask && Array.isArray(existingTask.assigneeIds) && existingTask.assigneeIds.length > 0) {
+          assigneeIds = existingTask.assigneeIds;
+        } else if (existingTask && existingTask.assigneeId) {
+          assigneeIds = [existingTask.assigneeId];
+        }
+      }
+      assigneeIds = assigneeIds.filter(mid => mid && mid !== 'm1' && Store.getMember(mid)?.role !== 'Admin');
+      assigneeIds = [...new Set(assigneeIds)];
+    } else {
+      // Standard user cannot change or pick assignees
+      if (id && existingTask) {
+        // Preserves existing task assignments strictly
+        assigneeIds = Array.isArray(existingTask.assigneeIds) && existingTask.assigneeIds.length > 0
+          ? existingTask.assigneeIds
+          : (existingTask.assigneeId ? [existingTask.assigneeId] : [userMemberId || currentUser?.id || 'm2']);
+      } else {
+        // New task created by standard user is strictly assigned to themselves
+        assigneeIds = [userMemberId || currentUser?.id || 'm2'];
       }
     }
-    // Clean & filter out admin
-    assigneeIds = assigneeIds.filter(mid => mid && mid !== 'm1' && Store.getMember(mid)?.role !== 'Admin');
-    assigneeIds = [...new Set(assigneeIds)];
-    const assigneeId = assigneeIds[0] || '';
+    const assigneeId = assigneeIds[0] || (userMemberId || currentUser?.id || '');
 
     if (id) {
+      const isAssigned = this._isUserTask(existingTask, currentUser);
       const updatePayload = {
         title,
         projectId: isPersonal ? '' : projectId,
@@ -1378,7 +1471,7 @@ const TasksScreen = {
         assigneeId,
         assigneeIds,
         priority: priorityEl?.value || 'medium',
-        status: (isAdmin && existingTask && !existingTask.isPersonal) ? existingTask.status : (statusEl?.value || 'todo'),
+        status: (isAdmin || !isAssigned) ? (existingTask ? existingTask.status : 'todo') : (statusEl?.value || 'todo'),
         dueDate: dueEl?.value || ''
       };
 
@@ -1446,28 +1539,30 @@ const TasksScreen = {
     const body = `
       <div class="form-group" style="margin-bottom:14px">
         <label class="form-label">Title</label>
-        <input type="text" class="form-input" id="detail-title" value="${Utils.escapeHtml(t.title)}">
+        <input type="text" class="form-input" id="detail-title" value="${Utils.escapeHtml(t.title)}" ${(!isOwnTask && !isAdmin) ? 'readonly style="background:var(--color-surface-subtle);cursor:default;"' : ''}>
       </div>
       <div class="form-group" style="margin-bottom:14px">
         <label class="form-label">${t.isPersonal ? 'Notes / Scratchpad' : 'Description'}</label>
-        <textarea class="form-textarea" id="detail-desc" rows="3">${Utils.escapeHtml(t.description || '')}</textarea>
+        <textarea class="form-textarea" id="detail-desc" rows="3" ${(!isOwnTask && !isAdmin) ? 'readonly style="background:var(--color-surface-subtle);cursor:default;"' : ''}>${Utils.escapeHtml(t.description || '')}</textarea>
       </div>
       
       ${!t.isPersonal ? `
         <div class="form-row" style="margin-bottom:14px">
           <div class="form-group" style="flex:1;">
             <label class="form-label">Project</label>
-            <select class="form-select" id="detail-project" onchange="TasksScreen.handleProjectChangeInModal(this.value, 'detail')">
+            <select class="form-select" id="detail-project" ${(!isOwnTask && !isAdmin) ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;"' : ''} onchange="TasksScreen.handleProjectChangeInModal(this.value, 'detail')">
               ${projects.map(p => `<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="form-group" style="margin-bottom:14px">
           <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-            <span>Assignee(s) <span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span></span>
+            <span>Assignee(s) ${isAdmin ? '<span style="font-weight:normal;color:var(--color-text-muted);font-size:12px;">(Select one or multiple team members)</span>' : '<span style="font-weight:normal;color:var(--color-text-muted);font-size:11px;">(Only Admin can assign or change team members)</span>'}</span>
           </label>
           <div id="detail-assignee-picker">
-            ${this._renderAssigneePills(selectableAssignees, existingAssigneeIds, 'detail')}
+            ${isAdmin
+              ? this._renderAssigneePills(selectableAssignees, existingAssigneeIds, 'detail')
+              : this._renderReadOnlyAssigneePills(existingAssigneeIds)}
           </div>
           <input type="hidden" id="detail-assignee" value="${t.assigneeId || ''}">
         </div>
@@ -1475,15 +1570,15 @@ const TasksScreen = {
 
       <div class="form-row" style="margin-bottom:14px">
         <div class="form-group">
-          <label class="form-label">Status ${isAdmin ? '<span style="font-weight:400;color:var(--color-text-muted);font-size:11px;">(Observer Mode)</span>' : ''}</label>
-          <select class="form-select" id="detail-status" ${isAdmin ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;" title="Execution status is updated by assigned developers"' : ''}>
+          <label class="form-label">Status ${isAdmin ? '<span style="font-weight:400;color:var(--color-text-muted);font-size:11px;">(Observer Mode)</span>' : (!isOwnTask ? '<span style="font-weight:400;color:var(--color-text-muted);font-size:11px;">(View Only)</span>' : '')}</label>
+          <select class="form-select" id="detail-status" ${(!isOwnTask || isAdmin) ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;" title="' + (isAdmin ? 'Live execution status updated by assigned developers' : 'Only assigned team member can update execution status') + '"' : ''}>
             ${['todo','in-progress','review','done'].map(s => `<option value="${s}" ${t.status===s?'selected':''}>${Utils.humanize(s)}</option>`).join('')}
           </select>
-          ${isAdmin ? `<small style="font-size:11px;color:var(--color-text-muted);display:block;margin-top:2px;">Live execution status updated by assigned developers.</small>` : ''}
+          ${isAdmin ? `<small style="font-size:11px;color:var(--color-text-muted);display:block;margin-top:2px;">Live execution status updated by assigned developers.</small>` : (!isOwnTask ? `<small style="font-size:11px;color:var(--color-text-muted);display:block;margin-top:2px;">Only assigned team member can change execution status.</small>` : '')}
         </div>
         <div class="form-group">
           <label class="form-label">Priority</label>
-          <select class="form-select" id="detail-priority">
+          <select class="form-select" id="detail-priority" ${(!isOwnTask && !isAdmin) ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;"' : ''}>
             ${['low','medium','high'].map(p => `<option value="${p}" ${t.priority===p?'selected':''}>${Utils.humanize(p)}</option>`).join('')}
           </select>
         </div>
@@ -1502,12 +1597,12 @@ const TasksScreen = {
 
       <div class="form-group" style="margin-bottom:18px">
         <label class="form-label">Due Date</label>
-        <input type="date" class="form-input" id="detail-due" value="${t.dueDate || ''}">
+        <input type="date" class="form-input" id="detail-due" value="${t.dueDate || ''}" ${(!isOwnTask && !isAdmin) ? 'disabled style="background:var(--color-surface-subtle);cursor:not-allowed;"' : ''}>
       </div>
 
       <!-- Interactive Subtasks Checklist Section with Visual Progress Bar -->
       <div id="detail-subtasks-wrapper" style="border-top:1px solid var(--color-border);padding-top:16px;">
-        ${this._buildSubtasksHtml(taskId, subtasks)}
+        ${this._buildSubtasksHtml(taskId, subtasks, (isAdmin || isOwnTask))}
       </div>
     `;
 
@@ -1518,13 +1613,13 @@ const TasksScreen = {
           Review Changes
         </button>
       ` : ''}
-      <button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
-      <button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save Changes</button>`;
+      <button class="btn btn-secondary" onclick="Modal.closeAll()">${(!isAdmin && !isOwnTask) ? 'Close' : 'Cancel'}</button>
+      ${(!isAdmin && !isOwnTask) ? '' : `<button class="btn btn-primary" onclick="TasksScreen.saveTask('${taskId}')">Save Changes</button>`}`;
     
     Modal.open(t.isPersonal ? 'Personal Task Details' : 'Edit Task Details', body, footer, { large: true });
   },
 
-  _buildSubtasksHtml(taskId, subtasks) {
+  _buildSubtasksHtml(taskId, subtasks, isEditable = true) {
     const list = Array.isArray(subtasks) ? subtasks : [];
     const total = list.length;
     const completed = list.filter(s => s.completed).length;
@@ -1552,43 +1647,63 @@ const TasksScreen = {
       <!-- Checklist Items -->
       <div class="subtasks-checklist-items" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
         ${total === 0 ? `
-          <div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No subtasks created for this task yet. Add checklist items below.</div>
+          <div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No subtasks created for this task yet. ${isEditable ? 'Add checklist items below.' : ''}</div>
         ` : list.map(st => `
           <div class="subtask-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:${st.completed ? 'var(--color-surface-subtle, #f8fafc)' : 'var(--color-surface)'};border:1px solid ${st.completed ? 'var(--color-border-subtle, #e2e8f0)' : 'var(--color-border)'};transition:all 0.15s ease;">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;margin:0;user-select:none;">
-              <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="TasksScreen.handleToggleSubtask('${taskId}', '${st.id}', this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primary);border-radius:4px;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:${isEditable ? 'pointer' : 'default'};flex:1;margin:0;user-select:none;">
+              <input type="checkbox" ${st.completed ? 'checked' : ''} ${!isEditable ? 'disabled style="cursor:not-allowed;"' : `onchange="TasksScreen.handleToggleSubtask('${taskId}', '${st.id}', this.checked)"`} style="width:16px;height:16px;cursor:${isEditable ? 'pointer' : 'not-allowed'};accent-color:var(--color-primary);border-radius:4px;">
               <span style="font-size:13px;transition:all 0.15s ease;${st.completed ? 'text-decoration:line-through;color:var(--color-text-disabled);' : 'color:var(--color-text-primary);font-weight:500;'}">
                 ${Utils.escapeHtml(st.title)}
               </span>
             </label>
-            <button type="button" class="btn btn-ghost btn-xs btn-icon" onclick="TasksScreen.handleDeleteSubtask('${taskId}', '${st.id}')" title="Delete Subtask" style="color:var(--color-text-muted);">
-              ${Icons.x}
-            </button>
+            ${isEditable ? `
+              <button type="button" class="btn btn-ghost btn-xs btn-icon" onclick="TasksScreen.handleDeleteSubtask('${taskId}', '${st.id}')" title="Delete Subtask" style="color:var(--color-text-muted);">
+                ${Icons.x}
+              </button>
+            ` : ''}
           </div>
         `).join('')}
       </div>
 
-      <!-- Inline + Add Subtask Text Field -->
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" class="form-input" id="detail-new-subtask-input" placeholder="+ Add a new subtask checklist item..." style="font-size:13px;height:34px;flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.handleAddSubtask('${taskId}');}">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="TasksScreen.handleAddSubtask('${taskId}')" style="white-space:nowrap;height:34px;">
-          ${Icons.plus} Add Subtask
-        </button>
-      </div>
+      ${isEditable ? `
+        <!-- Inline + Add Subtask Text Field -->
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" class="form-input" id="detail-new-subtask-input" placeholder="+ Add a new subtask checklist item..." style="font-size:13px;height:34px;flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();TasksScreen.handleAddSubtask('${taskId}');}">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="TasksScreen.handleAddSubtask('${taskId}')" style="white-space:nowrap;height:34px;">
+            ${Icons.plus} Add Subtask
+          </button>
+        </div>
+      ` : ''}
     `;
   },
 
   handleToggleSubtask(taskId, subtaskId, isChecked) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const task = Store.getTask(taskId);
+    if (!task) return;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin && !this._isUserTask(task, currentUser)) {
+      if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can update subtasks.', 'warning');
+      return;
+    }
     Store.toggleSubtask(taskId, subtaskId, isChecked);
     const updatedTask = Store.getTask(taskId);
     const wrapper = document.getElementById('detail-subtasks-wrapper');
     if (wrapper && updatedTask) {
-      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || [], true);
     }
     this.updateTasksContainer();
   },
 
   handleAddSubtask(taskId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const task = Store.getTask(taskId);
+    if (!task) return;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin && !this._isUserTask(task, currentUser)) {
+      if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can add subtasks.', 'warning');
+      return;
+    }
     const input = document.getElementById('detail-new-subtask-input');
     if (!input) return;
     const title = input.value.trim();
@@ -1598,7 +1713,7 @@ const TasksScreen = {
     const updatedTask = Store.getTask(taskId);
     const wrapper = document.getElementById('detail-subtasks-wrapper');
     if (wrapper && updatedTask) {
-      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || [], true);
       const newInput = document.getElementById('detail-new-subtask-input');
       if (newInput) newInput.focus();
     }
@@ -1607,11 +1722,19 @@ const TasksScreen = {
   },
 
   handleDeleteSubtask(taskId, subtaskId) {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const task = Store.getTask(taskId);
+    if (!task) return;
+    const isAdmin = currentUser && currentUser.role === 'Admin';
+    if (!isAdmin && !this._isUserTask(task, currentUser)) {
+      if (typeof Toast !== 'undefined') Toast.show('Only the assigned team member can remove subtasks.', 'warning');
+      return;
+    }
     Store.deleteSubtask(taskId, subtaskId);
     const updatedTask = Store.getTask(taskId);
     const wrapper = document.getElementById('detail-subtasks-wrapper');
     if (wrapper && updatedTask) {
-      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || []);
+      wrapper.innerHTML = this._buildSubtasksHtml(taskId, updatedTask.subtasks || [], true);
     }
     this.updateTasksContainer();
     Toast.show('Subtask removed');

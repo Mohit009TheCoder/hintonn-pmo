@@ -345,17 +345,16 @@ assert(!doneSection.includes('Assigned to Me'), 'Done column does NOT contain re
 assert(!doneSection.includes('openAddPersonalTaskModal'), 'Done column does NOT contain "+ Add Personal Task" action');
 assert(doneSection.includes('kanban-full-cards'), 'Done column renders direct full-height cards container');
 
-// 4. Shared Project Task Visibility for Collaborators
+// 4. Strict Role-Based Task Visibility: Non-admin only sees tasks assigned to them
 TasksScreen._filter.project = projectAlpha.id;
 const sharedProjectTasks = TasksScreen._getFilteredTasks();
 assert(sharedProjectTasks.some(t => t.id === task1.id), 'Shared project filter includes Preet task (task1)');
-assert(sharedProjectTasks.some(t => t.id === task2.id), 'Shared project filter includes collaborator Hirvi task (task2)');
+assert(!sharedProjectTasks.some(t => t.id === task2.id), 'Shared project filter strictly excludes other user Hirvi task (task2)');
 assert(!sharedProjectTasks.some(t => t.id === task3.id), 'Shared project filter strictly excludes unassigned project tasks (task3)');
 
 const sharedKanbanHtml = TasksScreen._renderKanban(sharedProjectTasks);
-assert(sharedKanbanHtml.includes('Project Tasks'), 'Top section header updates to Project Tasks when project is selected');
-assert(sharedKanbanHtml.includes('avatar avatar-badge'), 'Project task card renders collaborator avatar badge');
-assert(sharedKanbanHtml.includes('Preet Data Preparation') && sharedKanbanHtml.includes('Hirvi Model Fine-tuning'), 'All project collaborator tasks render in Kanban');
+assert(sharedKanbanHtml.includes('Preet Data Preparation'), 'Assigned task renders in Kanban');
+assert(!sharedKanbanHtml.includes('Hirvi Model Fine-tuning'), 'Other team member tasks do NOT leak into standard user Kanban');
 
 // 5. Admin project-level tasks visibility (Personal tasks omitted for Admin)
 Auth.currentUser = { id: 'mohit', memberId: 'm3', name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com' };

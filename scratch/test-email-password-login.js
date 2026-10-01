@@ -90,8 +90,8 @@ const loginCode = fs.readFileSync(path.join(__dirname, '../js/screens/login.js')
 vm.runInContext(loginCode, context);
 
 (async () => {
-  const Auth = context.Auth;
-  const LoginScreen = context.LoginScreen;
+  const Auth = vm.runInContext('Auth', context);
+  const LoginScreen = vm.runInContext('LoginScreen', context);
 
   Auth.init();
 

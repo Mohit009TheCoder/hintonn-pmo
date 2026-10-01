@@ -31,7 +31,7 @@ function createEnvironment(initialSessionData = {}, initialLocalData = {}) {
     'login-btn': { disabled: false, textContent: 'Sign In' },
     'auth-error-alert': { style: { display: 'none' }, classList: { add: ()=>{}, remove: ()=>{} } },
     'auth-error-text': { textContent: '' },
-    'page-content': { innerHTML: '' },
+    'page-content': { innerHTML: '', classList: { add: ()=>{}, remove: ()=>{} }, style: {} },
     'sidebar-nav': { innerHTML: '' },
     'breadcrumb': { innerHTML: '' },
     'toast-container': { innerHTML: '', appendChild: ()=>{} }

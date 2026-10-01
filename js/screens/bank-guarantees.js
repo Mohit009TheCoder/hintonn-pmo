@@ -298,12 +298,156 @@ const BankGuaranteesScreen = {
     DashboardScreen.openBatchRenewal();
   },
 
+  _INDIAN_BANKS: [
+    { group: 'Public Sector Banks (PSU)', items: [
+      { value: 'State Bank of India', label: 'State Bank of India (SBI)' },
+      { value: 'Punjab National Bank', label: 'Punjab National Bank (PNB)' },
+      { value: 'Bank of Baroda', label: 'Bank of Baroda (BOB)' },
+      { value: 'Canara Bank', label: 'Canara Bank' },
+      { value: 'Union Bank of India', label: 'Union Bank of India' },
+      { value: 'Bank of India', label: 'Bank of India (BOI)' },
+      { value: 'Indian Bank', label: 'Indian Bank' },
+      { value: 'Central Bank of India', label: 'Central Bank of India' },
+      { value: 'Indian Overseas Bank', label: 'Indian Overseas Bank (IOB)' },
+      { value: 'UCO Bank', label: 'UCO Bank' },
+      { value: 'Bank of Maharashtra', label: 'Bank of Maharashtra' },
+      { value: 'Punjab & Sind Bank', label: 'Punjab & Sind Bank' }
+    ]},
+    { group: 'Leading Private Sector Banks', items: [
+      { value: 'HDFC Bank', label: 'HDFC Bank' },
+      { value: 'ICICI Bank', label: 'ICICI Bank' },
+      { value: 'Axis Bank', label: 'Axis Bank' },
+      { value: 'Kotak Mahindra Bank', label: 'Kotak Mahindra Bank' },
+      { value: 'IndusInd Bank', label: 'IndusInd Bank' },
+      { value: 'IDBI Bank', label: 'IDBI Bank' },
+      { value: 'Yes Bank', label: 'Yes Bank' },
+      { value: 'Federal Bank', label: 'Federal Bank' },
+      { value: 'IDFC FIRST Bank', label: 'IDFC FIRST Bank' },
+      { value: 'South Indian Bank', label: 'South Indian Bank' },
+      { value: 'RBL Bank', label: 'RBL Bank' },
+      { value: 'Bandhan Bank', label: 'Bandhan Bank' },
+      { value: 'City Union Bank', label: 'City Union Bank' },
+      { value: 'Karur Vysya Bank', label: 'Karur Vysya Bank' },
+      { value: 'Karnataka Bank', label: 'Karnataka Bank' },
+      { value: 'Tamilnad Mercantile Bank', label: 'Tamilnad Mercantile Bank' },
+      { value: 'Jammu & Kashmir Bank', label: 'Jammu & Kashmir Bank (J&K Bank)' },
+      { value: 'CSB Bank', label: 'CSB Bank' },
+      { value: 'Dhanlaxmi Bank', label: 'Dhanlaxmi Bank' },
+      { value: 'DCB Bank', label: 'DCB Bank' }
+    ]},
+    { group: 'Development & Specialized Institutions', items: [
+      { value: 'Export-Import Bank of India (EXIM)', label: 'Export-Import Bank of India (EXIM Bank)' },
+      { value: 'SIDBI', label: 'Small Industries Development Bank of India (SIDBI)' },
+      { value: 'NABARD', label: 'NABARD' }
+    ]},
+    { group: 'Foreign Scheduled Commercial Banks (Operating in India)', items: [
+      { value: 'Standard Chartered Bank', label: 'Standard Chartered Bank (India)' },
+      { value: 'HSBC India', label: 'HSBC India' },
+      { value: 'Citibank India', label: 'Citibank India' },
+      { value: 'Deutsche Bank India', label: 'Deutsche Bank India' },
+      { value: 'Barclays Bank India', label: 'Barclays Bank India' },
+      { value: 'DBS Bank India', label: 'DBS Bank India' },
+      { value: 'BNP Paribas India', label: 'BNP Paribas India' },
+      { value: 'SMBC Bank India', label: 'Sumitomo Mitsui Banking Corp (SMBC India)' },
+      { value: 'MUFG Bank India', label: 'MUFG Bank India' },
+      { value: 'Mizuho Bank India', label: 'Mizuho Bank India' }
+    ]},
+    { group: 'Other', items: [
+      { value: 'Other Indian Scheduled Bank', label: 'Other Indian Scheduled Bank...' }
+    ]}
+  ],
+
+  _renderBankOptionsHTML(query = '') {
+    const q = (query || '').toLowerCase().trim();
+    let html = '';
+    let totalMatches = 0;
+
+    this._INDIAN_BANKS.forEach(grp => {
+      const filtered = grp.items.filter(item => 
+        !q || item.label.toLowerCase().includes(q) || item.value.toLowerCase().includes(q) || grp.group.toLowerCase().includes(q)
+      );
+
+      if (filtered.length > 0) {
+        html += `<div class="custom-dropdown-group-header">${grp.group}</div>`;
+        filtered.forEach(item => {
+          totalMatches++;
+          html += `
+            <div class="custom-dropdown-item" onclick="BankGuaranteesScreen.selectBank('${item.value.replace(/'/g, "\\'")}', '${item.label.replace(/'/g, "\\'")}')">
+              <span>${item.label}</span>
+            </div>
+          `;
+        });
+      }
+    });
+
+    if (totalMatches === 0) {
+      html = `<div class="custom-dropdown-empty">No banks matching "${Utils.escapeHtml(query)}"</div>`;
+    }
+
+    return html;
+  },
+
+  toggleBankDropdown(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('custom-bank-menu');
+    const trigger = document.getElementById('custom-bank-trigger');
+    const arrow = document.getElementById('custom-bank-arrow');
+    const searchInput = document.getElementById('custom-bank-search');
+
+    if (!menu) return;
+    const isOpen = menu.style.display === 'flex' || menu.style.display === 'block';
+
+    if (isOpen) {
+      menu.style.display = 'none';
+      if (trigger) trigger.classList.remove('open');
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    } else {
+      menu.style.display = 'flex';
+      if (trigger) trigger.classList.add('open');
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    }
+  },
+
+  filterBankDropdown(query) {
+    const list = document.getElementById('custom-bank-options-list');
+    if (list) {
+      list.innerHTML = this._renderBankOptionsHTML(query);
+    }
+  },
+
+  selectBank(value, label) {
+    const hiddenInput = document.getElementById('new-bg-bank');
+    const labelSpan = document.getElementById('custom-bank-selected-text');
+    const customWrap = document.getElementById('new-bg-custom-bank-wrap');
+
+    if (hiddenInput) hiddenInput.value = value;
+    if (labelSpan) {
+      labelSpan.textContent = label;
+      labelSpan.style.color = 'var(--color-text-primary)';
+      labelSpan.style.fontWeight = '600';
+    }
+
+    if (customWrap) {
+      customWrap.style.display = value === 'Other Indian Scheduled Bank' ? 'block' : 'none';
+    }
+
+    const menu = document.getElementById('custom-bank-menu');
+    const trigger = document.getElementById('custom-bank-trigger');
+    const arrow = document.getElementById('custom-bank-arrow');
+    if (menu) menu.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  },
+
   openNewBGModal() {
     const projects = (typeof Store !== 'undefined' && Store.getProjects) ? Store.getProjects() : [];
     const html = `
-      <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:14px" onclick="const m = document.getElementById('custom-bank-menu'); if(m) m.style.display='none'; const t = document.getElementById('custom-bank-trigger'); if(t) t.classList.remove('open'); const a = document.getElementById('custom-bank-arrow'); if(a) a.style.transform='rotate(0deg)';">
         <div class="form-group">
-          <label class="form-label">Project</label>
+          <label class="form-label" style="font-weight:600">Project</label>
           <select class="form-control" id="new-bg-proj">
             ${projects.length > 0 ? projects.map(p => `
               <option value="${p.id}">${p.name} ${p.code ? `(${p.code})` : ''}</option>
@@ -316,86 +460,42 @@ const BankGuaranteesScreen = {
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Issuing Commercial Bank (Indian Scheduled Banks)</label>
-          <select class="form-control" id="new-bg-bank" onchange="const customWrap = document.getElementById('new-bg-custom-bank-wrap'); if(customWrap) customWrap.style.display = this.value === 'Other Indian Scheduled Bank' ? 'block' : 'none';">
-            <option value="" disabled selected>Select Issuing Indian Bank...</option>
-            
-            <optgroup label="Public Sector Banks (PSU)">
-              <option value="State Bank of India">State Bank of India (SBI)</option>
-              <option value="Punjab National Bank">Punjab National Bank (PNB)</option>
-              <option value="Bank of Baroda">Bank of Baroda (BOB)</option>
-              <option value="Canara Bank">Canara Bank</option>
-              <option value="Union Bank of India">Union Bank of India</option>
-              <option value="Bank of India">Bank of India (BOI)</option>
-              <option value="Indian Bank">Indian Bank</option>
-              <option value="Central Bank of India">Central Bank of India</option>
-              <option value="Indian Overseas Bank">Indian Overseas Bank (IOB)</option>
-              <option value="UCO Bank">UCO Bank</option>
-              <option value="Bank of Maharashtra">Bank of Maharashtra</option>
-              <option value="Punjab & Sind Bank">Punjab & Sind Bank</option>
-            </optgroup>
+        <div class="form-group" style="position:relative">
+          <label class="form-label" style="font-weight:600">Issuing Commercial Bank (Indian Scheduled Banks)</label>
+          <input type="hidden" id="new-bg-bank" value="">
+          
+          <div class="custom-searchable-dropdown" id="custom-bank-select-wrap">
+            <div class="custom-dropdown-trigger" id="custom-bank-trigger" onclick="BankGuaranteesScreen.toggleBankDropdown(event)">
+              <span id="custom-bank-selected-text" style="color:var(--color-text-muted)">Select Issuing Indian Bank...</span>
+              <svg style="width:16px;height:16px;color:var(--color-text-muted);transition:transform 0.2s" id="custom-bank-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
 
-            <optgroup label="Leading Private Sector Banks">
-              <option value="HDFC Bank">HDFC Bank</option>
-              <option value="ICICI Bank">ICICI Bank</option>
-              <option value="Axis Bank">Axis Bank</option>
-              <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-              <option value="IndusInd Bank">IndusInd Bank</option>
-              <option value="IDBI Bank">IDBI Bank</option>
-              <option value="Yes Bank">Yes Bank</option>
-              <option value="Federal Bank">Federal Bank</option>
-              <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
-              <option value="South Indian Bank">South Indian Bank</option>
-              <option value="RBL Bank">RBL Bank</option>
-              <option value="Bandhan Bank">Bandhan Bank</option>
-              <option value="City Union Bank">City Union Bank</option>
-              <option value="Karur Vysya Bank">Karur Vysya Bank</option>
-              <option value="Karnataka Bank">Karnataka Bank</option>
-              <option value="Tamilnad Mercantile Bank">Tamilnad Mercantile Bank</option>
-              <option value="Jammu & Kashmir Bank">Jammu & Kashmir Bank (J&K Bank)</option>
-              <option value="CSB Bank">CSB Bank</option>
-              <option value="Dhanlaxmi Bank">Dhanlaxmi Bank</option>
-              <option value="DCB Bank">DCB Bank</option>
-            </optgroup>
-
-            <optgroup label="Development & Specialized Institutions">
-              <option value="Export-Import Bank of India (EXIM)">Export-Import Bank of India (EXIM Bank)</option>
-              <option value="SIDBI">Small Industries Development Bank of India (SIDBI)</option>
-              <option value="NABARD">NABARD</option>
-            </optgroup>
-
-            <optgroup label="Foreign Scheduled Commercial Banks (Operating in India)">
-              <option value="Standard Chartered Bank">Standard Chartered Bank (India)</option>
-              <option value="HSBC India">HSBC India</option>
-              <option value="Citibank India">Citibank India</option>
-              <option value="Deutsche Bank India">Deutsche Bank India</option>
-              <option value="Barclays Bank India">Barclays Bank India</option>
-              <option value="DBS Bank India">DBS Bank India</option>
-              <option value="BNP Paribas India">BNP Paribas India</option>
-              <option value="SMBC Bank India">Sumitomo Mitsui Banking Corp (SMBC India)</option>
-              <option value="MUFG Bank India">MUFG Bank India</option>
-              <option value="Mizuho Bank India">Mizuho Bank India</option>
-            </optgroup>
-
-            <optgroup label="Other">
-              <option value="Other Indian Scheduled Bank">Other Indian Scheduled Bank...</option>
-            </optgroup>
-          </select>
+            <!-- Guaranteed Downward Opening Dropdown Menu -->
+            <div class="custom-dropdown-menu" id="custom-bank-menu" style="display:none" onclick="event.stopPropagation()">
+              <div class="custom-dropdown-search-wrap">
+                <input type="text" class="custom-dropdown-search-input" id="custom-bank-search" 
+                       placeholder="Search bank (e.g. SBI, HDFC, Canara, BOB)..." 
+                       oninput="BankGuaranteesScreen.filterBankDropdown(this.value)">
+              </div>
+              <div id="custom-bank-options-list" style="overflow-y:auto;max-height:180px">
+                ${this._renderBankOptionsHTML()}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group" id="new-bg-custom-bank-wrap" style="display:none">
-          <label class="form-label">Specify Bank Name</label>
+          <label class="form-label" style="font-weight:600">Specify Bank Name</label>
           <input type="text" class="form-control" id="new-bg-custom-bank" placeholder="Enter bank name...">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Guarantee Amount (₹)</label>
+          <label class="form-label" style="font-weight:600">Guarantee Amount (₹)</label>
           <input type="text" class="form-control" id="new-bg-amount" placeholder="e.g. 14,250,000">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Guarantee Type</label>
+          <label class="form-label" style="font-weight:600">Guarantee Type</label>
           <select class="form-control" id="new-bg-type">
             <option value="Performance BG">Performance Guarantee (PBG - 10%)</option>
             <option value="Advance BG">Advance Payment Guarantee (ABG - 10%)</option>
@@ -406,7 +506,7 @@ const BankGuaranteesScreen = {
         </div>
 
         <div class="form-group">
-          <label class="form-label">Expiry Date</label>
+          <label class="form-label" style="font-weight:600">Expiry Date</label>
           <input type="date" class="form-control" id="new-bg-expiry" value="${new Date(Date.now() + 180*24*60*60*1000).toISOString().slice(0, 10)}">
         </div>
       </div>
@@ -425,8 +525,8 @@ const BankGuaranteesScreen = {
     const projectName = proj ? proj.name : (projSelect && projSelect.options[projSelect.selectedIndex] ? projSelect.options[projSelect.selectedIndex].text : 'General Project');
     const packageCode = proj ? (proj.packageCode || proj.code || 'PKG-01') : 'PKG-01';
 
-    const bankSelect = document.getElementById('new-bg-bank');
-    let bank = bankSelect ? bankSelect.value : '';
+    const bankInput = document.getElementById('new-bg-bank');
+    let bank = bankInput ? bankInput.value : '';
     if (bank === 'Other Indian Scheduled Bank') {
       const custom = document.getElementById('new-bg-custom-bank') ? document.getElementById('new-bg-custom-bank').value.trim() : '';
       if (custom) bank = custom;

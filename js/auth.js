@@ -72,11 +72,71 @@ const Auth = {
   ],
 
   currentUser: null,
+  _sessionFallback: {},
+
+  _getSessionStorage() {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        return window.sessionStorage;
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        return sessionStorage;
+      }
+    } catch (e) {}
+    if (typeof localStorage !== 'undefined' && typeof window !== 'undefined' && !window.sessionStorage) {
+      return localStorage;
+    }
+    return {
+      getItem: (k) => Auth._sessionFallback[k] || null,
+      setItem: (k, v) => { Auth._sessionFallback[k] = String(v); },
+      removeItem: (k) => { delete Auth._sessionFallback[k]; },
+      clear: () => { Auth._sessionFallback = {}; }
+    };
+  },
+
+  _getSessionUser() {
+    try {
+      const storage = this._getSessionStorage();
+      if (!storage) return null;
+      const raw = storage.getItem('hintonn-current-user');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  _setSessionUser(u) {
+    try {
+      const storage = this._getSessionStorage();
+      if (storage && u) {
+        storage.setItem('hintonn-current-user', JSON.stringify(u));
+      }
+    } catch (e) {}
+    // Guarantee no persistent session remains in localStorage
+    try { localStorage.removeItem('hintonn-current-user'); } catch (e) {}
+  },
+
+  _clearSessionUser() {
+    try {
+      const storage = this._getSessionStorage();
+      if (storage) {
+        storage.removeItem('hintonn-current-user');
+      }
+    } catch (e) {}
+    try { localStorage.removeItem('hintonn-current-user'); } catch (e) {}
+  },
+
   getCurrentUser() {
+    if (this.currentUser) this._enforceAdminRole(this.currentUser);
     return this.currentUser;
   },
   setCurrentUser(u) {
     this.currentUser = u;
+    if (u) {
+      this._setSessionUser(u);
+    } else {
+      this._clearSessionUser();
+    }
   },
   isAuthenticated() {
     return !!(this.currentUser && this.currentUser.approved !== false && this.currentUser.revoked !== true);
@@ -148,10 +208,13 @@ const Auth = {
 
   init() {
     try {
-      const AUTH_VERSION = 'v8-revoke-fix';
+      const AUTH_VERSION = 'v9-tab-session';
       if (localStorage.getItem('hintonn-auth-version') !== AUTH_VERSION) {
         localStorage.setItem('hintonn-auth-version', AUTH_VERSION);
       }
+
+      // ── CRITICAL: Purge any legacy localStorage session to enforce login on start ──
+      try { localStorage.removeItem('hintonn-current-user'); } catch (e) {}
 
       const savedUsers = localStorage.getItem('hintonn-users-db');
       if (savedUsers) {
@@ -178,29 +241,29 @@ const Auth = {
         } catch(e) {}
       }
 
-      const saved = localStorage.getItem('hintonn-current-user');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      // ── Tab Session Check: Only restore user if active in current tab's sessionStorage ──
+      const savedUser = this._getSessionUser();
+      if (savedUser) {
         let match = this.users.find(u => 
-          u.id === parsed.id || 
-          (u.email && parsed.email && u.email.toLowerCase() === parsed.email.toLowerCase()) ||
-          (u.googleEmail && parsed.email && u.googleEmail.toLowerCase() === parsed.email.toLowerCase())
+          u.id === savedUser.id || 
+          (u.email && savedUser.email && u.email.toLowerCase() === savedUser.email.toLowerCase()) ||
+          (u.googleEmail && savedUser.email && u.googleEmail.toLowerCase() === savedUser.email.toLowerCase())
         );
-        if (!match && parsed && (parsed.email || parsed.name)) {
-          match = parsed;
+        if (!match && savedUser && (savedUser.email || savedUser.name)) {
+          match = savedUser;
           this.users.push(match);
         }
         if (match) {
           this._enforceAdminRole(match);
-          if (match.approved === false) {
+          if (match.approved === false || match.revoked === true) {
             this.currentUser = null;
-            localStorage.removeItem('hintonn-current-user');
+            this._clearSessionUser();
           } else {
             this.currentUser = match;
             if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
               Store._data.settings.currentUser = match.memberId || 'm1';
             }
-            try { localStorage.setItem('hintonn-current-user', JSON.stringify(match)); } catch (e) {}
+            this._setSessionUser(match);
 
             // ── Ensure non-admin user has a member record in Store ──
             if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function' && match.role !== 'Admin') {
@@ -220,18 +283,22 @@ const Auth = {
                   color: match.color || '#2563EB'
                 });
               } else if (existingMember.id !== match.memberId) {
-                // Sync memberId if found by email but has different ID
                 match.memberId = existingMember.id;
-                try { localStorage.setItem('hintonn-current-user', JSON.stringify(match)); } catch (e) {}
+                this._setSessionUser(match);
               }
             }
           }
         } else {
           this.currentUser = null;
-          localStorage.removeItem('hintonn-current-user');
+          this._clearSessionUser();
         }
       } else {
+        // Tab closed or fresh start: prompt for login every time!
         this.currentUser = null;
+        this._clearSessionUser();
+        if (typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.signOut === 'function') {
+          FirebaseAuth.signOut().catch(() => {});
+        }
       }
     } catch (e) {
       this.currentUser = null;
@@ -268,7 +335,7 @@ const Auth = {
           }
           this._enforceAdminRole(fbUser);
           this.currentUser = fbUser;
-          try { localStorage.setItem('hintonn-current-user', JSON.stringify(fbUser)); } catch (e) {}
+          this._setSessionUser(fbUser);
           if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
             Store._data.settings.currentUser = fbUser.memberId || 'm1';
             if (typeof Store._save === 'function') Store._save();
@@ -348,9 +415,7 @@ const Auth = {
     }
 
     this.currentUser = user;
-    try {
-      localStorage.setItem('hintonn-current-user', JSON.stringify(user));
-    } catch (e) {}
+    this._setSessionUser(user);
 
     if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
       Store._data.settings.currentUser = user.memberId || 'm1';
@@ -642,9 +707,7 @@ const Auth = {
     }
 
     this.currentUser = user;
-    try {
-      localStorage.setItem('hintonn-current-user', JSON.stringify(user));
-    } catch (e) {}
+    this._setSessionUser(user);
 
     if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
       Store._data.settings.currentUser = user.memberId || 'm1';
@@ -700,7 +763,7 @@ const Auth = {
         };
       }
       this.currentUser = user;
-      try { localStorage.setItem('hintonn-current-user', JSON.stringify(user)); } catch (e) {}
+      this._setSessionUser(user);
       if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
         Store._data.settings.currentUser = user.memberId;
       }

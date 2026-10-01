@@ -945,48 +945,16 @@ const TasksScreen = {
   // ─── Assignee Selector Helpers ───
   _getSelectableAssignees(projectId, currentUser) {
     const allAssignees = Store.getAssignees(); // Excludes Admin m1
-    if (!projectId) {
+    if (allAssignees && allAssignees.length > 0) {
       return allAssignees;
     }
-    const project = Store.getProject(projectId);
-    if (!project) {
-      return allAssignees;
-    }
-    const pMemberIds = Array.isArray(project.memberIds)
-      ? project.memberIds.map(x => (typeof x === 'object' && x ? (x.id || x.memberId || '') : String(x))).filter(Boolean)
-      : [];
-    if (pMemberIds.length === 0) {
-      return [];
-    }
-    const filtered = allAssignees.filter(m =>
-      pMemberIds.includes(m.id) ||
-      pMemberIds.includes(String(m.id)) ||
-      (m.memberId && pMemberIds.includes(m.memberId)) ||
-      (m.userId && pMemberIds.includes(m.userId)) ||
-      (m.id === 'm2' && pMemberIds.includes('preet')) ||
-      (m.id === 'm3' && pMemberIds.includes('mohit')) ||
-      (m.id === 'm4' && pMemberIds.includes('hirvi'))
-    );
-    if (filtered.length === 0) {
-      const allMembers = Store.getMembers() || [];
-      const projMembers = allMembers.filter(m =>
-        m.id !== 'm1' && m.role !== 'Admin' && (
-          pMemberIds.includes(m.id) ||
-          pMemberIds.includes(String(m.id)) ||
-          (m.memberId && pMemberIds.includes(m.memberId)) ||
-          (m.id === 'm2' && pMemberIds.includes('preet')) ||
-          (m.id === 'm3' && pMemberIds.includes('mohit')) ||
-          (m.id === 'm4' && pMemberIds.includes('hirvi'))
-        )
-      );
-      if (projMembers.length > 0) return projMembers;
-    }
-    return filtered;
+    const allMembers = Store.getMembers() || [];
+    return allMembers.filter(m => m.id !== 'm1' && m.role !== 'Admin');
   },
 
   _renderAssigneePills(availableMembers, selectedMemberIds = [], prefix = 'task') {
     if (!availableMembers || availableMembers.length === 0) {
-      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No team members assigned to this project.</div>`;
+      return `<div style="font-size:12.5px;color:var(--color-text-muted);font-style:italic;padding:6px 0;">No team members available.</div>`;
     }
     return `
       <div class="assignee-pills-wrap" id="${prefix}-assignee-pills" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;">
@@ -1505,6 +1473,24 @@ const TasksScreen = {
       };
       Store.createTask(data);
       Toast.show('Task created successfully');
+    }
+
+    // Ensure all assigned members are linked to the project
+    if (projectId && assigneeIds && assigneeIds.length > 0) {
+      const proj = Store.getProject(projectId);
+      if (proj) {
+        let existingMembers = Array.isArray(proj.memberIds) ? [...proj.memberIds] : [];
+        let updated = false;
+        assigneeIds.forEach(mid => {
+          if (!existingMembers.includes(mid)) {
+            existingMembers.push(mid);
+            updated = true;
+          }
+        });
+        if (updated) {
+          Store.updateProject(projectId, { memberIds: existingMembers });
+        }
+      }
     }
 
     Modal.closeAll();

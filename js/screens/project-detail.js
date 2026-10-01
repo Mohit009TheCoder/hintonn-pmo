@@ -28,16 +28,33 @@ const ProjectDetailScreen = {
     const isAdmin = currentUser && currentUser.role === 'Admin';
     const isStandardUser = !isAdmin;
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
-
     const isUserTask = (t) => {
-      return t.assigneeId === currentUser?.id ||
-             (userMemberId && t.assigneeId === userMemberId) ||
-             (currentUser?.id === 'preet' && t.assigneeId === 'm2') ||
-             (currentUser?.id === 'mohit' && t.assigneeId === 'm3') ||
-             (currentUser?.id === 'hirvi' && t.assigneeId === 'm4') ||
-             (currentUser?.memberId === 'm2' && t.assigneeId === 'preet') ||
-             (currentUser?.memberId === 'm3' && t.assigneeId === 'mohit') ||
-             (currentUser?.memberId === 'm4' && t.assigneeId === 'hirvi');
+      const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
+      const currentEmail = (currentUser?.email || '').toLowerCase().trim();
+      const currentName = (currentUser?.name || '').toLowerCase().trim();
+
+      return ids.some(id => {
+        if (!id) return false;
+        const strId = String(id).toLowerCase().trim();
+        if (strId === String(currentUser?.id).toLowerCase().trim()) return true;
+        if (userMemberId && strId === String(userMemberId).toLowerCase().trim()) return true;
+        if (currentUser?.id === 'preet' && (strId === 'm2' || strId === 'preet')) return true;
+        if (currentUser?.id === 'mohit' && (strId === 'm3' || strId === 'mohit')) return true;
+        if (currentUser?.id === 'hirvi' && (strId === 'm4' || strId === 'hirvi')) return true;
+        if (currentUser?.memberId === 'm2' && (strId === 'm2' || strId === 'preet')) return true;
+        if (currentUser?.memberId === 'm3' && (strId === 'm3' || strId === 'mohit')) return true;
+        if (currentUser?.memberId === 'm4' && (strId === 'm4' || strId === 'hirvi')) return true;
+
+        if (typeof Store !== 'undefined' && Store.getMember) {
+          const mem = Store.getMember(id);
+          if (mem) {
+            if (currentEmail && mem.email && mem.email.toLowerCase().trim() === currentEmail) return true;
+            if (currentName && mem.name && mem.name.toLowerCase().trim() === currentName) return true;
+            if (mem.userId && (mem.userId === currentUser?.id || mem.userId === userMemberId)) return true;
+          }
+        }
+        return false;
+      });
     };
 
     let allProjectTasks = Store.getTasks(projectId).filter(t => !t.isPersonal);

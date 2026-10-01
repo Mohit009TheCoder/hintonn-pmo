@@ -10,24 +10,27 @@ const CalendarScreen = {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isNonAdmin = currentUser && currentUser.role !== 'Admin';
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     let tasks = Store.getTasks().filter(t => t.dueDate);
     let milestones = Store.getMilestones().filter(m => m.dueDate);
 
-    // Strict Individual Privacy for AI Developers
-    if (isDeveloper) {
-      tasks = tasks.filter(task => 
-        task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
-      );
+    // Strict Individual Privacy for Non-Admin Users
+    if (isNonAdmin) {
+      tasks = tasks.filter(task => {
+        const ids = Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0 ? task.assigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+        return ids.some(id =>
+          id === currentUser.id ||
+          (userMemberId && id === userMemberId) ||
+          (currentUser.id === 'preet' && (id === 'm2' || id === 'preet')) ||
+          (currentUser.id === 'mohit' && (id === 'm3' || id === 'mohit')) ||
+          (currentUser.id === 'hirvi' && (id === 'm4' || id === 'hirvi')) ||
+          (currentUser.memberId === 'm2' && (id === 'm2' || id === 'preet')) ||
+          (currentUser.memberId === 'm3' && (id === 'm3' || id === 'mohit')) ||
+          (currentUser.memberId === 'm4' && (id === 'm4' || id === 'hirvi'))
+        );
+      });
 
       const myProjectIds = new Set(tasks.map(t => t.projectId));
       milestones = milestones.filter(m => myProjectIds.has(m.projectId));
@@ -189,23 +192,26 @@ const CalendarScreen = {
 
   openDayModal(dateStr) {
     const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    const isDeveloper = currentUser && currentUser.role === 'AI Developer';
+    const isNonAdmin = currentUser && currentUser.role !== 'Admin';
     const userMemberId = currentUser ? (currentUser.memberId || (currentUser.id === 'preet' ? 'm2' : currentUser.id === 'mohit' ? 'm3' : currentUser.id === 'hirvi' ? 'm4' : '')) : '';
 
     let tasks = Store.getTasks().filter(t => t.dueDate === dateStr);
     let milestones = Store.getMilestones().filter(m => m.dueDate === dateStr);
 
-    if (isDeveloper) {
-      tasks = tasks.filter(task => 
-        task.assigneeId === currentUser.id ||
-        (userMemberId && task.assigneeId === userMemberId) ||
-        (currentUser.id === 'preet' && task.assigneeId === 'm2') ||
-        (currentUser.id === 'mohit' && task.assigneeId === 'm3') ||
-        (currentUser.id === 'hirvi' && task.assigneeId === 'm4') ||
-        (currentUser.memberId === 'm2' && task.assigneeId === 'preet') ||
-        (currentUser.memberId === 'm3' && task.assigneeId === 'mohit') ||
-        (currentUser.memberId === 'm4' && task.assigneeId === 'hirvi')
-      );
+    if (isNonAdmin) {
+      tasks = tasks.filter(task => {
+        const ids = Array.isArray(task.assigneeIds) && task.assigneeIds.length > 0 ? task.assigneeIds : (task.assigneeId ? [task.assigneeId] : []);
+        return ids.some(id =>
+          id === currentUser.id ||
+          (userMemberId && id === userMemberId) ||
+          (currentUser.id === 'preet' && (id === 'm2' || id === 'preet')) ||
+          (currentUser.id === 'mohit' && (id === 'm3' || id === 'mohit')) ||
+          (currentUser.id === 'hirvi' && (id === 'm4' || id === 'hirvi')) ||
+          (currentUser.memberId === 'm2' && (id === 'm2' || id === 'preet')) ||
+          (currentUser.memberId === 'm3' && (id === 'm3' || id === 'mohit')) ||
+          (currentUser.memberId === 'm4' && (id === 'm4' || id === 'hirvi'))
+        );
+      });
       const myProjectIds = new Set(tasks.map(t => t.projectId));
       milestones = milestones.filter(m => myProjectIds.has(m.projectId));
     }

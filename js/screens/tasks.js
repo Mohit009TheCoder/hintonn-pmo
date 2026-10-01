@@ -12,16 +12,31 @@ const TasksScreen = {
       ? t.assigneeIds
       : (t.assigneeId ? [t.assigneeId] : []);
 
-    return ids.some(id =>
-      id === currentUser.id ||
-      (userMemberId && id === userMemberId) ||
-      (currentUser.id === 'preet' && id === 'm2') ||
-      (currentUser.id === 'mohit' && id === 'm3') ||
-      (currentUser.id === 'hirvi' && id === 'm4') ||
-      (currentUser.memberId === 'm2' && id === 'preet') ||
-      (currentUser.memberId === 'm3' && id === 'mohit') ||
-      (currentUser.memberId === 'm4' && id === 'hirvi')
-    );
+    const currentEmail = (currentUser.email || '').toLowerCase().trim();
+    const currentName = (currentUser.name || '').toLowerCase().trim();
+
+    return ids.some(id => {
+      if (!id) return false;
+      const strId = String(id).toLowerCase().trim();
+      if (strId === String(currentUser.id).toLowerCase().trim()) return true;
+      if (userMemberId && strId === String(userMemberId).toLowerCase().trim()) return true;
+      if (currentUser.id === 'preet' && (strId === 'm2' || strId === 'preet')) return true;
+      if (currentUser.id === 'mohit' && (strId === 'm3' || strId === 'mohit')) return true;
+      if (currentUser.id === 'hirvi' && (strId === 'm4' || strId === 'hirvi')) return true;
+      if (currentUser.memberId === 'm2' && (strId === 'm2' || strId === 'preet')) return true;
+      if (currentUser.memberId === 'm3' && (strId === 'm3' || strId === 'mohit')) return true;
+      if (currentUser.memberId === 'm4' && (strId === 'm4' || strId === 'hirvi')) return true;
+
+      if (typeof Store !== 'undefined' && Store.getMember) {
+        const mem = Store.getMember(id);
+        if (mem) {
+          if (currentEmail && mem.email && mem.email.toLowerCase().trim() === currentEmail) return true;
+          if (currentName && mem.name && mem.name.toLowerCase().trim() === currentName) return true;
+          if (mem.userId && (mem.userId === currentUser.id || mem.userId === userMemberId)) return true;
+        }
+      }
+      return false;
+    });
   },
 
   _isOwnPersonalTask(t, currentUser) {
@@ -66,20 +81,15 @@ const TasksScreen = {
       tasks = tasks.filter(t => !t.isPersonal);
     } else if (isStandardUser) {
       if (this._filter.project) {
-        // Shared Project Visibility: Any user assigned to this project can view all tasks in this project
-        // Personal tasks are strictly excluded from project-specific filtered views
-        const isMember = this._isUserCollaboratorOnProject(this._filter.project, currentUser);
+        // Strict Task Privacy: Standard user only sees tasks assigned to them within the selected project
         tasks = tasks.filter(t => 
-          t.projectId === this._filter.project && isMember && !t.isPersonal
+          t.projectId === this._filter.project && !t.isPersonal && this._isUserTask(t, currentUser)
         );
       } else {
-        // "All Projects" view: show tasks assigned to user + tasks from shared projects they belong to + user's own private personal tasks
+        // "All Projects" view: Strictly only tasks assigned to user + user's own private personal tasks
         tasks = tasks.filter(t => 
           (t.isPersonal && this._isOwnPersonalTask(t, currentUser)) ||
-          (!t.isPersonal && (
-            this._isUserTask(t, currentUser) ||
-            (t.projectId && this._isUserCollaboratorOnProject(t.projectId, currentUser))
-          ))
+          (!t.isPersonal && this._isUserTask(t, currentUser))
         );
       }
     }
@@ -357,9 +367,9 @@ const TasksScreen = {
               return ids.length <= 1; // Only solo-assigned tasks go to "Assigned to Me"
             });
             const sharedTasks = projectTasks.filter(t => {
-              if (!this._isUserTask(t, currentUser)) return true; // Not assigned to me = shared/other
+              if (!this._isUserTask(t, currentUser)) return false; // Strictly only tasks assigned to current user!
               const ids = Array.isArray(t.assigneeIds) && t.assigneeIds.length > 0 ? t.assigneeIds : (t.assigneeId ? [t.assigneeId] : []);
-              return ids.length > 1; // Multi-assignee tasks go to "Shared Work"
+              return ids.length > 1; // Multi-assignee tasks where user is an assignee go to "Shared Work"
             });
             const colTotalCount = projectTasks.length + personalTasks.length;
 
@@ -1456,6 +1466,12 @@ const TasksScreen = {
     const isAdmin = currentUser && currentUser.role === 'Admin';
     const isStandardUser = !isAdmin;
     const isOwnTask = this._isUserTask(t, currentUser);
+    const isOwnPersonal = t.isPersonal && this._isOwnPersonalTask(t, currentUser);
+
+    if (!isAdmin && !isOwnTask && !isOwnPersonal) {
+      if (typeof Toast !== 'undefined') Toast.show('You do not have permission to view this task.', 'warning');
+      return;
+    }
     const isCreator = t && currentUser && (
       t.creatorId === currentUser.id ||
       t.creatorId === currentUser.memberId ||

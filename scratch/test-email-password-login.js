@@ -58,9 +58,12 @@ const context = vm.createContext({
     auth: () => ({
       currentUser: null,
       signInWithEmailAndPassword: async (email, pass) => {
-        // Mock Firebase Auth check
-        if (pass === 'wrongpass') {
-          const err = new Error('Wrong password');
+        const valid = (email.includes('mohit') && pass === 'Mohit@123') ||
+                      (email.includes('admin') && pass === 'admin@123') ||
+                      (email.includes('preet') && pass === 'Preet@123') ||
+                      (email.includes('hirvi') && pass === 'Hirvi@123');
+        if (!valid) {
+          const err = new Error('Incorrect password');
           err.code = 'auth/wrong-password';
           throw err;
         }

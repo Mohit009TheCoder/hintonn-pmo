@@ -357,7 +357,7 @@ const FirebaseAuth = {
 
     // ── Ensure approved user has a member record in Store ──
     // Without this, non-admin users can't be assigned tasks and see nothing.
-    if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function' && !isAdmin) {
+    if (typeof Store !== 'undefined' && Store._data && Array.isArray(Store._data.members) && typeof Store.getMembers === 'function' && !isAdmin) {
       const members = Store.getMembers();
       const existingMember = members.find(m =>
         m.id === localUser.memberId ||

@@ -5,18 +5,33 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-firebase.initializeApp({
-  apiKey: self.FIREBASE_API_KEY || 'placeholder',
-  authDomain: self.FIREBASE_AUTH_DOMAIN || 'placeholder',
-  projectId: self.FIREBASE_PROJECT_ID || 'hintonn-pmo',
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || 'placeholder',
-  appId: self.FIREBASE_APP_ID || 'placeholder'
-});
+const firebaseConfig = {
+  apiKey: self.FIREBASE_API_KEY || "AIzaSyBt1yVDlgfYaCMvWjbqrHGL1kpDudjKB5A",
+  authDomain: self.FIREBASE_AUTH_DOMAIN || "hintonn-pmo.firebaseapp.com",
+  projectId: self.FIREBASE_PROJECT_ID || "hintonn-pmo",
+  storageBucket: self.FIREBASE_STORAGE_BUCKET || "hintonn-pmo.appspot.com",
+  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || "516528306945",
+  appId: self.FIREBASE_APP_ID || "1:516528306945:web:9b9a88accbd424115df900"
+};
 
-const messaging = firebase.messaging();
+try {
+  if (!firebase.apps || !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+} catch (e) {
+  console.warn('[SW] Firebase initializeApp warning:', e);
+}
+
+let messaging = null;
+try {
+  messaging = firebase.messaging();
+} catch (e) {
+  console.warn('[SW] firebase.messaging() init warning:', e);
+}
 
 // Handle background messages from Cloud Functions + n8n
-messaging.onBackgroundMessage(payload => {
+if (messaging && typeof messaging.onBackgroundMessage === 'function') {
+  messaging.onBackgroundMessage(payload => {
   console.log('[SW] Background message received:', payload);
 
   const { title, body, icon } = payload.notification || {};
@@ -50,7 +65,8 @@ messaging.onBackgroundMessage(payload => {
       });
     });
   });
-});
+  });
+}
 
 // Handle notification click — smart route to relevant screen
 self.addEventListener('notificationclick', event => {

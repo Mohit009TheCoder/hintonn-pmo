@@ -340,8 +340,12 @@ const App = {
       TasksScreen.updateTasksContainer();
       return;
     }
+    if ((this.currentScreen === 'billing' || this.currentScreen === 'invoices') && typeof BillingScreen !== 'undefined' && typeof BillingScreen.updateBillingContainer === 'function') {
+      BillingScreen.updateBillingContainer();
+      return;
+    }
     const modalOpen = typeof Modal !== 'undefined' && typeof Modal.isOpen === 'function' ? Modal.isOpen() : false;
-    if (!modalOpen && ['dashboard', 'projects', 'team', 'project-detail', 'reports'].includes(this.currentScreen)) {
+    if (!modalOpen && ['dashboard', 'projects', 'team', 'project-detail', 'reports', 'billing', 'invoices', 'retention', 'bg', 'bank-guarantees', 'dlp', 'dlp-timelines', 'milestones', 'issues', 'calendar', 'notifications', 'user-approvals'].includes(this.currentScreen)) {
       this.refresh();
     }
   },

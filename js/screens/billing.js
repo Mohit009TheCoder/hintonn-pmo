@@ -5,8 +5,6 @@ const BillingScreen = {
   _viewMode: 'company', // 'company' (default) | 'table'
   _search: '',
   _expandedCompanies: {},
-  _invoices: null,
-
   _getCompanies() {
     return Store.getCompanies();
   },
@@ -22,9 +20,7 @@ const BillingScreen = {
 
   // Commercial EPC Invoices Dataset with Multi-Version Control & History
   _getInvoices() {
-    if (this._invoices) return this._invoices;
-
-    this._invoices = Store.getInvoices().map(inv => ({
+    return Store.getInvoices().map(inv => ({
       ...inv,
       amountDue: this._normAmt(inv.amountDue),
       taxAmount: this._normAmt(inv.taxAmount),
@@ -39,8 +35,6 @@ const BillingScreen = {
         netPayable: this._normAmt(v.netPayable)
       }))
     }));
-
-    return this._invoices;
   },
 
   _getFilteredInvoices() {
@@ -121,6 +115,50 @@ const BillingScreen = {
     this.updateBillingContainer();
   },
 
+  _updateKPIsAndTabs() {
+    const allInvoices = this._getInvoices();
+    const companies = this._getCompanies();
+    const totalBills = allInvoices.length;
+    const paidBills = allInvoices.filter(i => i.status === 'paid').length;
+    const pendingBills = totalBills - paidBills;
+    const totalRevisedBills = allInvoices.filter(i => i.isRevised).length;
+    const companyCount = companies.length;
+    const packageCount = new Set(allInvoices.map(i => i.projectName).filter(Boolean)).size;
+
+    const elTotal = document.getElementById('kpi-total-bills');
+    const elTotalSub = document.getElementById('kpi-total-sub');
+    const elPaid = document.getElementById('kpi-paid-bills');
+    const elPending = document.getElementById('kpi-pending-bills');
+    const elRevised = document.getElementById('kpi-revised-bills');
+
+    if (elTotal) elTotal.textContent = `${totalBills} Bills`;
+    if (elTotalSub) elTotalSub.textContent = `${companyCount} client ${companyCount === 1 ? 'company' : 'companies'} · ${packageCount} packages`;
+    if (elPaid) elPaid.textContent = `${paidBills} Invoices`;
+    if (elPending) elPending.textContent = `${pendingBills} Invoices`;
+    if (elRevised) elRevised.textContent = `${totalRevisedBills} Bills Revised`;
+
+    const tabsContainer = document.getElementById('billing-stage-tabs');
+    if (tabsContainer) {
+      tabsContainer.innerHTML = `
+        <button class="timeline-stage-tab ${this._filter==='all'?'active':''}" onclick="BillingScreen.setFilter('all')">
+          All Bills (${allInvoices.length})
+        </button>
+        <button class="timeline-stage-tab ${this._filter==='pending'?'active':''}" onclick="BillingScreen.setFilter('pending')">
+          Pending Approval (${allInvoices.filter(i=>i.status!=='paid').length})
+        </button>
+        <button class="timeline-stage-tab ${this._filter==='paid'?'active':''}" onclick="BillingScreen.setFilter('paid')">
+          Paid (${allInvoices.filter(i=>i.status==='paid').length})
+        </button>
+        <button class="timeline-stage-tab ${this._filter==='revised'?'active':''}" onclick="BillingScreen.setFilter('revised')">
+          Revised (v1.1+) (${allInvoices.filter(i=>i.isRevised).length})
+        </button>
+        <button class="timeline-stage-tab ${this._filter==='latest'?'active':''}" onclick="BillingScreen.setFilter('latest')">
+          Latest Active Only
+        </button>
+      `;
+    }
+  },
+
   updateBillingContainer() {
     const container = document.getElementById('billing-content-view');
     if (container) {
@@ -130,8 +168,11 @@ const BillingScreen = {
       } else {
         container.innerHTML = this._renderTable(invoices);
       }
+      this._updateKPIsAndTabs();
     } else {
-      App.refresh();
+      if (typeof App !== 'undefined' && (App.currentScreen === 'billing' || App.currentScreen === 'invoices')) {
+        App.refresh();
+      }
     }
   },
 
@@ -166,14 +207,14 @@ const BillingScreen = {
         </div>
 
         <!-- Top Commercial KPI Strip -->
-        <div class="kpi-grid" style="margin-bottom:20px">
+        <div class="kpi-grid" id="billing-kpi-grid" style="margin-bottom:20px">
           <div class="kpi-card" onclick="BillingScreen.setFilter('all')" style="cursor:pointer">
             <div class="kpi-header">
               <span class="kpi-label">Total Invoiced</span>
               <div class="kpi-icon-wrap">${Icons.fileText}</div>
             </div>
-            <div class="kpi-value">${totalBills} Bills</div>
-            <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
+            <div class="kpi-value" id="kpi-total-bills">${totalBills} Bills</div>
+            <div class="kpi-change neutral" id="kpi-total-sub" style="font-weight:600;color:var(--color-text-secondary)">
               ${companyCount} client ${companyCount === 1 ? 'company' : 'companies'} · ${packageCount} packages
             </div>
           </div>
@@ -183,7 +224,7 @@ const BillingScreen = {
               <span class="kpi-label">Certified & Collected</span>
               <div class="kpi-icon-wrap">${Icons.check}</div>
             </div>
-            <div class="kpi-value">${paidBills} Invoices</div>
+            <div class="kpi-value" id="kpi-paid-bills">${paidBills} Invoices</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-success-700, #1E40AF)">
               Fully settled
             </div>
@@ -194,7 +235,7 @@ const BillingScreen = {
               <span class="kpi-label">Pending Client Sign-off</span>
               <div class="kpi-icon-wrap">${Icons.clock}</div>
             </div>
-            <div class="kpi-value">${pendingBills} Invoices</div>
+            <div class="kpi-value" id="kpi-pending-bills">${pendingBills} Invoices</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-text-secondary)">
               Under review / certification
             </div>
@@ -205,7 +246,7 @@ const BillingScreen = {
               <span class="kpi-label">Multi-Version Revisions</span>
               <div class="kpi-icon-wrap">${Icons.shield}</div>
             </div>
-            <div class="kpi-value">${totalRevisedBills} Bills Revised</div>
+            <div class="kpi-value" id="kpi-revised-bills">${totalRevisedBills} Bills Revised</div>
             <div class="kpi-change neutral" style="font-weight:600;color:var(--color-warning-700, #5B21B6)">
               v1.1 → v2.0 version controlled
             </div>
@@ -232,7 +273,7 @@ const BillingScreen = {
               </div>
 
               <!-- Status & Version Filter Tabs -->
-              <div class="timeline-stage-tabs" style="margin:0">
+              <div class="timeline-stage-tabs" id="billing-stage-tabs" style="margin:0">
                 <button class="timeline-stage-tab ${this._filter==='all'?'active':''}" onclick="BillingScreen.setFilter('all')">
                   All Bills (${allInvoices.length})
                 </button>

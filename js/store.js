@@ -19,10 +19,12 @@ const Store = {
   init() {
     // One-time clear of local storage for fresh application (v6: purge legacy billing/BG/seed data)
     if (!localStorage.getItem('hintonn_cleared_v6')) {
-      localStorage.removeItem('hintonn-pm');
-      localStorage.removeItem('hintonn-users-db');
-      localStorage.removeItem('hintonn-auth-version');
-      localStorage.setItem('hintonn_cleared_v6', 'true');
+      try {
+        localStorage.removeItem('hintonn-pm');
+        localStorage.removeItem('hintonn-users-db');
+        localStorage.removeItem('hintonn-auth-version');
+        localStorage.setItem('hintonn_cleared_v6', 'true');
+      } catch (e) { /* storage unavailable or quota — skip one-time purge */ }
     }
 
     const defaultMembers = [];
@@ -67,7 +69,18 @@ const Store = {
     this._initFirestoreSync();
   },
 
-  _save() { localStorage.setItem('hintonn-pm', JSON.stringify(this._data)); },
+  _save() {
+    try {
+      localStorage.setItem('hintonn-pm', JSON.stringify(this._data));
+    } catch (e) {
+      // Quota exceeded or storage disabled — keep the in-memory session
+      // working instead of crashing every mutation. Warn once.
+      if (!this._storageWarned) {
+        this._storageWarned = true;
+        console.warn('[Hintonn] Local storage save failed (quota or disabled):', (e && e.message) || e);
+      }
+    }
+  },
   _notify() { this._listeners.forEach(fn => fn()); },
   subscribe(fn) { this._listeners.push(fn); },
 
@@ -85,6 +98,7 @@ const Store = {
       const startSync = () => {
         if (this._firestoreInitialized) return;
         this._firestoreInitialized = true;
+        this._listenersFailed = false;
         console.log('⚡ [Hintonn Cloud Sync] Connected to Cloud Firestore backend (Project: hintonn-pmo)');
         this._startFirestoreListeners();
       };
@@ -97,6 +111,14 @@ const Store = {
         auth.onAuthStateChanged(user => {
           if (user) {
             console.log('⚡ [Hintonn Cloud Sync] Auth state active:', user.email || user.uid);
+            // Rules require an authenticated session: listeners attached
+            // BEFORE sign-in fail with permission-denied. Re-attach them
+            // now that a session exists — otherwise live sync stays dead
+            // for the entire tab session.
+            if (this._listenersFailed) {
+              this._detachFirestoreListeners();
+              this._firestoreInitialized = false;
+            }
             startSync();
           }
         });
@@ -107,13 +129,19 @@ const Store = {
     }
   },
 
+  _detachFirestoreListeners() {
+    (this._unsubFirestore || []).forEach(fn => { try { fn(); } catch (e) {} });
+    this._unsubFirestore = [];
+  },
+
   _startFirestoreListeners() {
     if (!this._db) return;
+    this._unsubFirestore = [];
 
     const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
 
     syncCollections.forEach(colName => {
-      this._db.collection(colName).onSnapshot(snapshot => {
+      const unsub = this._db.collection(colName).onSnapshot(snapshot => {
         if (!snapshot) return;
 
         // If collection is completely empty on remote, update if remote is authoritative
@@ -167,12 +195,14 @@ const Store = {
           this._notify();
         }
       }, err => {
+        this._listenersFailed = true;
         console.warn(`[Hintonn Cloud Sync] Realtime listener notice for '${colName}':`, err.message || err);
       });
+      if (typeof unsub === 'function') this._unsubFirestore.push(unsub);
     });
 
     // Settings synchronization
-    this._db.collection('settings').doc('workspace_settings').onSnapshot(doc => {
+    const unsubSettings = this._db.collection('settings').doc('workspace_settings').onSnapshot(doc => {
       if (doc && doc.exists) {
         const remoteSettings = doc.data();
         if (remoteSettings) {
@@ -183,7 +213,8 @@ const Store = {
       } else if (this._data.settings) {
         this._db.collection('settings').doc('workspace_settings').set(this._sanitizeForFirestore(this._data.settings)).catch(() => {});
       }
-    }, () => {});
+    }, () => { this._listenersFailed = true; });
+    if (typeof unsubSettings === 'function') this._unsubFirestore.push(unsubSettings);
   },
 
   _sanitizeForFirestore(obj) {

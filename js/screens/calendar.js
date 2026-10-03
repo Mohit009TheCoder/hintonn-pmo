@@ -62,8 +62,9 @@ const CalendarScreen = {
         ...dayTasks.map(t => ({ type: 'task', data: t }))
       ];
 
-      const visibleItems = allItems.slice(0, 3);
-      const remainingCount = allItems.length - 3;
+      const maxVisible = allItems.length > 2 ? 2 : 2;
+      const visibleItems = allItems.slice(0, maxVisible);
+      const remainingCount = allItems.length - visibleItems.length;
 
       calHtml += `
         <div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${dateStr}">
@@ -71,34 +72,36 @@ const CalendarScreen = {
             <span class="calendar-day-badge">${d}</span>
             ${isToday ? '<span class="today-indicator-tag">Today</span>' : ''}
           </div>
-          ${visibleItems.map(item => {
-            if (item.type === 'milestone') {
-              const m = item.data;
-              const proj = Store.getProject(m.projectId);
-              const projName = proj ? proj.name : 'Unknown Project';
-              const tooltip = `${m.name}&#10;Type: Milestone Deadline&#10;Project: ${projName}&#10;Due: ${Utils.formatDate(m.dueDate)}&#10;Status: ${Utils.humanize(m.status || 'active')}`;
-              return `
-                <div class="calendar-event milestone" title="${tooltip}" onclick="CalendarScreen.openEventDetail('milestone', '${m.id}')">
-                  <svg style="width:11px;height:11px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-                  <span class="calendar-event-title">${Utils.escapeHtml(m.name)}</span>
-                </div>
-              `;
-            } else {
-              const t = item.data;
-              const proj = Store.getProject(t.projectId);
-              const m = Store.getMember(t.assigneeId);
-              const projName = proj ? proj.name : 'Unknown Project';
-              const assigneeName = m ? m.name : 'Unassigned';
-              const isOverdue = Utils.isOverdue(t.dueDate) && t.status !== 'done';
-              const statusClass = isOverdue ? 'overdue' : 'task';
-              const tooltip = `${t.title}&#10;Type: Task (${Utils.humanize(t.priority)} Priority)&#10;Project: ${projName}&#10;Assignee: ${assigneeName}&#10;Status: ${Utils.humanize(t.status)}${isOverdue ? ' [OVERDUE]' : ''}&#10;Due: ${Utils.formatDate(t.dueDate)}`;
-              return `
-                <div class="calendar-event ${statusClass}" title="${tooltip}" onclick="CalendarScreen.openEventDetail('task', '${t.id}')">
-                  <span class="calendar-event-title">${Utils.escapeHtml(t.title)}</span>
-                </div>
-              `;
-            }
-          }).join('')}
+          <div class="calendar-events-list">
+            ${visibleItems.map(item => {
+              if (item.type === 'milestone') {
+                const m = item.data;
+                const proj = Store.getProject(m.projectId);
+                const projName = proj ? proj.name : 'Unknown Project';
+                const tooltip = `${m.name}&#10;Type: Milestone Deadline&#10;Project: ${projName}&#10;Due: ${Utils.formatDate(m.dueDate)}&#10;Status: ${Utils.humanize(m.status || 'active')}`;
+                return `
+                  <div class="calendar-event milestone" title="${tooltip}" onclick="CalendarScreen.openEventDetail('milestone', '${m.id}')">
+                    <svg style="width:11px;height:11px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                    <span class="calendar-event-title">${Utils.escapeHtml(m.name)}</span>
+                  </div>
+                `;
+              } else {
+                const t = item.data;
+                const proj = Store.getProject(t.projectId);
+                const m = Store.getMember(t.assigneeId);
+                const projName = proj ? proj.name : 'Unknown Project';
+                const assigneeName = m ? m.name : 'Unassigned';
+                const isOverdue = Utils.isOverdue(t.dueDate) && t.status !== 'done';
+                const statusClass = isOverdue ? 'overdue' : 'task';
+                const tooltip = `${t.title}&#10;Type: Task (${Utils.humanize(t.priority)} Priority)&#10;Project: ${projName}&#10;Assignee: ${assigneeName}&#10;Status: ${Utils.humanize(t.status)}${isOverdue ? ' [OVERDUE]' : ''}&#10;Due: ${Utils.formatDate(t.dueDate)}`;
+                return `
+                  <div class="calendar-event ${statusClass}" title="${tooltip}" onclick="CalendarScreen.openEventDetail('task', '${t.id}')">
+                    <span class="calendar-event-title">${Utils.escapeHtml(t.title)}</span>
+                  </div>
+                `;
+              }
+            }).join('')}
+          </div>
           ${remainingCount > 0 ? `
             <button type="button" class="calendar-more-btn" onclick="CalendarScreen.openDayModal('${dateStr}')" title="View all ${allItems.length} items for this date">
               <span>+${remainingCount} more</span>
@@ -137,13 +140,12 @@ const CalendarScreen = {
       </div>
       ${calHtml}
       
-      <!-- Status & Priority Legend -->
-      <div style="display:flex;align-items:center;gap:20px;margin-top:20px;padding:12px 16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:12px;color:var(--color-text-secondary);flex-wrap:wrap">
-        <span style="font-weight:600;color:var(--color-text-primary);margin-right:4px">Legend:</span>
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span class="calendar-event task" style="display:inline-block;padding:2px 8px;font-size:11px">Task</span>
+      <div class="calendar-legend">
+        <span class="calendar-legend-title">Legend:</span>
+        <div class="calendar-legend-item">
+          <span class="calendar-event task">Task</span>
           <span>Task due date</span>
-        </span>
+        </div>
         <span style="display:inline-flex;align-items:center;gap:6px">
           <span class="calendar-event milestone" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;font-size:11px">
             <svg style="width:10px;height:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Milestone

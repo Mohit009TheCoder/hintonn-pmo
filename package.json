@@ -1,11 +1,11 @@
 {
   "name": "hintonn-pmo",
   "version": "1.0.0",
-  "description": "Hintonn PMO — enterprise project management workspace (Firebase + vanilla JS)",
+  "description": "Hintonn PMO \u2014 enterprise project management workspace (Firebase + vanilla JS)",
   "scripts": {
     "start": "npx serve . -l 3000",
     "dev": "npx serve . -l 3000",
-    "test": "node tests/invoice-math.test.js",
+    "test": "node --test \"tests/*.test.js\"",
     "lint": "eslint js/ tests/ *.js functions/index.js"
   },
   "repository": {

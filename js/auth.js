@@ -313,99 +313,69 @@ const Auth = {
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
 
     if (!raw || !rawPass) {
-      return { success: false, error: 'Please enter both login ID/email and password.' };
+      return { success: false, error: 'Please enter both email and password.' };
     }
 
-    // 1. If valid email and FirebaseAuth is initialized, try Firebase Authentication
-    if (isEmail && typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.signInEmail === 'function') {
-      try {
-        const fbRes = await FirebaseAuth.signInEmail(raw, rawPass);
-        if (fbRes) {
-          const fbUser = fbRes.user || fbRes;
-          if (fbRes.revoked === true || fbUser.revoked === true) {
-            return { success: false, error: 'Your access has been revoked by an administrator. Please contact admin to regain access.' };
-          }
-          if (fbRes.approved === false || fbUser.approved === false) {
-            return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: fbUser };
-          }
-          this._enforceAdminRole(fbUser);
-          this.currentUser = fbUser;
-          this._setSessionUser(fbUser);
-          if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
-            Store._data.settings.currentUser = fbUser.memberId || 'm1';
-            if (typeof Store._save === 'function') Store._save();
-          }
-          return { success: true, user: fbUser };
-        }
-      } catch (fbErr) {
-        console.warn('[Auth] Firebase Auth signInEmail fallback:', fbErr.message || fbErr);
-      }
-    }
-
-    // 2. Local-only login IDs are no longer supported — credentials are
-    //    verified exclusively by Firebase Authentication (step 1). This
-    //    removes the client-side password database entirely.
+    // Local-only login IDs are no longer supported — credentials are
+    // verified exclusively by Firebase Authentication.
     if (!isEmail) {
       return { success: false, error: 'Please sign in with your registered email address. Local login IDs are no longer supported.' };
     }
 
-    // 3. Look up the local profile registry (roles/approval metadata only — no credentials).
-    let user = this.users.find(u =>
-      (u.email && u.email.toLowerCase() === raw) ||
-      (u.googleEmail && u.googleEmail.toLowerCase() === raw)
-    );
-
-    if (!user) {
-      return { success: false, error: 'No account found with this email.' };
+    // The authentication service must be available. There is NO local
+    // password fallback — a registry match alone never grants a session.
+    if (typeof FirebaseAuth === 'undefined' || typeof FirebaseAuth.signInEmail !== 'function') {
+      return { success: false, error: 'Authentication service unavailable. Please reload the page and try again.' };
     }
 
-    this._enforceAdminRole(user);
-
-    // ── BLOCK revoked users from logging in ──
-    if (user.revoked === true) {
-      return { success: false, error: 'Your access has been revoked by an administrator. Please contact admin to regain access.' };
-    }
-
-    // ── If locally unapproved, check Firestore for real-time approval status ──
-    if (user.approved === false) {
-      const firestoreApproved = await this._checkApprovalInFirestore(user.email || user.googleEmail);
-      if (firestoreApproved) {
-        user.approved = true;
-        this._saveUserDb();
-      } else {
-        return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: user };
+    let fbUser;
+    try {
+      const fbRes = await FirebaseAuth.signInEmail(raw, rawPass);
+      fbUser = (fbRes && (fbRes.user || fbRes)) || null;
+      if (!fbUser) {
+        return { success: false, error: 'Authentication failed. Please try again.' };
       }
+      if ((fbRes && fbRes.revoked === true) || fbUser.revoked === true) {
+        return { success: false, error: 'Your access has been revoked by an administrator. Please contact admin to regain access.' };
+      }
+      if ((fbRes && fbRes.approved === false) || fbUser.approved === false) {
+        return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true, user: fbUser };
+      }
+    } catch (fbErr) {
+      // Wrong credentials / network failure — never fall through to the
+      // local registry. The error message comes from FirebaseAuth mapping.
+      return { success: false, error: (fbErr && fbErr.message) || 'Incorrect email or password.' };
     }
 
-    this.currentUser = user;
-    this._setSessionUser(user);
-
+    this._enforceAdminRole(fbUser);
+    this.currentUser = fbUser;
+    this._setSessionUser(fbUser);
     if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
-      Store._data.settings.currentUser = user.memberId || 'm1';
+      Store._data.settings.currentUser = fbUser.memberId || 'm1';
       if (typeof Store._save === 'function') Store._save();
     }
 
     // ── Ensure non-admin user has a member record in Store ──
-    if (typeof Store !== 'undefined' && Store._data && Array.isArray(Store._data.members) && typeof Store.getMembers === 'function' && user.role !== 'Admin') {
+    if (typeof Store !== 'undefined' && Store._data && Array.isArray(Store._data.members) && typeof Store.getMembers === 'function' && fbUser.role !== 'Admin') {
       const members = Store.getMembers();
       const existingMember = members.find(m =>
-        m.id === user.memberId ||
-        (m.email && m.email.toLowerCase() === (user.email || '').toLowerCase())
+        m.id === fbUser.memberId ||
+        (m.email && m.email.toLowerCase() === (fbUser.email || '').toLowerCase())
       );
       if (!existingMember) {
         Store.createMember({
-          id: user.memberId || ('m_' + Date.now()),
-          name: user.name,
-          role: user.role || 'AI Developer',
-          designation: user.role || 'AI Developer',
-          email: user.email,
-          initials: user.initials || user.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
-          color: user.color || '#2563EB'
+          id: fbUser.memberId || ('m_' + Date.now()),
+          name: fbUser.name,
+          role: fbUser.role || 'AI Developer',
+          designation: fbUser.role || 'AI Developer',
+          email: fbUser.email,
+          initials: fbUser.initials || (fbUser.name || 'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+          color: fbUser.color || '#2563EB'
         });
       }
     }
 
-    return { success: true, user };
+    return { success: true, user: fbUser };
   },
 
   // ─── Check Firestore for real-time approval status ───

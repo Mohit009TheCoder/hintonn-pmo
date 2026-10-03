@@ -106,7 +106,6 @@ const Sidebar = {
         <a href="#user-approvals" class="sidebar-item ${current === 'user-approvals' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons.users || Icons.hexagonSm}
           <span>User Approvals</span>
-          ${typeof Auth !== 'undefined' && Auth.getPendingUsers && Auth.getPendingUsers().length > 0 ? `<span class="badge-count" style="background:#F59E0B;color:#fff;">${Auth.getPendingUsers().length}</span>` : ''}
         </a>
         <a href="#settings" class="sidebar-item ${current === 'settings' ? 'active' : ''}" onclick="if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons.settings}

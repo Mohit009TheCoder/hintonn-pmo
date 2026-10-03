@@ -1,6 +1,7 @@
-// ─── User Approvals Screen (Admin Only) ───
 const UserApprovalsScreen = {
   _filter: 'all', // 'all' | 'pending' | 'approved' | 'revoked' | 'rejected'
+  _isFetching: false,
+  _lastFetchTime: 0,
 
   setFilter(filter) {
     this._filter = filter;
@@ -9,6 +10,10 @@ const UserApprovalsScreen = {
 
   refresh() {
     if (typeof App !== 'undefined' && App.currentScreen !== 'user-approvals') {
+      return;
+    }
+    // Prevent wiping active modal if one is open
+    if (typeof Modal !== 'undefined' && Modal.isOpen()) {
       return;
     }
     const content = document.getElementById('page-content');
@@ -265,7 +270,7 @@ const UserApprovalsScreen = {
 
   openAddUserModal() {
     const bodyHtml = `
-      <div style="display:flex;flex-direction:column;gap:14px;">
+      <form id="admin-add-user-form" onsubmit="event.preventDefault(); UserApprovalsScreen.saveNewUser();" style="display:flex;flex-direction:column;gap:14px;">
         <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:8px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" width="16" height="16" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <div style="font-size:12px;color:#1E40AF;line-height:1.5;">
@@ -274,7 +279,7 @@ const UserApprovalsScreen = {
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Full Name <span style="color:#EF4444">*</span></label>
-          <input type="text" id="admin-add-name" class="form-input" placeholder="e.g. John Smith" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
+          <input type="text" id="admin-add-name" class="form-input" placeholder="e.g. John Smith" required autofocus style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Email Address <span style="color:#EF4444">*</span></label>
@@ -295,7 +300,7 @@ const UserApprovalsScreen = {
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Account Setup</label>
           <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.5;padding:10px 12px;background:var(--color-bg-page,#F8FAFC);border:1px solid var(--color-border,#E5E7EB);border-radius:var(--radius-md);">The team member sets their own password when they sign up — no default or shared passwords are assigned.</div>
         </div>
-      </div>
+      </form>
     `;
     const footerHtml = `
       <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
@@ -317,25 +322,25 @@ const UserApprovalsScreen = {
     if (!email || !email.includes('@')) { Toast.show('Please enter a valid email.', 'error'); return; }
 
     const res = Auth.adminAddUser(name, email, role);
-    if (res.success) {
-      Toast.show(`✅ ${name} added and approved. Login ID: ${name.split(' ')[0]}`, 'success');
+    if (res && res.success) {
+      Toast.show(`✅ ${name} added and approved.`, 'success');
       Modal.closeAll();
       this.refresh();
     } else {
-      Toast.show(res.error || 'Failed to add user.', 'error');
+      Toast.show(res ? res.error : 'Failed to add user.', 'error');
     }
   },
 
   approveGoogleRequest(reqId) {
     const res = Auth.approveGoogleRequest(reqId);
-    if (res.success) {
+    if (res && res.success) {
       Toast.show('Google access approved successfully.', 'success');
       this.refresh();
       if (typeof App !== 'undefined' && typeof App.updateNotifDot === 'function') {
         App.updateNotifDot();
       }
     } else {
-      Toast.show(res.error || 'Failed to approve request.', 'error');
+      Toast.show(res ? res.error : 'Failed to approve request.', 'error');
     }
   },
 
@@ -348,13 +353,18 @@ const UserApprovalsScreen = {
   },
 
   render() {
-    // Fetch pending users from Firestore in background (for cross-device visibility)
-    if (typeof Auth !== 'undefined' && Auth.fetchPendingUsersFromFirestore) {
+    // Fetch pending users from Firestore in background (debounced, avoids infinite re-render loop)
+    const now = Date.now();
+    if (typeof Auth !== 'undefined' && Auth.fetchPendingUsersFromFirestore && !this._isFetching && (now - this._lastFetchTime > 30000)) {
+      this._isFetching = true;
+      this._lastFetchTime = now;
       Auth.fetchPendingUsersFromFirestore().then(() => {
-        // Re-render if we're still on this screen and got new data
-        if (typeof App !== 'undefined' && App.currentScreen === 'user-approvals') {
+        this._isFetching = false;
+        if (typeof App !== 'undefined' && App.currentScreen === 'user-approvals' && typeof Modal !== 'undefined' && !Modal.isOpen()) {
           this.refresh();
         }
+      }).catch(() => {
+        this._isFetching = false;
       });
     }
 

@@ -66,9 +66,9 @@ const Topbar = {
 
     dropdown.innerHTML = `
       <div style="padding:14px 16px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-page)">
-        <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);margin-bottom:3px">${user.name}</div>
+        <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);margin-bottom:3px">${Utils.escapeHtml(user.name)}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200)">${user.role}</span>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200)">${Utils.escapeHtml(user.role)}</span>
         </div>
         <div style="font-size:12px;color:var(--color-text-muted)">${user.googleEmail || user.email}</div>
       </div>

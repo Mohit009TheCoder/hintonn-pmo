@@ -100,10 +100,11 @@ export const computeHealthScore = onDocumentWritten(
       if (!after) return; // document was deleted
 
       // --- Tasks ---
+      // NOTE: the client stores tasks in the TOP-LEVEL `tasks` collection
+      // with a `projectId` field (see js/store.js) — not as subcollections.
       const tasksSnap = await db
-        .collection("projects")
-        .doc(projectId)
         .collection("tasks")
+        .where("projectId", "==", projectId)
         .get();
       const tasks = tasksSnap.docs.map((d) => d.data());
       const totalTasks = tasks.length;
@@ -122,11 +123,10 @@ export const computeHealthScore = onDocumentWritten(
 
       // --- Milestones ---
       const milestonesSnap = await db
-        .collection("projects")
-        .doc(projectId)
         .collection("milestones")
+        .where("projectId", "==", projectId)
         .get()
-        .catch(() => ({ docs: [] })); // subcollection may not exist yet
+        .catch(() => ({ docs: [] }));
       // We also accept milestoneIds on the project doc as a fallback
       let totalMilestones = milestonesSnap.docs.length;
       let completedMilestones = milestonesSnap.docs.filter((d) => {
@@ -152,9 +152,8 @@ export const computeHealthScore = onDocumentWritten(
       // --- Issues ---
       let openIssues = 0;
       const issuesSnap = await db
-        .collection("projects")
-        .doc(projectId)
         .collection("issues")
+        .where("projectId", "==", projectId)
         .get()
         .catch(() => ({ docs: [] }));
       if (issuesSnap.docs.length > 0) {
@@ -223,14 +222,20 @@ export const sendInvoiceNotification = onDocumentCreated(
 
       const billNumber = invoice.billNumber || "N/A";
       const projectName = invoice.projectName || "Unknown Project";
-      const amountDue = invoice.amountDue ?? 0;
+      // Prefer the numeric total — amountDue is stored as a formatted
+      // display string (e.g. "₹1,25,000") by the client.
+      const amountNum =
+        typeof invoice.totals?.payable === "number"
+          ? invoice.totals.payable
+          : Number(String(invoice.amountDue ?? 0).replace(/[^0-9.-]/g, "")) || 0;
+      const amountLabel = amountNum.toLocaleString("en-IN");
 
       // Notification
       await db.collection("notifications").add({
         type: "invoice",
-        text: `New invoice created: ${billNumber} for ${projectName} — ₹${amountDue.toLocaleString()}`,
+        text: `New invoice created: ${billNumber} for ${projectName} — ₹${amountLabel}`,
         read: false,
-        userId: invoice.assigneeId || "all",
+        userId: "all",
         invoiceId,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -238,7 +243,7 @@ export const sendInvoiceNotification = onDocumentCreated(
       // Activity log
       await db.collection("activities").add({
         type: "invoice",
-        html: `<strong>New Invoice</strong> — ${billNumber} created for <em>${projectName}</em> (₹${amountDue.toLocaleString()})`,
+        html: `<strong>New Invoice</strong> — ${billNumber} created for <em>${projectName}</em> (₹${amountLabel})`,
         createdAt: FieldValue.serverTimestamp(),
       });
 
@@ -250,9 +255,9 @@ export const sendInvoiceNotification = onDocumentCreated(
             topic: "invoice-alerts",
             notification: {
               title: "📄 New Invoice Created",
-              body: `${billNumber} for ${projectName} (₹${amountDue.toLocaleString()})`,
+              body: `${billNumber} for ${projectName} (₹${amountLabel})`,
             },
-            data: { invoiceId, type: "invoice", amount: String(amountDue) },
+            data: { invoiceId, type: "invoice", amount: String(amountNum) },
           });
         }
       } catch (fcmErr) {

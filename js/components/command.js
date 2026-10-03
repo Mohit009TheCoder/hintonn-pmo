@@ -150,7 +150,7 @@ const Command = {
       pages.slice(0, 6).forEach(p => {
         const icon = Icons[p.icon] || Icons.folder;
         html += `<div class="command-item" onclick="Command.close();App.navigate('${p.route}')">
-          ${icon}<span class="command-item-text">${p.name}</span><span class="command-item-hint">#${p.route}</span>
+          ${icon}<span class="command-item-text">${Utils.escapeHtml(p.name)}</span><span class="command-item-hint">#${p.route}</span>
         </div>`;
       });
     }
@@ -160,7 +160,7 @@ const Command = {
       html += '<div class="command-group-label">Projects</div>';
       data.projects.slice(0, 5).forEach(p => {
         html += `<div class="command-item" onclick="Command.close();App.navigate('project-detail','${p.id}')">
-          ${Icons.folder}<span class="command-item-text">${p.name}</span><span class="command-item-hint">${p.type} · ${Utils.humanize(p.status)}</span>
+          ${Icons.folder}<span class="command-item-text">${Utils.escapeHtml(p.name)}</span><span class="command-item-hint">${p.type} · ${Utils.humanize(p.status)}</span>
         </div>`;
       });
     }
@@ -171,7 +171,7 @@ const Command = {
       data.tasks.slice(0, 5).forEach(t => {
         const proj = Store.getProject(t.projectId);
         html += `<div class="command-item" onclick="Command.close();TasksScreen.openDetailModal('${t.id}')">
-          ${Icons.checkSquare}<span class="command-item-text">${t.title}</span><span class="command-item-hint">${proj ? proj.name : 'Task'} · ${Utils.humanize(t.status)}</span>
+          ${Icons.checkSquare}<span class="command-item-text">${Utils.escapeHtml(t.title)}</span><span class="command-item-hint">${proj ? proj.name : 'Task'} · ${Utils.humanize(t.status)}</span>
         </div>`;
       });
     }
@@ -182,7 +182,7 @@ const Command = {
       data.milestones.slice(0, 4).forEach(m => {
         const proj = Store.getProject(m.projectId);
         html += `<div class="command-item" onclick="Command.close();App.navigate('milestones')">
-          ${Icons.flag}<span class="command-item-text">${m.name}</span><span class="command-item-hint">${proj ? proj.name : 'Milestone'} · ${m.dueDate ? Utils.formatDate(m.dueDate) : Utils.humanize(m.status)}</span>
+          ${Icons.flag}<span class="command-item-text">${Utils.escapeHtml(m.name)}</span><span class="command-item-hint">${proj ? proj.name : 'Milestone'} · ${m.dueDate ? Utils.formatDate(m.dueDate) : Utils.humanize(m.status)}</span>
         </div>`;
       });
     }
@@ -193,7 +193,7 @@ const Command = {
       data.issues.slice(0, 4).forEach(i => {
         const proj = Store.getProject(i.projectId);
         html += `<div class="command-item" onclick="Command.close();App.navigate('issues')">
-          ${Icons.alertCircle}<span class="command-item-text">${i.title}</span><span class="command-item-hint">${proj ? proj.name : 'Issue'} · ${Utils.humanize(i.priority)}</span>
+          ${Icons.alertCircle}<span class="command-item-text">${Utils.escapeHtml(i.title)}</span><span class="command-item-hint">${proj ? proj.name : 'Issue'} · ${Utils.humanize(i.priority)}</span>
         </div>`;
       });
     }
@@ -206,12 +206,12 @@ const Command = {
         html += '<div class="command-group-label">Commercial & Finance</div>';
         bgs.slice(0, 3).forEach(bg => {
           html += `<div class="command-item" onclick="Command.close();App.navigate('${bg.route}')">
-            ${Icons.shield}<span class="command-item-text">${bg.ref}</span><span class="command-item-hint">${bg.projectName} · ${bg.type}</span>
+            ${Icons.shield}<span class="command-item-text">${Utils.escapeHtml(bg.ref)}</span><span class="command-item-hint">${Utils.escapeHtml(bg.projectName)} · ${bg.type}</span>
           </div>`;
         });
         invoices.slice(0, 3).forEach(inv => {
           html += `<div class="command-item" onclick="Command.close();App.navigate('${inv.route}')">
-            ${Icons.creditCard}<span class="command-item-text">${inv.id} (${inv.amount})</span><span class="command-item-hint">${inv.projectName} · ${inv.status}</span>
+            ${Icons.creditCard}<span class="command-item-text">${inv.id} (${inv.amount})</span><span class="command-item-hint">${Utils.escapeHtml(inv.projectName)} · ${inv.status}</span>
           </div>`;
         });
       }

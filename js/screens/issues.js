@@ -86,7 +86,7 @@ const IssuesScreen = {
         </select>
         <select class="form-select" id="issue-filter-project" style="width:150px" onchange="IssuesScreen.handleFilterChange('project', this.value)">
           <option value="">All Projects</option>
-          ${projects.map(p => `<option value="${p.id}" ${this._filter.project===p.id?'selected':''}>${p.name}</option>`).join('')}
+          ${projects.map(p => `<option value="${p.id}" ${this._filter.project===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
         </select>
       </div>
       <div id="issues-container" class="issues-list">
@@ -179,7 +179,7 @@ const IssuesScreen = {
           })(i.createdAt) : (new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
           return `<tr>
-            <td><span class="task-title" onclick="IssuesScreen.openEditModal('${i.id}')">${i.title}</span><br><span style="font-size:11px;color:var(--color-text-muted)">${Utils.truncate(i.description, 60)}</span></td>
+            <td><span class="task-title" onclick="IssuesScreen.openEditModal('${i.id}')">${Utils.escapeHtml(i.title)}</span><br><span style="font-size:11px;color:var(--color-text-muted)">${Utils.truncate(i.description, 60)}</span></td>
             <td style="font-size:12px;color:var(--color-text-muted)">${proj ? proj.name : '—'}</td>
             <td><span class="badge badge-${i.priority}">${Utils.humanize(i.priority)}</span></td>
             <td style="font-size:12px">${m ? m.name : '<span style="color:var(--color-text-disabled)">Unassigned</span>'}</td>
@@ -226,7 +226,7 @@ const IssuesScreen = {
           <label class="form-label">Project *</label>
           <select class="form-select" id="issue-project">
             <option value="">Select project</option>
-            ${projects.map(p => `<option value="${p.id}" ${projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+            ${projects.map(p => `<option value="${p.id}" ${projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -247,7 +247,7 @@ const IssuesScreen = {
         ` : `
           <select class="form-select" id="issue-assignee">
             <option value="">Unassigned</option>
-            ${assignees.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+            ${assignees.map(m => `<option value="${m.id}">${Utils.escapeHtml(m.name)}</option>`).join('')}
           </select>
         `}
       </div>`;
@@ -266,10 +266,10 @@ const IssuesScreen = {
     const m = Store.getMember(i.assigneeId);
 
     const body = `
-      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Title</label><input type="text" class="form-input" id="issue-title" value="${i.title}"></div>
-      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Description</label><textarea class="form-textarea" id="issue-desc">${i.description}</textarea></div>
+      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Title</label><input type="text" class="form-input" id="issue-title" value="${Utils.escapeHtml(i.title)}"></div>
+      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Description</label><textarea class="form-textarea" id="issue-desc">${Utils.escapeHtml(i.description)}</textarea></div>
       <div class="form-row" style="margin-bottom:16px">
-        <div class="form-group"><label class="form-label">Project</label><select class="form-select" id="issue-project">${projects.map(p=>`<option value="${p.id}" ${i.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">Project</label><select class="form-select" id="issue-project">${projects.map(p=>`<option value="${p.id}" ${i.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}</select></div>
         <div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="issue-priority">${['low','medium','high'].map(p=>`<option value="${p}" ${i.priority===p?'selected':''}>${Utils.humanize(p)}</option>`).join('')}</select></div>
       </div>
       <div class="form-row">
@@ -279,7 +279,7 @@ const IssuesScreen = {
               <option value="${i.assigneeId}">${m ? m.name : (currentUser ? currentUser.name : 'You')}</option>
             </select>
           ` : `
-            <select class="form-select" id="issue-assignee"><option value="">Unassigned</option>${assignees.map(m=>`<option value="${m.id}" ${i.assigneeId===m.id?'selected':''}>${m.name}</option>`).join('')}</select>
+            <select class="form-select" id="issue-assignee"><option value="">Unassigned</option>${assignees.map(m=>`<option value="${m.id}" ${i.assigneeId===m.id?'selected':''}>${Utils.escapeHtml(m.name)}</option>`).join('')}</select>
           `}
         </div>
         <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="issue-status"><option value="open" ${i.status==='open'?'selected':''}>Open</option><option value="resolved" ${i.status==='resolved'?'selected':''}>Resolved</option></select></div>
@@ -310,7 +310,5 @@ const IssuesScreen = {
     const isAdmin = currentUser && currentUser.role === 'Admin';
     if (!isAdmin) { Toast.show('Only admins can delete issues', 'error'); return; }
     Modal.confirm('Delete Issue', 'Are you sure?', () => { Store.deleteIssue(id); Toast.show('Issue deleted'); App.refresh(); }, { danger: true });
-  },
-
-  refresh() { document.getElementById('page-content').innerHTML = this.render(); }
+  }
 };

@@ -16,7 +16,7 @@ Phase 5 deliverable: 6 n8n workflows for the Hintonn PMO commercial project mana
 ## Prerequisites
 
 1. **n8n instance** running (self-hosted or cloud)
-2. **Firebase project**: `project-management-syste-bf69f`
+2. **Firebase project**: `hintonn-pmo`
 3. **Google Sheets** connected with project data
 4. **SMTP credentials** configured in n8n for email alerts
 
@@ -26,14 +26,30 @@ Phase 5 deliverable: 6 n8n workflows for the Hintonn PMO commercial project mana
 HINTONN_SHEET_ID=<your Google Sheets ID>
 ALERT_FROM_EMAIL=pmo@hintonn.com
 ALERT_TO_EMAIL=mohit@hintonn.com
-FIREBASE_STORAGE_BUCKET=project-management-syste-bf69f.appspot.com
+FIREBASE_STORAGE_BUCKET=hintonn-pmo.firebasestorage.app
 ```
 
 ## Credentials to Configure in n8n
 
 - **Google Sheets OAuth2** — for Data Sync Engine
 - **SMTP** — for Alert Dispatcher + Weekly Report email
-- **Firebase Firestore API** (or HTTP API key) — for all Firestore writes
+- **Google OAuth2** (`Hintonn Google OAuth2`) — for ALL Firestore reads/writes and Storage uploads
+
+### ⚠️ Firestore security rules (required reading)
+
+`firestore.rules` no longer allows anonymous access. Every Firestore call
+from these workflows runs through the **Google OAuth2** credential, and the
+rules enforce:
+
+| Collection | Rule |
+|-----------|------|
+| `projects`, `tasks`, `milestones`, `issues`, `comments`, `members`, `activities`, `notifications`, `settings` | Any signed-in Google account |
+| `invoices`, `bankGuarantees`, `dlpRecords`, `retentionRecords`, `companies` | **Admin accounts only** (`mohithintonn@gmail.com`, `admin@hintonn.com`) |
+
+**Action required:** the `Hintonn Google OAuth2` credential in n8n must be
+authorized with an **admin Google account**, otherwise workflows 01, 02, 03,
+04 and 05 will get `permission-denied` on the commercial collections.
+Re-authorize the credential under n8n → Credentials → Hintonn Google OAuth2.
 
 ## Import Steps
 

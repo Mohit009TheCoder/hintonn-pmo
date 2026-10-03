@@ -262,7 +262,7 @@ const ReportsScreen = {
               ${memberWork.map(m => `<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
                 <div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
                 <div style="flex:1">
-                  <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px">${m.name}</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:4px">${Utils.escapeHtml(m.name)}</div>
                   <div class="progress-bar">
                     <div class="progress-bar-fill" style="width:${m.total/maxTasks*100}%;background:var(--gradient-primary)"></div>
                   </div>
@@ -286,7 +286,7 @@ const ReportsScreen = {
                 const projectTasks = isStandardUser ? pt.filter(isUserTask) : pt;
                 const projectIssues = isStandardUser ? pi.filter(i => isUserTask({ assigneeId: i.assigneeId })) : pi;
                 return `<tr>
-                  <td><span class="task-title" onclick="App.navigate('project-detail','${p.id}')">${p.name}</span></td>
+                  <td><span class="task-title" onclick="App.navigate('project-detail','${p.id}')">${Utils.escapeHtml(p.name)}</span></td>
                   <td style="font-size:12px">${p.type}</td>
                   <td><span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span></td>
                   <td>
@@ -391,7 +391,7 @@ const ReportsScreen = {
               <div id="scope-individual-picker-wrap" style="display:none;padding:10px 14px;background:var(--color-surface-subtle);border-radius:8px;border:1px solid var(--color-border-subtle);margin-left:26px;">
                 <label class="form-label" style="font-size:12px;font-weight:600;margin-bottom:6px;">Select Teammate:</label>
                 <select class="form-select" id="report-individual-member-select">
-                  ${assignees.map(m => `<option value="${m.id}">${m.name} (${m.role || m.designation})</option>`).join('')}
+                  ${assignees.map(m => `<option value="${m.id}">${Utils.escapeHtml(m.name)} (${m.role || m.designation})</option>`).join('')}
                 </select>
               </div>
 
@@ -412,7 +412,7 @@ const ReportsScreen = {
                     <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--color-border);border-radius:20px;cursor:pointer;font-size:12.5px;background:var(--color-surface);user-select:none;transition:all 0.15s;" class="group-member-pill-label">
                       <input type="checkbox" value="${m.id}" class="report-group-member-cb" ${idx < 2 ? 'checked' : ''} onchange="ReportsScreen.updateGroupPillStyle(this)" style="width:14px;height:14px;accent-color:var(--color-primary);">
                       <div class="avatar avatar-xs" style="background:${m.color};width:18px;height:18px;font-size:9px;">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-                      <span style="font-weight:500;">${m.name}</span>
+                      <span style="font-weight:500;">${Utils.escapeHtml(m.name)}</span>
                     </label>
                   `).join('')}
                 </div>
@@ -815,7 +815,7 @@ const ReportsScreen = {
                   return `
                     <div>
                       <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;">
-                        <span>${p.label}</span>
+                        <span>${Utils.escapeHtml(p.label)}</span>
                         <span>${p.count} (${pct}%)</span>
                       </div>
                       <div style="width:100%;height:7px;background:var(--color-surface-subtle);border-radius:4px;overflow:hidden;">
@@ -855,10 +855,10 @@ const ReportsScreen = {
                       <td>
                         <div style="display:flex;align-items:center;gap:8px;">
                           <div class="avatar avatar-xs" style="background:${m.color};">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-                          <span style="font-weight:600;font-size:13px;">${m.name}</span>
+                          <span style="font-weight:600;font-size:13px;">${Utils.escapeHtml(m.name)}</span>
                         </div>
                       </td>
-                      <td style="font-size:12px;color:var(--color-text-muted);">${m.role}</td>
+                      <td style="font-size:12px;color:var(--color-text-muted);">${Utils.escapeHtml(m.role)}</td>
                       <td style="font-size:12.5px;font-weight:600;">${m.done} / ${m.total}</td>
                       <td>
                         <div style="display:flex;align-items:center;gap:8px;">

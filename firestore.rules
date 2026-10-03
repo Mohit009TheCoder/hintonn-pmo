@@ -1,10 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Hintonn PMO: Allow read and write for all platform collections so real-time sync works
-    // across both Google OAuth and Email/Password authenticated sessions.
+
+    // ─── Helpers ────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Admin emails — must match Auth._ADMIN_EMAILS / FirebaseAuth ADMIN_EMAILS
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        'mohithintonn@gmail.com',
+        'admin@hintonn.com'
+      ];
+    }
+
+    // Signed-in user may create only their OWN pending user document
+    function isSelfSignup() {
+      return isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.isActive == false
+        && request.resource.data.email == request.auth.token.email;
+    }
+
+    // Users may only change approval-sensitive fields on their own doc
+    function selfEditFieldsValid() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider']);
+    }
+
+    // ─── Users (accounts, approvals) ────────────────────────────
+    match /users/{userId} {
+      // Any signed-in user can read the directory; signups read their own doc.
+      allow read: if isSignedIn();
+      // Self-signup (pending), self profile update, admin full control.
+      allow create: if isAdmin() || isSelfSignup();
+      allow update: if isAdmin() || (isOwner(userId) && selfEditFieldsValid());
+      allow delete: if isAdmin();
+    }
+
+    // ─── Shared workspace data ──────────────────────────────────
+    // Authenticated collaborators read/write the shared PMO workspace.
+    // (Per-field authorization for projects/tasks lives in Cloud Functions,
+    //  which run with admin credentials and enforce server-side checks.)
+    match /projects/{docId}      { allow read, write: if isSignedIn(); }
+    match /tasks/{docId}         { allow read, write: if isSignedIn(); }
+    match /milestones/{docId}    { allow read, write: if isSignedIn(); }
+    match /issues/{docId}        { allow read, write: if isSignedIn(); }
+    match /comments/{docId}      { allow read, write: if isSignedIn(); }
+    match /activities/{docId}    { allow read: if isSignedIn();
+                                   allow write: if isSignedIn() || isAdmin(); }
+    match /notifications/{docId} { allow read: if isSignedIn();
+                                   allow write: if isSignedIn() || isAdmin(); }
+    match /members/{docId}       { allow read: if isSignedIn();
+                                   allow write: if isSignedIn() || isAdmin(); }
+
+    // ─── Commercial & financial data — ADMIN ONLY ───────────────
+    // Billing, invoices, bank guarantees, DLP, retention and client
+    // records are restricted to admin accounts. Non-admin clients get
+    // permission-denied on these collections (the UI already gates them).
+    match /invoices/{docId}          { allow read, write: if isAdmin(); }
+    match /bankGuarantees/{docId}    { allow read, write: if isAdmin(); }
+    match /dlpRecords/{docId}        { allow read, write: if isAdmin(); }
+    match /retentionRecords/{docId}  { allow read, write: if isAdmin(); }
+    match /companies/{docId}         { allow read, write: if isAdmin(); }
+
+    // ─── Settings ───────────────────────────────────────────────
+    // Workspace settings doc is shared; notification prefs live here too.
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ─── Audit logs ─────────────────────────────────────────────
+    // Written ONLY by Cloud Functions (admin SDK bypasses rules).
+    match /audit_logs/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ─── Deny everything else by default ────────────────────────
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

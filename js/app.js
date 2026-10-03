@@ -252,7 +252,21 @@ const App = {
 
     document.body.classList.remove('login-active');
     const content = document.getElementById('page-content');
-    const screens = {
+    const screens = this._screensMap();
+    const renderer = screens[this.currentScreen] || screens.dashboard;
+    content.innerHTML = renderer();
+    content.classList.add('animate-fade-in');
+    setTimeout(() => content.classList.remove('animate-fade-in'), 200);
+
+    Modal.closeAll();
+    Sidebar.render();
+    Topbar.render();
+    this.updateMobileNav();
+  },
+
+  // Single source of truth for route → screen renderer mapping.
+  _screensMap() {
+    return {
       login: () => typeof LoginScreen !== 'undefined' ? LoginScreen.render('signin') : '',
       signup: () => typeof LoginScreen !== 'undefined' ? LoginScreen.render('signup') : '',
       'forgot-password': () => typeof LoginScreen !== 'undefined' ? LoginScreen.render('forgot') : '',
@@ -280,16 +294,6 @@ const App = {
       dlp: () => DLPTimelinesScreen.render(),
       'dlp-timelines': () => DLPTimelinesScreen.render(),
     };
-
-    const renderer = screens[this.currentScreen] || screens.dashboard;
-    content.innerHTML = renderer();
-    content.classList.add('animate-fade-in');
-    setTimeout(() => content.classList.remove('animate-fade-in'), 200);
-
-    Modal.closeAll();
-    Sidebar.render();
-    Topbar.render();
-    this.updateMobileNav();
   },
 
   refresh() {
@@ -305,33 +309,8 @@ const App = {
     }
 
     document.body.classList.remove('login-active');
-    const screens = {
-      login: () => typeof LoginScreen !== 'undefined' ? LoginScreen.render() : '',
-      dashboard: () => DashboardScreen.render(),
-      projects: () => ProjectsScreen.render(),
-      'project-detail': () => ProjectDetailScreen.render(this.currentProjectId),
-      tasks: () => TasksScreen.render(),
-      timeline: () => TimelineScreen.render(),
-      team: () => TeamScreen.render(),
-      calendar: () => CalendarScreen.render(),
-      reports: () => ReportsScreen.render(),
-      issues: () => IssuesScreen.render(),
-      milestones: () => MilestonesScreen.render(),
-      'ai-assistant': () => AIAssistantScreen.render(),
-      connectors: () => ConnectorsScreen.render(),
-      notifications: () => NotificationsScreen.render(),
-      settings: () => SettingsScreen.render(),
-      'user-approvals': () => UserApprovalsScreen.render(),
-      billing: () => BillingScreen.render(),
-      invoices: () => BillingScreen.render(),
-      retention: () => RetentionScreen.render(),
-      bg: () => BankGuaranteesScreen.render(),
-      'bank-guarantees': () => BankGuaranteesScreen.render(),
-      dlp: () => DLPTimelinesScreen.render(),
-      'dlp-timelines': () => DLPTimelinesScreen.render(),
-    };
-    const renderer = screens[this.currentScreen] || screens.dashboard;
-    document.getElementById('page-content').innerHTML = renderer();
+    document.getElementById('page-content').innerHTML =
+      (this._screensMap()[this.currentScreen] || this._screensMap().dashboard)();
 
     Sidebar.render();
     Topbar.render();
@@ -458,8 +437,8 @@ const App = {
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                   <div style="width:26px;height:26px;border-radius:50%;background:${r.color || '#2563EB'};color:#FFF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.avatar || 'GU'}</div>
                   <div style="flex:1;min-width:0;">
-                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.name}</div>
-                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.email}</div>
+                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(r.name)}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(r.email)}</div>
                   </div>
                   <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:10px;">Pending</span>
                 </div>
@@ -498,8 +477,8 @@ const App = {
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                   <div style="width:26px;height:26px;border-radius:50%;background:${u.color||'#2563EB'};color:#FFF;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${u.initials||'??'}</div>
                   <div style="flex:1;min-width:0;">
-                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.name}</div>
-                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.email}</div>
+                    <div style="font-size:12.5px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(u.name)}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(u.email)}</div>
                   </div>
                   <span style="font-size:10px;font-weight:700;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:10px;">Pending</span>
                 </div>

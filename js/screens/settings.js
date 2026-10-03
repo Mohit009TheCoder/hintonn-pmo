@@ -61,12 +61,12 @@ const SettingsScreen = {
       <div class="form-group" style="margin-bottom:20px">
         <label class="form-label">Current User</label>
         <select class="form-select" id="profile-user" style="max-width:400px">
-          ${members.map(m => `<option value="${m.id}" ${s.currentUser===m.id?'selected':''}>${m.name} — ${m.role}</option>`).join('')}
+          ${members.map(m => `<option value="${m.id}" ${s.currentUser===m.id?'selected':''}>${Utils.escapeHtml(m.name)} — ${Utils.escapeHtml(m.role)}</option>`).join('')}
         </select>
       </div>
       ${current ? `<div style="display:flex;align-items:center;gap:16px;padding:20px;background:var(--color-bg-soft);border-radius:var(--radius-lg)">
         <div class="avatar avatar-xl" style="background:${current.color}">${current.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-        <div><div style="font-size:18px;font-weight:600">${current.name}</div><div style="font-size:14px;color:var(--color-text-muted)">${authUser ? authUser.role : current.role}</div><div style="font-size:13px;color:var(--color-text-disabled);margin-top:2px">${displayEmail}</div></div>
+        <div><div style="font-size:18px;font-weight:600">${Utils.escapeHtml(current.name)}</div><div style="font-size:14px;color:var(--color-text-muted)">${authUser ? authUser.role : current.role}</div><div style="font-size:13px;color:var(--color-text-disabled);margin-top:2px">${displayEmail}</div></div>
       </div>` : ''}
       <div style="margin-top:24px"><button class="btn btn-primary" onclick="SettingsScreen.saveProfile()">Save Profile</button></div>`;
   },

@@ -8,6 +8,18 @@
  */
 const fs = require('fs');
 const path = require('path');
+// Service-account credentials come from the environment — the key file is
+// NOT committed to the repo (see .gitignore). Set:
+//   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+// or rely on Application Default Credentials.
+function loadServiceAccount() {
+  const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (keyPath) return JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+  const local = __dirname + '/service-account.json';
+  if (fs.existsSync(local)) return JSON.parse(fs.readFileSync(local, 'utf8'));
+  return null;
+}
+
 
 const DRY = process.argv.includes('--dry-run');
 
@@ -29,8 +41,8 @@ async function main() {
   const mod = await import('firebase-admin');
   const admin = mod.default || mod;
   const { cert } = mod;
-  const sa = JSON.parse(fs.readFileSync(path.join(__dirname, 'service-account.json'), 'utf8'));
-  try { admin.initializeApp({ credential: cert(sa), projectId: 'hintonn-pmo' }); } catch (e) {}
+  const sa = loadServiceAccount();
+  try { if (sa) admin.initializeApp({ credential: cert(sa), projectId: 'hintonn-pmo' }); else admin.initializeApp({ projectId: 'hintonn-pmo' }); } catch (e) {}
   const { getFirestore } = await import('firebase-admin/firestore');
   const db = getFirestore();
 

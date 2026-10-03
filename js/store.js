@@ -1,5 +1,16 @@
 // ─── Hintonn PM Data Store (Integrated with Firebase Cloud Firestore) ───
 const Store = {
+  // Escape user-controlled text before it is embedded in activity /
+  // notification HTML (Utils lives in app.js and loads after this file).
+  _esc(s) {
+    if (s == null) return '';
+    if (typeof Utils !== 'undefined' && typeof Utils.escapeHtml === 'function') {
+      return Utils.escapeHtml(s);
+    }
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  },
   _data: null,
   _listeners: [],
   _db: null,
@@ -239,8 +250,8 @@ const Store = {
       taskIds: [], milestoneIds: [], issueIds: [], tags: d.tags||[],
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.projects.unshift(p);
-    this._addActivity('project', `Created project <strong>${p.name}</strong>`);
-    this._addNotification('project', `New project created: ${p.name}`);
+    this._addActivity('project', `Created project <strong>${this._esc(p.name)}</strong>`);
+    this._addNotification('project', `New project created: ${this._esc(p.name)}`);
     this._save(); this._notify();
     this._syncToFirestore('projects', p.id, p);
     return p;
@@ -248,7 +259,7 @@ const Store = {
   updateProject(id, d) {
     const p = this.getProject(id); if (!p) return null;
     Object.assign(p, d, { updatedAt: new Date().toISOString() });
-    this._addActivity('project', `Updated project <strong>${p.name}</strong>`);
+    this._addActivity('project', `Updated project <strong>${this._esc(p.name)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('projects', p.id, p);
     return p;
@@ -263,7 +274,7 @@ const Store = {
     this._data.tasks = this._data.tasks.filter(t => t.projectId !== id);
     this._data.issues = this._data.issues.filter(i => i.projectId !== id);
     this._data.milestones = this._data.milestones.filter(m => m.projectId !== id);
-    this._addActivity('project', `Deleted project <strong>${p.name}</strong>`);
+    this._addActivity('project', `Deleted project <strong>${this._esc(p.name)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('projects', id);
     delTasks.forEach(t => this._deleteFromFirestore('tasks', t.id));
@@ -327,7 +338,7 @@ const Store = {
         this._syncToFirestore('projects', proj.id, proj);
       }
     }
-    this._addActivity('task', `Created ${isPersonal ? 'personal ' : ''}task <strong>${t.title}</strong>`);
+    this._addActivity('task', `Created ${isPersonal ? 'personal ' : ''}task <strong>${this._esc(t.title)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('tasks', t.id, t);
     return t;
@@ -366,7 +377,7 @@ const Store = {
     }
     Object.assign(t, updateData, { updatedAt: new Date().toISOString() });
     if (d.status && d.status !== oldStatus) {
-      this._addActivity('task', `Moved <strong>${t.title}</strong> to ${d.status.replace('-',' ')}`);
+      this._addActivity('task', `Moved <strong>${this._esc(t.title)}</strong> to ${d.status.replace('-',' ')}`);
     }
     if (t.projectId) {
       this._recalcProgress(t.projectId);
@@ -427,7 +438,7 @@ const Store = {
       this._recalcProgress(t.projectId);
       this._syncToFirestore('projects', proj.id, proj);
     }
-    this._addActivity('task', `Deleted task <strong>${t.title}</strong>`);
+    this._addActivity('task', `Deleted task <strong>${this._esc(t.title)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('tasks', id);
   },
@@ -459,8 +470,8 @@ const Store = {
       designation: d.designation || d.role || 'AI Developer', email: d.email || '',
       initials: d.initials || '', color: d.color || '#2563EB' };
     this._data.members.push(m);
-    this._addActivity('member', `Added team member <strong>${m.name}</strong> as ${m.designation}`);
-    this._addNotification('member', `New team member: ${m.name}`);
+    this._addActivity('member', `Added team member <strong>${this._esc(m.name)}</strong> as ${m.designation}`);
+    this._addNotification('member', `New team member: ${this._esc(m.name)}`);
     this._save(); this._notify();
     this._syncToFirestore('members', m.id, m);
     return m;
@@ -468,7 +479,7 @@ const Store = {
   updateMember(id, d) {
     const m = this.getMember(id); if (!m) return null;
     Object.assign(m, d, { updatedAt: new Date().toISOString() });
-    this._addActivity('member', `Updated member <strong>${m.name}</strong> — ${Object.keys(d).join(', ')}`);
+    this._addActivity('member', `Updated member <strong>${this._esc(m.name)}</strong> — ${Object.keys(d).join(', ')}`);
     this._save(); this._notify();
     this._syncToFirestore('members', m.id, m);
     return m;
@@ -483,7 +494,7 @@ const Store = {
       }
     });
     this._data.members = this._data.members.filter(x => x.id !== id);
-    this._addActivity('member', `Removed team member <strong>${m.name}</strong>`);
+    this._addActivity('member', `Removed team member <strong>${this._esc(m.name)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('members', id);
     return m;
@@ -502,8 +513,8 @@ const Store = {
       stateCountry: d.stateCountry || '', gstin: d.gstin || '',
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.companies.push(c);
-    this._addActivity('company', `Added company <strong>${c.name}</strong>`);
-    this._addNotification('company', `New company added: ${c.name}`);
+    this._addActivity('company', `Added company <strong>${this._esc(c.name)}</strong>`);
+    this._addNotification('company', `New company added: ${this._esc(c.name)}`);
     this._save(); this._notify();
     this._syncToFirestore('companies', c.id, c);
     return c;
@@ -511,7 +522,7 @@ const Store = {
   updateCompany(id, d) {
     const c = this.getCompany(id); if (!c) return null;
     Object.assign(c, d, { updatedAt: new Date().toISOString() });
-    this._addActivity('company', `Updated company <strong>${c.name}</strong>`);
+    this._addActivity('company', `Updated company <strong>${this._esc(c.name)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('companies', c.id, c);
     return c;
@@ -519,7 +530,7 @@ const Store = {
   deleteCompany(id) {
     const c = this.getCompany(id); if (!c) return;
     this._data.companies = this._data.companies.filter(x => x.id !== id);
-    this._addActivity('company', `Deleted company <strong>${c.name}</strong>`);
+    this._addActivity('company', `Deleted company <strong>${this._esc(c.name)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('companies', id);
     return c;
@@ -577,7 +588,7 @@ const Store = {
   updateInvoice(id, d) {
     const inv = this.getInvoice(id); if (!inv) return null;
     Object.assign(inv, d, { updatedAt: new Date().toISOString() });
-    this._addActivity('invoice', `Updated invoice <strong>${inv.id}</strong>`);
+    this._addActivity('invoice', `Updated invoice <strong>${this._esc(inv.id)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('invoices', inv.id, inv);
     return inv;
@@ -585,7 +596,7 @@ const Store = {
   deleteInvoice(id) {
     const inv = this.getInvoice(id); if (!inv) return;
     this._data.invoices = this._data.invoices.filter(x => x.id !== id);
-    this._addActivity('invoice', `Deleted invoice <strong>${inv.id}</strong>`);
+    this._addActivity('invoice', `Deleted invoice <strong>${this._esc(inv.id)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('invoices', id);
   },
@@ -827,7 +838,7 @@ const Store = {
   createBankGuarantee(d) {
     const bg = { id: d.id || d.ref || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.bankGuarantees.push(bg);
-    this._addActivity('bankGuarantee', `Registered BG <strong>${bg.ref}</strong> — ${bg.projectName || ''}`);
+    this._addActivity('bankGuarantee', `Registered BG <strong>${this._esc(bg.ref)}</strong> — ${bg.projectName || ''}`);
     this._save(); this._notify();
     this._syncToFirestore('bankGuarantees', bg.id || bg.ref, bg);
     return bg;
@@ -835,7 +846,7 @@ const Store = {
   updateBankGuarantee(id, d) {
     const bg = this.getBankGuarantee(id); if (!bg) return null;
     Object.assign(bg, d, { updatedAt: new Date().toISOString() });
-    this._addActivity('bankGuarantee', `Updated BG <strong>${bg.ref}</strong>`);
+    this._addActivity('bankGuarantee', `Updated BG <strong>${this._esc(bg.ref)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('bankGuarantees', bg.id || bg.ref, bg);
     return bg;
@@ -843,7 +854,7 @@ const Store = {
   deleteBankGuarantee(id) {
     const bg = this.getBankGuarantee(id); if (!bg) return;
     this._data.bankGuarantees = this._data.bankGuarantees.filter(x => x.id !== id && x.ref !== id);
-    this._addActivity('bankGuarantee', `Deleted BG <strong>${bg.ref}</strong>`);
+    this._addActivity('bankGuarantee', `Deleted BG <strong>${this._esc(bg.ref)}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('bankGuarantees', bg.id || bg.ref);
   },
@@ -917,7 +928,7 @@ const Store = {
       proj.milestoneIds.push(m.id);
       this._syncToFirestore('projects', proj.id, proj);
     }
-    this._addActivity('milestone', `Created milestone <strong>${m.name}</strong>`);
+    this._addActivity('milestone', `Created milestone <strong>${this._esc(m.name)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('milestones', m.id, m);
     return m;
@@ -925,7 +936,7 @@ const Store = {
   updateMilestone(id, d) {
     const m = this._data.milestones.find(x => x.id === id); if (!m) return null;
     Object.assign(m, d);
-    this._addActivity('milestone', `Updated milestone <strong>${m.name}</strong>`);
+    this._addActivity('milestone', `Updated milestone <strong>${this._esc(m.name)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('milestones', m.id, m);
     return m;
@@ -957,8 +968,8 @@ const Store = {
       proj.issueIds.push(i.id);
       this._syncToFirestore('projects', proj.id, proj);
     }
-    this._addActivity('issue', `Created issue <strong>${i.title}</strong>${proj ? ` in ${proj.name}` : ''}`);
-    this._addNotification('issue', `New issue: ${i.title}`);
+    this._addActivity('issue', `Created issue <strong>${this._esc(i.title)}</strong>${proj ? ` in ${this._esc(proj.name)}` : ''}`);
+    this._addNotification('issue', `New issue: ${this._esc(i.title)}`);
     this._save(); this._notify();
     this._syncToFirestore('issues', i.id, i);
     return i;

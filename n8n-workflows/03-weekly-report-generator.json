@@ -170,7 +170,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://firebasestorage.googleapis.com/v0/b/project-management-syste-bf69f.appspot.com/o?uploadType=media&name=reports%2Fweekly%2Fweekly-report-{{ $now.toMillis() }}.pdf",
+        "url": "=https://firebasestorage.googleapis.com/v0/b/hintonn-pmo.firebasestorage.app/o?uploadType=media&name=reports%2Fweekly%2Fweekly-report-{{ $now.toMillis() }}.pdf",
         "authentication": "oAuth2",
         "sendBody": true,
         "specifyBody": "raw",

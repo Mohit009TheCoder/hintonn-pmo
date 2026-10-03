@@ -231,7 +231,7 @@ const ProjectsScreen = {
         <div class="project-card-header">
           <div>
             <div class="project-card-type">${p.type}</div>
-            <div class="project-card-name">${p.name}</div>
+            <div class="project-card-name">${Utils.escapeHtml(p.name)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
             <span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span>
@@ -245,7 +245,7 @@ const ProjectsScreen = {
             ` : ''}
           </div>
         </div>
-        <div class="project-card-desc">${p.description}</div>
+        <div class="project-card-desc">${Utils.escapeHtml(p.description)}</div>
         <div class="project-card-progress">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px">
             <span class="body-sm" style="color:var(--color-text-muted)">Progress</span>
@@ -255,7 +255,7 @@ const ProjectsScreen = {
         </div>
         <div class="project-card-meta">
           <div class="project-card-avatars">${members.slice(0,3).map(m =>
-            `<div class="avatar avatar-sm" style="background:${m.color}" title="${m.name}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`
+            `<div class="avatar avatar-sm" style="background:${m.color}" title="${Utils.escapeHtml(m.name)}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`
           ).join('')}${members.length > 3 ? `<div class="avatar avatar-sm" style="background:var(--color-surface-subtle);color:var(--color-text-muted)">+${members.length-3}</div>` : ''}</div>
           <div class="project-card-stats">
             <span>${doneTasks}/${tasks.length} tasks</span>
@@ -273,7 +273,7 @@ const ProjectsScreen = {
       <tbody>${projects.map(p => {
         const members = p.memberIds.map(id => Store.getMember(id)).filter(Boolean);
         return `<tr style="cursor:pointer" onclick="App.navigate('project-detail','${p.id}')">
-          <td><span class="task-title">${p.name}</span><br><span style="font-size:11px;color:var(--color-text-muted)">${Utils.truncate(p.description, 60)}</span></td>
+          <td><span class="task-title">${Utils.escapeHtml(p.name)}</span><br><span style="font-size:11px;color:var(--color-text-muted)">${Utils.truncate(p.description, 60)}</span></td>
           <td><span style="font-size:12px">${p.type}</span></td>
           <td><span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span></td>
           <td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar progress-blue" style="width:80px"><div class="progress-bar-fill" style="width:${p.progress}%"></div></div><span style="font-size:12px;font-weight:600">${p.progress}%</span></div></td>
@@ -393,7 +393,7 @@ const ProjectsScreen = {
     if (!isAdmin) { Toast.show('Only admins can delete projects', 'error'); return; }
 
     const p = Store.getProject(id);
-    Modal.confirm('Delete Project', `Are you sure you want to delete <strong>${p.name}</strong>? This will also delete all associated tasks, issues, and milestones. This cannot be undone.`,
+    Modal.confirm('Delete Project', `Are you sure you want to delete <strong>${Utils.escapeHtml(p.name)}</strong>? This will also delete all associated tasks, issues, and milestones. This cannot be undone.`,
       () => { Store.deleteProject(id); Toast.show('Project deleted'); App.navigate('projects'); }, { danger: true });
   }
 };

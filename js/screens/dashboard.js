@@ -268,7 +268,7 @@ const DashboardScreen = {
               <div class="project-progress-row" onclick="App.navigate('project-detail','${p.id}')">
                 <div class="project-progress-meta">
                   <div class="project-progress-name" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                    <span>${p.name}</span>
+                    <span>${Utils.escapeHtml(p.name)}</span>
                     <span class="commercial-stage-tag ${p.commercial.stageClass}">${p.commercial.commercialStage}</span>
                   </div>
                   <div class="project-progress-sub">
@@ -405,8 +405,8 @@ const DashboardScreen = {
                       <div style="display:flex;align-items:center;gap:8px">
                         <div class="avatar avatar-sm" style="background:${dev.color};font-weight:700;font-size:11px">${dev.initials || dev.name.slice(0,2)}</div>
                         <div>
-                          <div style="font-size:13px;font-weight:700;color:var(--color-text-primary)">${dev.name}</div>
-                          <div style="font-size:11px;color:var(--color-text-muted)">${dev.role}</div>
+                          <div style="font-size:13px;font-weight:700;color:var(--color-text-primary)">${Utils.escapeHtml(dev.name)}</div>
+                          <div style="font-size:11px;color:var(--color-text-muted)">${Utils.escapeHtml(dev.role)}</div>
                         </div>
                       </div>
                       <div style="text-align:right">
@@ -640,7 +640,7 @@ const DashboardScreen = {
                             ${t.title}
                           </div>
                           <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--color-text-muted);margin-top:2px">
-                            ${p ? `<span>${p.name}</span>` : ''}
+                            ${p ? `<span>${Utils.escapeHtml(p.name)}</span>` : ''}
                             <span>•</span>
                             <span class="badge badge-${t.priority}" style="font-size:10px;padding:1px 6px">${Utils.humanize(t.priority)}</span>
                           </div>
@@ -689,7 +689,7 @@ const DashboardScreen = {
                   return `
                     <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-page);cursor:pointer;transition:transform 0.15s ease" onclick="App.navigate('project-detail','${p.id}')">
                       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                        <span style="font-size:13.5px;font-weight:700;color:var(--color-text-primary)">${p.name}</span>
+                        <span style="font-size:13.5px;font-weight:700;color:var(--color-text-primary)">${Utils.escapeHtml(p.name)}</span>
                         <span class="badge badge-${p.status}" style="font-size:10px;padding:1px 6px">${Utils.humanize(p.status)}</span>
                       </div>
                       <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:8px">

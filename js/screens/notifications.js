@@ -53,8 +53,8 @@ const NotificationsScreen = {
               <div style="width:36px;height:36px;border-radius:50%;background:${r.color||'#2563EB'};color:#FFF;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.avatar||'GU'}</div>
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <strong style="font-size:13.5px;color:var(--color-text-primary);">${r.name}</strong>
-                  <span style="font-size:11px;color:var(--color-text-muted);">(${r.email})</span>
+                  <strong style="font-size:13.5px;color:var(--color-text-primary);">${Utils.escapeHtml(r.name)}</strong>
+                  <span style="font-size:11px;color:var(--color-text-muted);">(${Utils.escapeHtml(r.email)})</span>
                   <span class="badge" style="background:${r.status==='approved'?'#DCFCE7':r.status==='rejected'?'#FEE2E2':'#FEF3C7'};color:${r.status==='approved'?'#166534':r.status==='rejected'?'#991B1B':'#92400E'};font-size:10px;padding:1px 6px;">${r.status}</span>
                 </div>
                 <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Requested Google Login access · ${Utils.timeAgo(r.requestedAt)}</div>
@@ -87,11 +87,11 @@ const NotificationsScreen = {
               <div style="width:36px;height:36px;border-radius:50%;background:${u.color || '#F59E0B'};color:#FFF;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${u.initials || '??'}</div>
               <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <strong style="font-size:13.5px;color:var(--color-text-primary);">${u.name}</strong>
-                  <span style="font-size:11px;color:var(--color-text-muted);">(${u.email})</span>
+                  <strong style="font-size:13.5px;color:var(--color-text-primary);">${Utils.escapeHtml(u.name)}</strong>
+                  <span style="font-size:11px;color:var(--color-text-muted);">(${Utils.escapeHtml(u.email)})</span>
                   <span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--radius-pill);">Pending</span>
                 </div>
-                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Role: ${u.role} · Source: ${u.requestSource || 'Sign Up'} · Requested ${u.requestDate ? Utils.timeAgo(u.requestDate) : 'recently'}</div>
+                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Role: ${Utils.escapeHtml(u.role)} · Source: ${u.requestSource || 'Sign Up'} · Requested ${u.requestDate ? Utils.timeAgo(u.requestDate) : 'recently'}</div>
               </div>
               <div style="display:flex;gap:6px;flex-shrink:0;">
                 <button type="button" onclick="UserApprovalsScreen.approveUser('${u.id}');NotificationsScreen._refresh()" class="btn btn-sm" style="background:#059669;color:#FFF;border:none;padding:6px 12px;font-size:12px;font-weight:600;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">

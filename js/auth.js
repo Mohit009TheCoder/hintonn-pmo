@@ -8,7 +8,6 @@ const Auth = {
       id: 'mohit',
       memberId: 'm3',
       loginId: 'Mohit',
-      password: 'Mohit@123',
       name: 'Mohit Jain',
       role: 'Admin',
       email: 'mohithintonn@gmail.com',
@@ -21,7 +20,6 @@ const Auth = {
       id: 'admin_hintonn',
       memberId: 'm3',
       loginId: 'admin',
-      password: 'admin@123',
       name: 'Mohit Jain',
       role: 'Admin',
       email: 'admin@hintonn.com',
@@ -34,7 +32,6 @@ const Auth = {
       id: 'preet',
       memberId: 'm2',
       loginId: 'Preet',
-      password: 'Preet@123',
       name: 'Preet Bhavsar',
       role: 'AI Developer',
       email: 'preethintonn@gmail.com',
@@ -47,7 +44,6 @@ const Auth = {
       id: 'hirvi',
       memberId: 'm1',
       loginId: 'Hirvi',
-      password: 'Hirvi@123',
       name: 'Hirvi Sanghavi',
       role: 'AI Developer',
       email: 'hirvihintonn@gmail.com',
@@ -60,7 +56,6 @@ const Auth = {
       id: 'mohit_dev',
       memberId: 'm_1790601440429',
       loginId: 'MohitDev',
-      password: 'Mohit@123',
       name: 'MOHIT JAIN',
       role: 'AI Developer',
       email: 'mohitjain12104@gmail.com',
@@ -232,7 +227,7 @@ const Auth = {
               if (saved.reviewedAt !== undefined) exists.reviewedAt = saved.reviewedAt;
               if (saved.approvedDate !== undefined) exists.approvedDate = saved.approvedDate;
               if (saved.rejectedDate !== undefined) exists.rejectedDate = saved.rejectedDate;
-              if (saved.password && saved.password !== exists.password) exists.password = saved.password;
+              delete saved.password; // never persist credentials client-side
               this._enforceAdminRole(exists);
             } else {
               this.users.push(saved);
@@ -347,53 +342,21 @@ const Auth = {
       }
     }
 
-    // 2. Search in-memory / local users
-    let user = this.users.find(u => 
-      (u.loginId && u.loginId.toLowerCase() === raw) || 
+    // 2. Local-only login IDs are no longer supported — credentials are
+    //    verified exclusively by Firebase Authentication (step 1). This
+    //    removes the client-side password database entirely.
+    if (!isEmail) {
+      return { success: false, error: 'Please sign in with your registered email address. Local login IDs are no longer supported.' };
+    }
+
+    // 3. Look up the local profile registry (roles/approval metadata only — no credentials).
+    let user = this.users.find(u =>
       (u.email && u.email.toLowerCase() === raw) ||
       (u.googleEmail && u.googleEmail.toLowerCase() === raw)
     );
 
-    // 3. If not found locally, query Firestore users collection
-    if (!user && isEmail && typeof firebase !== 'undefined' && firebase.firestore) {
-      try {
-        const snap = await firebase.firestore().collection('users').where('email', '==', raw).get();
-        if (!snap.empty) {
-          const doc = snap.docs[0];
-          const d = doc.data();
-          const initials = (d.name || 'User').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-          user = {
-            id: d.uid || doc.id,
-            memberId: d.memberId || ('m_' + (d.uid || doc.id).slice(0, 6)),
-            loginId: raw.split('@')[0],
-            email: d.email || raw,
-            name: d.name || 'User',
-            role: d.role || 'AI Developer',
-            initials: initials,
-            color: '#2563EB',
-            approved: d.isActive === true,
-            revoked: d.isRevoked === true,
-            password: rawPass
-          };
-          this.users.push(user);
-          this._saveUserDb();
-        }
-      } catch(e) {}
-    }
-
     if (!user) {
-      return { success: false, error: 'No account found with this ID or email.' };
-    }
-
-    // Password validation: matches stored password, or standard defaults
-    const isMasterAdmin = this._ADMIN_EMAILS.includes((user.email || '').toLowerCase());
-    const matchesPassword = user.password === rawPass || 
-      (user.password && user.password.toLowerCase() === rawPass.toLowerCase()) ||
-      (isMasterAdmin && (rawPass === 'admin@123' || rawPass === 'Mohit@123')) ||
-      rawPass === 'user@123';
-
-    if (!matchesPassword) {
-      return { success: false, error: 'Incorrect password. Please try again.' };
+      return { success: false, error: 'No account found with this email.' };
     }
 
     this._enforceAdminRole(user);
@@ -566,7 +529,6 @@ const Auth = {
         id: 'goog_' + Date.now().toString(36),
         memberId: 'm_' + Date.now().toString(36),
         loginId: loginId,
-        password: 'user@123',
         name: req.name,
         role: req.role || 'AI Developer',
         email: req.email,
@@ -687,13 +649,20 @@ const Auth = {
       return { success: false, error: 'Request is not approved yet.' };
     }
 
+    // SECURITY: approval alone never grants a session. The requester must
+    // complete a real Google sign-in (Firebase Authentication) first.
+    const fbUser = (typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.getCurrentUser === 'function')
+      ? FirebaseAuth.getCurrentUser() : null;
+    if (!fbUser || (fbUser.email || '').toLowerCase() !== (req.email || '').toLowerCase()) {
+      return { success: false, error: 'Please sign in with your approved Google account first.' };
+    }
+
     let user = this.users.find(u => u.email && u.email.toLowerCase() === req.email.toLowerCase());
     if (!user) {
       user = {
         id: 'goog_' + Date.now().toString(36),
         memberId: 'm_' + Date.now().toString(36),
         loginId: req.name.split(' ')[0],
-        password: 'user@123',
         name: req.name,
         role: req.role || 'AI Developer',
         email: req.email,
@@ -717,66 +686,48 @@ const Auth = {
     return { success: true, user };
   },
 
-  // ─── Google OAuth Login ───
-  googleLogin(email) {
-    const raw = (email || '').trim().toLowerCase();
-    let user = this.users.find(u => 
-      (u.googleEmail && u.googleEmail.toLowerCase() === raw) ||
-      (u.email && u.email.toLowerCase() === raw)
-    );
-
-    if (!user && raw.includes('@')) {
-      const namePart = raw.split('@')[0].split(/[._-]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-      const initials = namePart.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'GU';
-      const newId = 'user_g_' + Date.now();
-      const newMemberId = 'm_g_' + Date.now();
-      const colors = ['#2563EB', '#7C3AED', '#4F46E5', '#1D4ED8', '#059669', '#D97706'];
-      const chosenColor = colors[this.users.length % colors.length];
-
-      user = {
-        id: newId,
-        memberId: newMemberId,
-        loginId: raw.split('@')[0],
-        email: raw,
-        googleEmail: raw,
-        name: namePart || 'Google User',
-        role: 'AI Developer',
-        avatar: initials,
-        color: chosenColor,
-        title: 'AI Developer',
-        approved: false,
-        initials: initials,
-        requestDate: new Date().toISOString(),
-        requestSource: 'Google OAuth'
-      };
-      this.users.push(user);
-      this._saveUserDb();
+  // ─── Google OAuth Login (real Firebase Auth popup — no email guessing) ───
+  async googleLogin() {
+    if (typeof FirebaseAuth === 'undefined' || typeof FirebaseAuth.signInGoogle !== 'function') {
+      return { success: false, error: 'Authentication service is initializing. Please reload.' };
     }
-
-    if (user) {
-      this._enforceAdminRole(user);
-      if (user.approved === false) {
-        return { 
-          success: false, 
-          error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.',
-          pendingApproval: true 
-        };
+    try {
+      const res = await FirebaseAuth.signInGoogle();
+      if (!res) return { success: false, error: 'Google sign-in was cancelled.' };
+      if (res.approved && res.user) {
+        this.currentUser = res.user;
+        this._setSessionUser(res.user);
+        if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
+          Store._data.settings.currentUser = res.user.memberId || 'm1';
+          if (typeof Store._save === 'function') Store._save();
+        }
+        return { success: true, user: res.user };
       }
-      this.currentUser = user;
-      this._setSessionUser(user);
-      if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
-        Store._data.settings.currentUser = user.memberId;
+      if (res.revoked) {
+        return { success: false, error: 'Your access has been revoked by an administrator.' };
       }
-      return { success: true, user };
+      return { success: false, error: 'Your account is pending admin approval. Please wait for an administrator to approve your access.', pendingApproval: true };
+    } catch (err) {
+      return { success: false, error: err.message || 'Google sign-in failed.' };
     }
-    return { success: false, error: 'Google account not registered with Hintonn PMO.' };
   },
 
-  // ─── Sign Up / Request Access (creates PENDING user) ───
-  signUp(name, email, password) {
+  // ─── Sign Up / Request Access (creates PENDING Firebase Auth user) ───
+  async signUp(name, email, password) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPass = password || '';
+
+    // All accounts are created in Firebase Authentication — the server
+    // stores the credential hash; nothing password-related is kept here.
+    if (typeof FirebaseAuth === 'undefined' || typeof FirebaseAuth.signUpEmail !== 'function') {
+      return { success: false, error: 'Authentication service is initializing. Please reload and try again.' };
+    }
+    try {
+      await FirebaseAuth.signUpEmail(cleanName, cleanEmail, cleanPass);
+    } catch (err) {
+      return { success: false, error: err.message || 'Could not create the account.' };
+    }
 
     const existing = this.users.find(u => 
       (u.email && u.email.toLowerCase() === cleanEmail) ||
@@ -799,7 +750,6 @@ const Auth = {
       id: newId,
       memberId: newMemberId,
       loginId: cleanName.split(' ')[0] || cleanName,
-      password: cleanPass,
       name: cleanName,
       role: 'AI Developer',
       email: cleanEmail,
@@ -818,8 +768,11 @@ const Auth = {
     // Sync new pending user to Firestore so admins on other devices can see them
     if (typeof firebase !== 'undefined' && firebase.firestore) {
       try {
-        firebase.firestore().collection('users').doc(newId).set({
-          id: newId,
+        const fbUid = (typeof FirebaseAuth !== 'undefined' && FirebaseAuth.getCurrentUser && FirebaseAuth.getCurrentUser())
+          ? FirebaseAuth.getCurrentUser().uid : newId;
+        firebase.firestore().collection('users').doc(fbUid).set({
+          uid: fbUid,
+          id: fbUid,
           memberId: newMemberId,
           name: cleanName,
           email: cleanEmail,
@@ -1002,10 +955,11 @@ const Auth = {
   },
 
   // ─── Admin: Add user directly (pre-approved) ───
-  adminAddUser(name, email, role, password) {
+  // No password handling here — the user signs up with their own password
+  // through Firebase Authentication; this only registers the approved profile.
+  adminAddUser(name, email, role) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPass = password || 'user@123';
     const cleanRole = role || 'AI Developer';
 
     const existing = this.users.find(u =>
@@ -1022,7 +976,7 @@ const Auth = {
 
     const newUser = {
       id: newId, memberId: newMemberId, loginId: cleanName.split(' ')[0] || cleanName,
-      password: cleanPass, name: cleanName, role: cleanRole, email: cleanEmail,
+      name: cleanName, role: cleanRole, email: cleanEmail,
       googleEmail: cleanEmail, initials: initials, color: chosenColor,
       approved: true, approvedDate: new Date().toISOString(), requestSource: 'Admin Direct Add'
     };
@@ -1041,21 +995,29 @@ const Auth = {
     return { success: true, user: newUser };
   },
 
+  // Sends Firebase Authentication's password-reset email. The user sets a
+  // new password via the emailed link — no client-side password writes.
   forgotPassword(email) {
     const raw = (email || '').trim().toLowerCase();
-    const user = this.users.find(u => (u.email && u.email.toLowerCase() === raw) || (u.googleEmail && u.googleEmail.toLowerCase() === raw));
-    return { success: true, userExists: !!user };
+    if (!raw || !raw.includes('@')) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+    if (typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.sendResetEmail === 'function') {
+      FirebaseAuth.sendResetEmail(raw)
+        .then(() => console.log('[Auth] Password reset email sent to', raw))
+        .catch(err => console.warn('[Auth] Password reset email:', err.message || err));
+    }
+    return { success: true, userExists: true };
   },
 
-  resetPassword(email, newPassword) {
-    const raw = (email || '').trim().toLowerCase();
-    const user = this.users.find(u => (u.email && u.email.toLowerCase() === raw) || (u.googleEmail && u.googleEmail.toLowerCase() === raw));
-    if (user) {
-      user.password = newPassword;
-      this._saveUserDb();
-      return { success: true };
+  // Passwords are reset ONLY through Firebase Authentication's emailed
+  // reset link — never written by client code.
+  resetPassword(email) {
+    if (typeof FirebaseAuth !== 'undefined' && typeof FirebaseAuth.sendResetEmail === 'function') {
+      FirebaseAuth.sendResetEmail((email || '').trim().toLowerCase())
+        .catch(err => console.warn('[Auth] Password reset email:', err.message || err));
     }
-    return { success: false, error: 'User not found.' };
+    return { success: true };
   },
 
   logout() {
@@ -1068,7 +1030,5 @@ const Auth = {
     if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
   },
 
-  isAuthenticated() { return !!this.currentUser; },
-  getCurrentUser() { this._enforceAdminRole(this.currentUser); return this.currentUser; },
   isAdmin() { return this.currentUser && this.currentUser.role === 'Admin'; }
 };

@@ -245,9 +245,6 @@ const LoginScreen = {
             <button type="button" class="login-submit-btn" onclick="LoginScreen.checkApprovalStatus('${req.id}')">
               Check Approval Status
             </button>
-            <button type="button" class="login-btn-secondary" onclick="LoginScreen.demoSwitchToAdmin('${req.id}')">
-              ⚡ Demo: Switch to Admin (Mohit) to Approve
-            </button>
             <button type="button" class="login-btn-ghost" onclick="LoginScreen.setView('signin')">Cancel & Return to Sign In</button>
           </div>
         ` : ''}
@@ -580,32 +577,7 @@ const LoginScreen = {
     }
   },
 
-  demoSwitchToAdmin(reqId) {
-    const adminUser = Auth.users.find(u => u.loginId === 'Mohit' || u.role === 'Admin') || {
-      id: 'mohit', memberId: 'm3', loginId: 'Mohit', password: 'Mohit@123',
-      name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com',
-      googleEmail: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5', approved: true
-    };
-
-    Auth.currentUser = adminUser;
-    if (typeof Auth !== 'undefined' && typeof Auth._setSessionUser === 'function') {
-      Auth._setSessionUser(adminUser);
-    } else {
-      try {
-        if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('hintonn-current-user', JSON.stringify(adminUser));
-        if (typeof localStorage !== 'undefined') localStorage.removeItem('hintonn-current-user');
-      } catch (e) {}
-    }
-    if (typeof Store !== 'undefined' && Store._data && Store._data.settings) {
-      Store._data.settings.currentUser = 'm3';
-    }
-
-    if (typeof Toast !== 'undefined') Toast.show('Logged in as Admin (Mohit Jain). Opening Dashboard...', 'info');
-    window.location.hash = '#dashboard';
-    if (typeof App !== 'undefined') App.handleRoute();
-  },
-
-  handleSignUp() {
+  async handleSignUp() {
     const nameEl = document.getElementById('signup-name');
     const emailEl = document.getElementById('signup-email');
     const passEl = document.getElementById('signup-password');
@@ -637,7 +609,7 @@ const LoginScreen = {
       return;
     }
 
-    const res = Auth.signUp(name, email, pass);
+    const res = await Auth.signUp(name, email, pass);
     if (res.success || res.pendingApproval) {
       this.clearError();
       if (typeof Toast !== 'undefined') Toast.show('Access request submitted! Waiting for admin approval.', 'success');
@@ -693,28 +665,17 @@ const LoginScreen = {
     }
     this._resetEmail = email;
     Auth.forgotPassword(email);
-    if (typeof Toast !== 'undefined') Toast.show('Reset link sent to your email!', 'success');
-    this.setView('reset');
+    if (typeof Toast !== 'undefined') Toast.show('Password reset link sent to your email. Please check your inbox.', 'success');
+    this.setView('signin');
   },
 
   handleResetPassword() {
-    const passEl = document.getElementById('reset-password');
-    const confirmEl = document.getElementById('reset-confirm-password');
-    const pass = passEl ? passEl.value : '';
-    const confirm = confirmEl ? confirmEl.value : '';
-
-    if (!pass || pass.length < 8) {
-      this.showError('Password must be at least 8 characters long.');
-      return;
-    }
-    if (pass !== confirm) {
-      this.showError('Passwords do not match.');
-      return;
-    }
-
-    Auth.resetPassword(this._resetEmail, pass);
-    if (typeof Toast !== 'undefined') Toast.show('Password updated successfully! Please sign in.', 'success');
-    this.setView('signin');
+    // Passwords can only be reset through Firebase Authentication's emailed
+    // link. If this screen is reached, re-send the link instead of accepting
+    // a password in the browser.
+    Auth.forgotPassword(this._resetEmail);
+    this.showError('For security, please open the password reset link we emailed you and set your new password there.');
+    if (typeof Toast !== 'undefined') Toast.show('A fresh reset link has been sent to your email.', 'info');
   },
 
   showError(msg) {

@@ -130,7 +130,7 @@ const ProjectDetailScreen = {
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <a href="#projects" style="font-size:13px;color:var(--color-text-muted)">${Icons.chevronLeft} Projects</a>
           </div>
-          <h1>${p.name}</h1>
+          <h1>${Utils.escapeHtml(p.name)}</h1>
           <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
             <span class="badge badge-${p.status}">${Utils.humanize(p.status)}</span>
             <span style="font-size:12px;color:var(--color-text-muted)">${p.type}</span>
@@ -173,10 +173,10 @@ const ProjectDetailScreen = {
         </div>
       </div>
 
-      ${p.description ? `<div class="section-card" style="margin-bottom:24px"><div class="section-card-body"><p class="body">${p.description}</p></div></div>` : ''}
+      ${p.description ? `<div class="section-card" style="margin-bottom:24px"><div class="section-card-body"><p class="body">${Utils.escapeHtml(p.description)}</p></div></div>` : ''}
 
       <div class="tabs">
-        ${tabs.map(t => `<button class="tab ${this._tab===t.id?'active':''}" onclick="ProjectDetailScreen._tab='${t.id}';ProjectDetailScreen.refresh('${projectId}')">${t.label}${t.count !== undefined ? ` (${t.count})` : ''}</button>`).join('')}
+        ${tabs.map(t => `<button class="tab ${this._tab===t.id?'active':''}" onclick="ProjectDetailScreen._tab='${t.id}';ProjectDetailScreen.refresh('${projectId}')">${Utils.escapeHtml(t.label)}${t.count !== undefined ? ` (${t.count})` : ''}</button>`).join('')}
       </div>
 
       <div id="project-tab-content">${this._renderTab(projectId, tasks, milestones, issues, members, activities, p)}</div>`;
@@ -203,7 +203,7 @@ const ProjectDetailScreen = {
         const m = members[0];
         return `<tr>
           <td><span class="priority-dot priority-${t.priority}" title="${t.priority}"></span></td>
-          <td><span class="task-title" onclick="TasksScreen.openDetailModal('${t.id}')">${t.title}</span></td>
+          <td><span class="task-title" onclick="TasksScreen.openDetailModal('${t.id}')">${Utils.escapeHtml(t.title)}</span></td>
           <td>${members.length > 1 ? `
             <div style="display:flex;align-items:center;gap:6px">
               <div class="avatar-stack">
@@ -215,7 +215,7 @@ const ProjectDetailScreen = {
               <span style="font-size:12px">${members.map(mem=>mem.name.split(' ')[0]).join(' + ')}</span>
             </div>
           ` : (members.length === 1 ? `
-            <div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span style="font-size:12px">${m.name}</span></div>
+            <div style="display:flex;align-items:center;gap:6px"><div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><span style="font-size:12px">${Utils.escapeHtml(m.name)}</span></div>
           ` : '<span style="color:var(--color-text-disabled);font-size:12px">Unassigned</span>')}</td>
           <td><span class="badge badge-${t.priority}">${Utils.humanize(t.priority)}</span></td>
           <td>
@@ -237,7 +237,7 @@ const ProjectDetailScreen = {
       const status = m.status === 'completed' ? 'completed' : new Date(m.dueDate) < new Date() ? 'pending' : 'upcoming';
       return `<div class="milestone-item">
         <div class="milestone-icon ${status}">${status==='completed'?'✓':'⚑'}</div>
-        <div class="milestone-info"><div class="milestone-name">${m.name}</div><div class="milestone-date">${m.dueDate ? 'Due ' + Utils.formatDate(m.dueDate) : 'No due date'}</div></div>
+        <div class="milestone-info"><div class="milestone-name">${Utils.escapeHtml(m.name)}</div><div class="milestone-date">${m.dueDate ? 'Due ' + Utils.formatDate(m.dueDate) : 'No due date'}</div></div>
         <span class="badge badge-${status==='completed'?'completed':status==='pending'?'paused':'planning'}">${Utils.humanize(m.status)}</span>
         <button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.openEditModal('${m.id}')">${Icons.edit}</button>
         <button class="btn btn-ghost btn-sm btn-icon" onclick="MilestonesScreen.deleteMilestone('${m.id}')">${Icons.trash}</button>
@@ -294,7 +294,7 @@ const ProjectDetailScreen = {
             })(i.createdAt) : (new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
 
             return `<tr>
-              <td><span class="task-title" onclick="IssuesScreen.openEditModal('${i.id}')">${i.title}</span></td>
+              <td><span class="task-title" onclick="IssuesScreen.openEditModal('${i.id}')">${Utils.escapeHtml(i.title)}</span></td>
               <td><span class="badge badge-${i.priority}">${Utils.humanize(i.priority)}</span></td>
               <td>${m ? m.name : '<span style="color:var(--color-text-disabled)">Unassigned</span>'}</td>
               <td><span class="badge badge-${i.status==='open'?'open':'resolved'}">${Utils.humanize(i.status)}</span></td>
@@ -316,7 +316,7 @@ const ProjectDetailScreen = {
         return `<div class="section-card" style="padding:20px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
             <div class="avatar avatar-lg" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-            <div><div style="font-size:14px;font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--color-text-muted)">${m.role}</div></div>
+            <div><div style="font-size:14px;font-weight:600">${Utils.escapeHtml(m.name)}</div><div style="font-size:12px;color:var(--color-text-muted)">${Utils.escapeHtml(m.role)}</div></div>
           </div>
           <div style="display:flex;gap:16px;font-size:12px;color:var(--color-text-muted)">
             <span>${memberTasks.length} tasks</span>

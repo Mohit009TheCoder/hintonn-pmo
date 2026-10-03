@@ -150,7 +150,9 @@ const TeamScreen = {
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       Auth.users.push({
         id: 'user_' + Date.now(), memberId: newId, loginId: name.split(' ')[0] || name,
-        password: 'user@123', name, role: designation, designation, title: designation,
+        // No password stored — the member signs up with their own password
+        // through Firebase Authentication; this profile only gates approval.
+        name, role: designation, designation, title: designation,
         email, initials, color: chosenColor,
         approved: true, // Admin-added member is pre-approved
         approvedDate: new Date().toISOString(),
@@ -174,8 +176,8 @@ const TeamScreen = {
         <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-bg-page,#F8FAFC);border-radius:8px;border:1px solid var(--color-border,#E2E8F0);">
           <div class="avatar avatar-md" style="background:${m.color||'#7C3AED'};font-weight:700;">${m.initials||'??'}</div>
           <div style="min-width:0;flex:1;">
-            <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${m.name}</div>
-            <div style="font-size:12px;color:var(--color-text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${m.email}</div>
+            <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${Utils.escapeHtml(m.name)}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${Utils.escapeHtml(m.email)}</div>
           </div>
         </div>
         <div>
@@ -325,8 +327,8 @@ const TeamScreen = {
         <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-bg-page);border-radius:8px;border:1px solid var(--color-border);">
           <div class="avatar avatar-md" style="background:${m.color||'#7C3AED'};font-weight:700;">${m.initials||'??'}</div>
           <div style="min-width:0;flex:1;">
-            <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;">${m.name}</div>
-            <div style="font-size:12px;color:var(--color-text-muted);">${m.email}</div>
+            <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;">${Utils.escapeHtml(m.name)}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);">${Utils.escapeHtml(m.email)}</div>
           </div>
           <span class="badge badge-medium" style="font-size:11px;">${m.designation || m.role || 'AI Developer'}</span>
         </div>
@@ -334,7 +336,7 @@ const TeamScreen = {
           <div style="display:flex;align-items:flex-start;gap:10px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div>
-              <div style="font-weight:700;color:#991B1B;font-size:14px;margin-bottom:4px;">Remove ${m.name} from the team?</div>
+              <div style="font-weight:700;color:#991B1B;font-size:14px;margin-bottom:4px;">Remove ${Utils.escapeHtml(m.name)} from the team?</div>
               <div style="font-size:13px;color:#7F1D1D;line-height:1.5;">
                 This will remove them from all projects. 
                 ${activeTasks.length > 0 ? `<strong style="color:#991B1B;">They have ${activeTasks.length} active task${activeTasks.length!==1?'s':''} that will become unassigned.</strong>` : 'They have no active tasks.'}
@@ -407,7 +409,7 @@ const TeamScreen = {
 
   _renderStatusBadge(status) {
     const s = this._statusColors[status] || this._statusColors['todo'];
-    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:${s.bg};color:${s.text};white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:${s.dot};flex-shrink:0;"></span>${Utils.humanize(status)}</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:${s.bg};color:${Utils.escapeHtml(s.text)};white-space:nowrap;"><span style="width:6px;height:6px;border-radius:50%;background:${s.dot};flex-shrink:0;"></span>${Utils.humanize(status)}</span>`;
   },
 
   _renderPriorityDot(priority) {
@@ -450,9 +452,9 @@ const TeamScreen = {
         <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--color-bg-page);border-radius:var(--radius-md);border:1px solid var(--color-border);">
           <div class="avatar avatar-xl" style="background:${m.color};font-weight:700;font-size:20px;flex-shrink:0;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:50%;">${m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
           <div style="min-width:0;flex:1;">
-            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);">${m.name}</div>
+            <div style="font-size:18px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);">${Utils.escapeHtml(m.name)}</div>
             <div style="font-size:13px;color:var(--color-text-muted);font-weight:500;margin-top:2px;">${designationText}</div>
-            <div style="font-size:12px;color:var(--color-text-disabled);margin-top:1px;">${m.email}</div>
+            <div style="font-size:12px;color:var(--color-text-disabled);margin-top:1px;">${Utils.escapeHtml(m.email)}</div>
           </div>
         </div>
 
@@ -512,7 +514,7 @@ const TeamScreen = {
                   <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-border-subtle);cursor:pointer;" onclick="Modal.closeAll();setTimeout(()=>TasksScreen.openDetailModal('${t.id}'),300);">
                     ${this._renderPriorityDot(t.priority)}
                     <div style="flex:1;min-width:0;">
-                      <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:2px;">${t.title}</div>
+                      <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-bottom:2px;">${Utils.escapeHtml(t.title)}</div>
                       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         ${this._renderStatusBadge(t.status)}
                         ${t.dueDate ? `<span style="font-size:11px;color:${Utils.isOverdue(t.dueDate)?'var(--color-error-600)':'var(--color-text-muted)'};">${Icons.clock} ${Utils.formatDate(t.dueDate)}</span>` : ''}
@@ -540,7 +542,7 @@ const TeamScreen = {
                 <div style="width:18px;height:18px;border-radius:50%;background:var(--color-success-50);border:2px solid var(--color-success-500);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-success-600)" stroke-width="3" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <span style="font-size:12px;color:var(--color-text-muted);text-decoration:line-through;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.title}</span>
+                <span style="font-size:12px;color:var(--color-text-muted);text-decoration:line-through;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${Utils.escapeHtml(t.title)}</span>
                 ${proj ? `<span style="font-size:10px;color:var(--color-text-disabled);flex-shrink:0;">${Utils.truncate(proj.name, 15)}</span>` : ''}
               </div>`;
             }).join('')}
@@ -661,12 +663,12 @@ const TeamScreen = {
               <div style="display:flex;align-items:flex-start;gap:14px;min-width:0;flex:1;">
                 <div class="avatar avatar-xl" style="background:${m.color};font-weight:700;font-size:18px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-top:2px;">${initials}</div>
                 <div style="min-width:0;flex:1;width:100%;">
-                  <div class="team-member-name" style="font-size:16px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);white-space:normal;overflow:visible;text-overflow:unset;word-break:break-word;display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.3;" title="${m.name}">
-                    <span>${m.name}</span>
+                  <div class="team-member-name" style="font-size:16px;font-weight:700;color:var(--color-text-primary);font-family:var(--font-display);white-space:normal;overflow:visible;text-overflow:unset;word-break:break-word;display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:1.3;" title="${Utils.escapeHtml(m.name)}">
+                    <span>${Utils.escapeHtml(m.name)}</span>
                     ${isYou ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 7px;border-radius:var(--radius-pill);font-weight:600;flex-shrink:0;">You</span>' : ''}
                   </div>
                   <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:3px;font-weight:500;white-space:normal;word-break:break-word;" title="${designationText}">${designationText}</div>
-                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;white-space:normal;word-break:break-word;" title="${m.email}">${m.email}</div>
+                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;white-space:normal;word-break:break-word;" title="${Utils.escapeHtml(m.email)}">${Utils.escapeHtml(m.email)}</div>
                 </div>
               </div>
               <div class="team-card-actions" style="position:relative;flex-shrink:0;margin-left:8px;">
@@ -761,7 +763,7 @@ const TeamScreen = {
                       ${projTasks.slice(0, 3).map(t => `
                         <div style="display:flex;align-items:center;gap:8px;padding:6px 0;${projTasks.indexOf(t) < projTasks.length - 1 ? 'border-bottom:1px solid var(--color-border-subtle);' : ''}cursor:pointer" onclick="TasksScreen.openDetailModal('${t.id}')">
                           ${this._renderPriorityDot(t.priority)}
-                          <span style="flex:1;font-size:12px;color:var(--color-text-primary);font-weight:500;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;" title="${t.title}">${Utils.truncate(t.title, 32)}</span>
+                          <span style="flex:1;font-size:12px;color:var(--color-text-primary);font-weight:500;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;" title="${Utils.escapeHtml(t.title)}">${Utils.truncate(t.title, 32)}</span>
                           ${this._renderStatusBadge(t.status)}
                         </div>
                       `).join('')}

@@ -210,7 +210,7 @@ const BankGuaranteesScreen = {
                       ${bg.issuingBank || bg.bank || '—'}
                     </td>
                     <td>
-                      <div style="font-weight:600;color:var(--color-text-primary);font-size:13px">${bg.projectName}</div>
+                      <div style="font-weight:600;color:var(--color-text-primary);font-size:13px">${Utils.escapeHtml(bg.projectName)}</div>
                       <div style="font-size:11px;color:var(--color-text-muted)">${bg.packageCode}</div>
                     </td>
                     <td style="font-size:12px;color:var(--color-text-secondary)">
@@ -226,7 +226,7 @@ const BankGuaranteesScreen = {
                       ${Utils.formatDate(bg.expiryDate)}
                     </td>
                     <td class="center">
-                      <span class="badge ${bg.badgeClass}">${bg.statusLabel}</span>
+                      <span class="badge ${bg.badgeClass}">${Utils.escapeHtml(bg.statusLabel)}</span>
                     </td>
                     <td class="center">
                       <div style="display:flex;align-items:center;justify-content:center;gap:6px">
@@ -235,7 +235,7 @@ const BankGuaranteesScreen = {
                                   onclick="DashboardScreen.requestRenewal('${bg.ref || ''}', '${(bg.projectName || '').replace(/'/g, "\\'")}', '${bg.amount || ''}', '${bg.type || ''}')">
                             Renew
                           </button>` : ''}
-                        <button class="btn btn-ghost btn-xs" onclick="BankGuaranteesScreen.viewBGDetails('${bg.ref}')">
+                        <button class="btn btn-ghost btn-xs" onclick="BankGuaranteesScreen.viewBGDetails('${Utils.escapeHtml(bg.ref)}')">
                           Details
                         </button>
                       </div>
@@ -373,7 +373,7 @@ const BankGuaranteesScreen = {
           totalMatches++;
           html += `
             <div class="custom-dropdown-item" onclick="BankGuaranteesScreen.selectBank('${item.value.replace(/'/g, "\\'")}', '${item.label.replace(/'/g, "\\'")}')">
-              <span>${item.label}</span>
+              <span>${Utils.escapeHtml(item.label)}</span>
             </div>
           `;
         });
@@ -450,7 +450,7 @@ const BankGuaranteesScreen = {
           <label class="form-label" style="font-weight:600">Project</label>
           <select class="form-control" id="new-bg-proj">
             ${projects.length > 0 ? projects.map(p => `
-              <option value="${p.id}">${p.name} ${p.code ? `(${p.code})` : ''}</option>
+              <option value="${p.id}">${Utils.escapeHtml(p.name)} ${p.code ? `(${p.code})` : ''}</option>
             `).join('') : `
               <option value="p1">Hintonn AI Core Platform</option>
               <option value="p2">Client Substation Package</option>

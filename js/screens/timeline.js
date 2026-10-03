@@ -219,7 +219,7 @@ const TimelineScreen = {
       <div class="timeline-assignees-stack">
         ${memberIds.map(id => {
           const m = this._getMember(id);
-          return `<span class="timeline-assignee-avatar" style="background:${m.color}" title="${m.name} (${m.role || 'Assignee'})">${m.initials}</span>`;
+          return `<span class="timeline-assignee-avatar" style="background:${m.color}" title="${Utils.escapeHtml(m.name)} (${m.role || 'Assignee'})">${m.initials}</span>`;
         }).join('')}
       </div>
     `;
@@ -490,7 +490,7 @@ const TimelineScreen = {
 
     tooltip.innerHTML = `
       <div class="timeline-tt-header">
-        <span>${data.name}</span>
+        <span>${Utils.escapeHtml(data.name)}</span>
         <span class="timeline-tt-stage" style="background:${stageColor}25; color:${stageColor}; border:1px solid ${stageColor}55">${data.stageLabel || data.stage}</span>
       </div>
       <div class="timeline-tt-row">
@@ -825,9 +825,9 @@ const TimelineScreen = {
               ${win.months.map(m => `
                 <div class="timeline-macro-col-header">
                   ${m.isCurrent ? `
-                    <span class="timeline-col-current-badge">${m.label}</span>
+                    <span class="timeline-col-current-badge">${Utils.escapeHtml(m.label)}</span>
                   ` : `
-                    <span>${m.label}</span>
+                    <span>${Utils.escapeHtml(m.label)}</span>
                   `}
                 </div>
               `).join('')}
@@ -868,7 +868,7 @@ const TimelineScreen = {
                 <div class="timeline-project-info">
                   <span class="timeline-expand-arrow" title="${isExpanded ? 'Collapse phases' : 'Expand phases'}">${isExpanded ? '▼' : '▶'}</span>
                   <span class="timeline-pkg-badge">${p.packageNo}</span>
-                  <span class="timeline-project-name" title="${p.name}">${p.name}</span>
+                  <span class="timeline-project-name" title="${Utils.escapeHtml(p.name)}">${Utils.escapeHtml(p.name)}</span>
                 </div>
                 <div class="timeline-project-meta-right">
                   <span class="timeline-stage-pill ${p.stagePillClass}">${p.stageLabel.split('/')[0].trim()}</span>
@@ -893,8 +893,8 @@ const TimelineScreen = {
                 ${(p.milestones || []).filter(m => m && m.date).map(m => {
                   const isOverdue = m.status !== 'completed' && m.date < new Date().toISOString().split('T')[0];
                   return `
-                  <div class="timeline-phase-row timeline-ms-sidebar-row" title="Milestone: ${m.name}">
-                    <span class="timeline-phase-name">◆ ${m.name}</span>
+                  <div class="timeline-phase-row timeline-ms-sidebar-row" title="Milestone: ${Utils.escapeHtml(m.name)}">
+                    <span class="timeline-phase-name">◆ ${Utils.escapeHtml(m.name)}</span>
                     <div class="timeline-phase-meta-right">
                       <span class="timeline-ms-date ${isOverdue ? 'overdue' : ''}">${m.date.slice(5)}</span>
                     </div>
@@ -998,7 +998,7 @@ const TimelineScreen = {
                         <div class="timeline-task-bar ${stCls} ${tk.status !== 'done' && tk.end === todayStr ? 'tk-today' : ''} ${tk.status === 'done' ? 'tk-done' : ''}">
                           <span class="timeline-task-bar-label">${tk.status === 'done' ? '✓ ' : ''}${tk.title}</span>
                           <span class="timeline-task-bar-team">
-                            ${(tkAssignees || []).slice(0, 3).map(m => `<span class="timeline-avatar-mini" style="background:${m.color}" title="${m.name} — ${tk.status === 'done' ? 'completed' : 'due ' + tk.end}">${m.initials}</span>`).join('')}
+                            ${(tkAssignees || []).slice(0, 3).map(m => `<span class="timeline-avatar-mini" style="background:${m.color}" title="${Utils.escapeHtml(m.name)} — ${tk.status === 'done' ? 'completed' : 'due ' + tk.end}">${m.initials}</span>`).join('')}
                           </span>
                         </div>
                       </div>
@@ -1011,7 +1011,7 @@ const TimelineScreen = {
                 const isDone = m.status === 'completed';
                 const msCls = isDone ? 'ms-done' : (m.date < todayStr ? 'ms-overdue' : 'ms-up');
                 return `<div class="timeline-macro-canvas-phase-row timeline-task-canvas-row">
-                          <div class="timeline-ms-marker ${msCls}" style="left:${msPct}%" title="Milestone: ${m.name} (${m.date})"></div>
+                          <div class="timeline-ms-marker ${msCls}" style="left:${msPct}%" title="Milestone: ${Utils.escapeHtml(m.name)} (${m.date})"></div>
                         </div>`;
               }).join('')}
             ` : ''}

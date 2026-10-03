@@ -181,7 +181,7 @@ const TasksScreen = {
         
         <select class="form-select" id="task-filter-project" style="width:160px" onchange="TasksScreen.handleFilterChange('project', this.value)">
           <option value="">All Projects</option>
-          ${projects.map(p => `<option value="${p.id}" ${this._filter.project===p.id?'selected':''}>${p.name}</option>`).join('')}
+          ${projects.map(p => `<option value="${p.id}" ${this._filter.project===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
         </select>
         
         <select class="form-select" id="task-filter-priority" style="width:120px" onchange="TasksScreen.handleFilterChange('priority', this.value)">
@@ -202,7 +202,7 @@ const TasksScreen = {
         ${isAdmin ? `
         <select class="form-select" id="task-filter-assignee" style="width:140px" onchange="TasksScreen.handleFilterChange('assignee', this.value)">
           <option value="">All Assignees</option>
-          ${assignees.map(m => `<option value="${m.id}" ${this._filter.assignee===m.id?'selected':''}>${m.name}</option>`).join('')}
+          ${assignees.map(m => `<option value="${m.id}" ${this._filter.assignee===m.id?'selected':''}>${Utils.escapeHtml(m.name)}</option>`).join('')}
         </select>` : ''}
       </div>
 
@@ -496,7 +496,7 @@ const TasksScreen = {
       const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
       const memberColor = m.color || '#2563EB';
       assigneeMarkup = `
-        <div class="avatar avatar-badge" style="background:${memberColor};width:24px;height:24px;font-size:10px;font-weight:700;color:#FFFFFF;border:1.5px solid #FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.1);display:inline-flex;align-items:center;justify-content:center;border-radius:50%;" title="Assigned to ${m.name}">
+        <div class="avatar avatar-badge" style="background:${memberColor};width:24px;height:24px;font-size:10px;font-weight:700;color:#FFFFFF;border:1.5px solid #FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.1);display:inline-flex;align-items:center;justify-content:center;border-radius:50%;" title="Assigned to ${Utils.escapeHtml(m.name)}">
           ${initials}
         </div>
         <span style="font-size:12px;font-weight:600;color:var(--color-text-primary);">${m.name.split(' ')[0]}</span>
@@ -711,7 +711,7 @@ const TasksScreen = {
                         ` : (members.length === 1 ? `
                           <div style="display:flex;align-items:center;gap:6px;">
                             <div class="avatar avatar-sm" style="background:${m.color}">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-                            <span style="font-size:12px;font-weight:500;">${m.name}</span>
+                            <span style="font-size:12px;font-weight:500;">${Utils.escapeHtml(m.name)}</span>
                           </div>
                         ` : '<span style="color:var(--color-text-disabled);font-size:12px">—</span>'))}
                       </td>
@@ -826,19 +826,13 @@ const TasksScreen = {
     }
     const t = Store.getTask(taskId);
     if (!t) return;
-    const newCompleted = !Boolean(t.completed || t.status === 'done');
+    const newCompleted = !(t.completed || t.status === 'done');
     Store.updateTask(taskId, {
       completed: newCompleted,
       status: newCompleted ? 'done' : 'todo'
     });
     Toast.show(newCompleted ? 'Personal task completed' : 'Personal task marked active');
     this.updateTasksContainer();
-  },
-
-  openAddPersonalTaskModal(status) {
-    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
-    if (currentUser && currentUser.role === 'Admin') return;
-    this.promptAddPersonalTask();
   },
 
   promptAddPersonalTask() {
@@ -953,7 +947,7 @@ const TasksScreen = {
             <label class="assignee-pill-btn ${isSelected ? 'selected' : ''}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid ${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-border)'};background:${isSelected ? 'rgba(37,99,235,0.08)' : 'var(--color-surface)'};cursor:pointer;user-select:none;transition:all 0.15s ease;">
               <input type="checkbox" class="task-assignee-cb" value="${m.id}" ${isSelected ? 'checked' : ''} onchange="TasksScreen.handleAssigneePillToggle(this)" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
               <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;">${initials}</span>
-              <span style="font-size:12.5px;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-text-primary)'};pointer-events:none;">${m.name}</span>
+              <span style="font-size:12.5px;font-weight:${isSelected ? '600' : '500'};color:${isSelected ? 'var(--color-primary, #2563EB)' : 'var(--color-text-primary)'};pointer-events:none;">${Utils.escapeHtml(m.name)}</span>
               <span class="assignee-check-indicator" style="font-size:12px;color:var(--color-primary);font-weight:bold;margin-left:2px;pointer-events:none;display:${isSelected ? 'inline-block' : 'none'};">✓</span>
             </label>
           `;
@@ -976,9 +970,9 @@ const TasksScreen = {
           const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
           const color = m.color || '#2563EB';
           return `
-            <div class="assignee-pill-readonly" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--color-border);background:var(--color-surface-subtle);cursor:default;" title="${m.name} (${m.role || 'Member'})">
+            <div class="assignee-pill-readonly" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--color-border);background:var(--color-surface-subtle);cursor:default;" title="${Utils.escapeHtml(m.name)} (${m.role || 'Member'})">
               <span class="avatar avatar-xs" style="background:${color};width:20px;height:20px;font-size:9.5px;font-weight:700;color:#FFFFFF;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">${initials}</span>
-              <span style="font-size:12.5px;font-weight:500;color:var(--color-text-primary);">${m.name}</span>
+              <span style="font-size:12.5px;font-weight:500;color:var(--color-text-primary);">${Utils.escapeHtml(m.name)}</span>
             </div>
           `;
         }).join('')}
@@ -1111,7 +1105,7 @@ const TasksScreen = {
           <label class="form-label">Project *</label>
           <select class="form-select" id="task-project" required onchange="TasksScreen.handleProjectChangeInModal(this.value, 'task')">
             <option value="">Select project</option>
-            ${projects.map(p => `<option value="${p.id}" ${(initialProjectId===p.id) ? 'selected' : ''}>${p.name}</option>`).join('')}
+            ${projects.map(p => `<option value="${p.id}" ${(initialProjectId===p.id) ? 'selected' : ''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -1179,6 +1173,11 @@ const TasksScreen = {
 
   // ─── Create Personal Task Modal ───
   openAddPersonalTaskModal(defaultStatus = 'todo') {
+    const currentUser = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    if (currentUser && currentUser.role === 'Admin') {
+      if (typeof Toast !== 'undefined') Toast.show('Personal tasks are not available for Admins.', 'info');
+      return;
+    }
     this._modalSubtasks = [];
 
     const body = `
@@ -1503,7 +1502,7 @@ const TasksScreen = {
           <div class="form-group" style="flex:1;">
             <label class="form-label">Project</label>
             <select class="form-select" id="detail-project" onchange="TasksScreen.handleProjectChangeInModal(this.value, 'detail')">
-              ${projects.map(p => `<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+              ${projects.map(p => `<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -1744,7 +1743,7 @@ const TasksScreen = {
     });
 
     // Notify assignee(s)
-    const notifText = `⚠️ <strong>Changes requested on "${task.title}"</strong> by ${adminName}: <strong>"${reviewText}"</strong>. Task moved back to In Progress.`;
+    const notifText = `⚠️ <strong>Changes requested on "${Utils.escapeHtml(task.title)}"</strong> by ${adminName}: <strong>"${reviewText}"</strong>. Task moved back to In Progress.`;
     Store.addNotification({
       type: 'task',
       text: notifText,

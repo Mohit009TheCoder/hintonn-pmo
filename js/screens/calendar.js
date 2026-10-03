@@ -80,7 +80,7 @@ const CalendarScreen = {
               return `
                 <div class="calendar-event milestone" title="${tooltip}" onclick="CalendarScreen.openEventDetail('milestone', '${m.id}')">
                   <svg style="width:11px;height:11px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-                  <span class="calendar-event-title">${m.name}</span>
+                  <span class="calendar-event-title">${Utils.escapeHtml(m.name)}</span>
                 </div>
               `;
             } else {
@@ -94,7 +94,7 @@ const CalendarScreen = {
               const tooltip = `${t.title}&#10;Type: Task (${Utils.humanize(t.priority)} Priority)&#10;Project: ${projName}&#10;Assignee: ${assigneeName}&#10;Status: ${Utils.humanize(t.status)}${isOverdue ? ' [OVERDUE]' : ''}&#10;Due: ${Utils.formatDate(t.dueDate)}`;
               return `
                 <div class="calendar-event ${statusClass}" title="${tooltip}" onclick="CalendarScreen.openEventDetail('task', '${t.id}')">
-                  <span class="calendar-event-title">${t.title}</span>
+                  <span class="calendar-event-title">${Utils.escapeHtml(t.title)}</span>
                 </div>
               `;
             }
@@ -117,6 +117,8 @@ const CalendarScreen = {
     }
     calHtml += '</div>';
 
+    const _user = typeof Auth !== 'undefined' ? Auth.getCurrentUser() : null;
+    const isDeveloper = !!_user && _user.role !== 'Admin';
     return `
       <div class="page-header">
         <div class="page-header-left">
@@ -239,7 +241,7 @@ const CalendarScreen = {
                     <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
                   </div>
                   <div>
-                    <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${m.name}</div>
+                    <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${Utils.escapeHtml(m.name)}</div>
                     <div style="font-size:11px;color:var(--color-text-muted)">Project: ${proj ? proj.name : '—'}</div>
                   </div>
                 </div>
@@ -259,7 +261,7 @@ const CalendarScreen = {
                 <div style="display:flex;align-items:center;gap:10px">
                   <span class="priority-dot priority-${t.priority}"></span>
                   <div>
-                    <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${t.title}</div>
+                    <div style="font-weight:600;font-size:13px;color:var(--color-text-primary)">${Utils.escapeHtml(t.title)}</div>
                     <div style="font-size:11px;color:var(--color-text-muted)">
                       ${proj ? proj.name : '—'} · ${m ? m.name : 'Unassigned'}
                     </div>
@@ -303,7 +305,7 @@ const CalendarScreen = {
               <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
             </div>
             <div>
-              <div style="font-size:16px;font-weight:700;color:#581C87">${m.name}</div>
+              <div style="font-size:16px;font-weight:700;color:#581C87">${Utils.escapeHtml(m.name)}</div>
               <div style="font-size:12px;color:#7E22CE">Milestone Deadline: ${formattedDate}</div>
             </div>
           </div>
@@ -322,7 +324,7 @@ const CalendarScreen = {
             ${m.description ? `
               <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border)">
                 <span style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:600">Description</span>
-                <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5">${m.description}</p>
+                <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5">${Utils.escapeHtml(m.description)}</p>
               </div>
             ` : ''}
           </div>

@@ -1,12 +1,12 @@
 {
   "name": "hintonn-pmo",
   "version": "1.0.0",
-  "description": "",
-  "main": "firebase-seed.js",
+  "description": "Hintonn PMO — enterprise project management workspace (Firebase + vanilla JS)",
   "scripts": {
     "start": "npx serve . -l 3000",
     "dev": "npx serve . -l 3000",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/invoice-math.test.js",
+    "lint": "eslint js/ tests/ *.js functions/index.js"
   },
   "repository": {
     "type": "git",
@@ -22,5 +22,9 @@
   "homepage": "https://github.com/Mohit009TheCoder/hintonn-pmo#readme",
   "dependencies": {
     "firebase-admin": "^14.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^9.39.5"
   }
 }

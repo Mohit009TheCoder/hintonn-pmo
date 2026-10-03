@@ -292,8 +292,8 @@ const UserApprovalsScreen = {
           </select>
         </div>
         <div>
-          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Login Password <span style="font-weight:400;color:var(--color-text-muted);font-size:11px;">(default: user@123)</span></label>
-          <input type="password" id="admin-add-password" class="form-input" placeholder="user@123" value="user@123" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Account Setup</label>
+          <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.5;padding:10px 12px;background:var(--color-bg-page,#F8FAFC);border:1px solid var(--color-border,#E5E7EB);border-radius:var(--radius-md);">The team member sets their own password when they sign up — no default or shared passwords are assigned.</div>
         </div>
       </div>
     `;
@@ -308,17 +308,15 @@ const UserApprovalsScreen = {
     const nameEl = document.getElementById('admin-add-name');
     const emailEl = document.getElementById('admin-add-email');
     const roleEl = document.getElementById('admin-add-role');
-    const passEl = document.getElementById('admin-add-password');
 
     const name = nameEl ? nameEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
     const role = roleEl ? roleEl.value : 'AI Developer';
-    const password = passEl ? passEl.value || 'user@123' : 'user@123';
 
     if (!name) { Toast.show('Please enter a name.', 'error'); return; }
     if (!email || !email.includes('@')) { Toast.show('Please enter a valid email.', 'error'); return; }
 
-    const res = Auth.adminAddUser(name, email, role, password);
+    const res = Auth.adminAddUser(name, email, role);
     if (res.success) {
       Toast.show(`✅ ${name} added and approved. Login ID: ${name.split(' ')[0]}`, 'success');
       Modal.closeAll();
@@ -506,7 +504,7 @@ const UserApprovalsScreen = {
         </div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
-            <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${r.name}</span>
+            <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${Utils.escapeHtml(r.name)}</span>
             <span class="badge" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
               <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
               Google SSO
@@ -515,7 +513,7 @@ const UserApprovalsScreen = {
               ${statusText}
             </span>
           </div>
-          <div style="font-size:13px;color:var(--color-text-muted);">${r.email} · <span style="color:var(--color-text-primary);font-weight:500;">${r.department || 'Commercial PMO'}</span></div>
+          <div style="font-size:13px;color:var(--color-text-muted);">${Utils.escapeHtml(r.email)} · <span style="color:var(--color-text-primary);font-weight:500;">${r.department || 'Commercial PMO'}</span></div>
           <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <span>Requested: <strong>${Utils.timeAgo(r.requestedAt)}</strong></span>
             ${r.reviewedBy && !isRevoked ? `<span>Approved by: <strong>${r.reviewedBy}</strong></span>` : ''}
@@ -568,12 +566,12 @@ const UserApprovalsScreen = {
         <div class="avatar avatar-lg" style="background:${u.color || '#F59E0B'};font-weight:700;font-size:16px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;">${u.initials || '??'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${u.name}</span>
+            <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${Utils.escapeHtml(u.name)}</span>
             <span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:0.03em;">Pending</span>
           </div>
-          <div style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">${u.email}</div>
+          <div style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">${Utils.escapeHtml(u.email)}</div>
           <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;display:flex;align-items:center;gap:12px;">
-            <span>Role: <strong style="color:var(--color-text-muted);">${u.role}</strong></span>
+            <span>Role: <strong style="color:var(--color-text-muted);">${Utils.escapeHtml(u.role)}</strong></span>
             <span>Source: <strong style="color:var(--color-text-muted);">${u.requestSource || 'Sign Up'}</strong></span>
             <span>Requested: <strong style="color:var(--color-text-muted);">${requestTime}</strong></span>
           </div>
@@ -626,13 +624,13 @@ const UserApprovalsScreen = {
         <div class="avatar avatar-md" style="background:${u.color || '#94A3B8'};font-weight:700;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;">${u.initials || '??'}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:14px;font-weight:700;color:var(--color-text-primary);">${u.name}</span>
+            <span style="font-size:14px;font-weight:700;color:var(--color-text-primary);">${Utils.escapeHtml(u.name)}</span>
             ${isCore ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 6px;border-radius:var(--radius-pill);font-weight:600;">Core</span>' : ''}
             <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:var(--radius-pill);background:${statusBg};color:${statusColor};">
               ${statusIcon} ${statusText}
             </span>
           </div>
-          <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:1px;">${u.email} · ${u.role}</div>
+          <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:1px;">${Utils.escapeHtml(u.email)} · ${Utils.escapeHtml(u.role)}</div>
           <div style="font-size:11px;color:var(--color-text-disabled);margin-top:1px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             ${u.requestDate ? `<span>Requested ${Utils.timeAgo(u.requestDate)} via ${u.requestSource || 'pre-configured'}</span>` : ''}
             ${isRevoked && u.revokedAt ? `<span style="color:#DC2626;">Revoked ${Utils.timeAgo(u.revokedAt)} by ${u.revokedBy || 'Mohit Jain (Admin)'}</span>` : ''}

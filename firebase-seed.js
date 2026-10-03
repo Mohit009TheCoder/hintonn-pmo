@@ -11,13 +11,24 @@ async function main() {
   const mod = await import('firebase-admin');
   const admin = mod.default || mod;
   const { cert } = mod;
+// Service-account credentials come from the environment — the key file is
+// NOT committed to the repo (see .gitignore). Set:
+//   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+// or rely on Application Default Credentials.
+function loadServiceAccount() {
+  const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (keyPath) return JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+  const local = __dirname + '/service-account.json';
+  if (fs.existsSync(local)) return JSON.parse(fs.readFileSync(local, 'utf8'));
+  return null;
+}
 
-  const serviceAccount = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'service-account.json'), 'utf8')
-  );
+
+  const serviceAccount = loadServiceAccount();
 
   try {
-    admin.initializeApp({ credential: cert(serviceAccount), projectId: 'hintonn-pmo' });
+    if (serviceAccount) admin.initializeApp({ credential: cert(serviceAccount), projectId: 'hintonn-pmo' });
+    else admin.initializeApp({ projectId: 'hintonn-pmo' }); // ADC
   } catch (e) { /* already initialized */ }
 
   const firestoreMod = await import('firebase-admin/firestore');

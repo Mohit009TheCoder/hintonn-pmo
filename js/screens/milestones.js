@@ -113,7 +113,7 @@ const MilestonesScreen = {
             <div class="milestone-item">
               <div class="milestone-icon ${status}">${status==='completed' ? Icons.check : Icons.flag}</div>
               <div class="milestone-info">
-                <div class="milestone-name">${m.name}</div>
+                <div class="milestone-name">${Utils.escapeHtml(m.name)}</div>
                 <div class="milestone-date">${proj ? proj.name + ' · ' : ''}${m.dueDate ? (isOverdue ? 'Overdue: ' : 'Due ') + Utils.formatDate(m.dueDate) : 'No due date'}</div>
               </div>
               <span class="badge badge-${status==='completed'?'completed':status==='pending'?'paused':'planning'}">${Utils.humanize(m.status)}</span>
@@ -200,7 +200,7 @@ const MilestonesScreen = {
           <label class="form-label">Project *</label>
           <select class="form-select" id="ms-project">
             <option value="">Select project</option>
-            ${projects.map(p => `<option value="${p.id}" ${projectId===p.id?'selected':''}>${p.name}</option>`).join('')}
+            ${projects.map(p => `<option value="${p.id}" ${projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -219,9 +219,9 @@ const MilestonesScreen = {
     const m = Store.getMilestones().find(x=>x.id===id); if (!m) return;
     const projects = Store.getProjects();
     const body = `
-      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Name</label><input type="text" class="form-input" id="ms-name" value="${m.name}"></div>
+      <div class="form-group" style="margin-bottom:16px"><label class="form-label">Name</label><input type="text" class="form-input" id="ms-name" value="${Utils.escapeHtml(m.name)}"></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Project</label><select class="form-select" id="ms-project">${projects.map(p=>`<option value="${p.id}" ${m.projectId===p.id?'selected':''}>${p.name}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">Project</label><select class="form-select" id="ms-project">${projects.map(p=>`<option value="${p.id}" ${m.projectId===p.id?'selected':''}>${Utils.escapeHtml(p.name)}</option>`).join('')}</select></div>
         <div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-input" id="ms-due" value="${m.dueDate||''}"></div>
       </div>`;
     const footer = `<button class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button><button class="btn btn-primary" onclick="MilestonesScreen.saveMilestone('${id}')">Save</button>`;

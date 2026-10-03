@@ -1,0 +1,35 @@
+# ─── Dependencies ───
+node_modules/
+functions/node_modules/
+
+# ─── Secrets — NEVER commit ───
+service-account.json
+*.serviceaccount.json
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.env.*
+!functions/.env.example
+
+# ─── Firebase ───
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.cache
+
+# ─── Backups & archives ───
+_backups/
+backup_current.zip
+*.zip
+
+# ─── OS / editor cruft ───
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ─── Test / coverage output ───
+coverage/
+.eslintcache

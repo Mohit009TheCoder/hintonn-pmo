@@ -92,7 +92,7 @@ const Sidebar = {
         
         html += `<a href="#${item.id}" class="sidebar-item ${active ? 'active' : ''} ${isAiItem ? 'ai-item' : ''} ${isCommercial ? 'commercial-item' : ''}" onclick="${item.id === 'bg' ? 'if(typeof BankGuaranteesScreen!==\'undefined\'&&BankGuaranteesScreen.markAllAsSeen)BankGuaranteesScreen.markAllAsSeen();' : ''}if(window.innerWidth<=768)App.closeSidebar()">
           ${Icons[item.icon] || Icons.hexagonSm}
-          <span>${item.label}</span>
+          <span>${Utils.escapeHtml(item.label)}</span>
           ${badge > 0 ? `<span class="badge-count">${badge}</span>` : ''}
         </a>`;
       });

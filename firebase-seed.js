@@ -24,16 +24,6 @@ function loadServiceAccount() {
 }
 
 
-  const force = process.argv.includes('--force');
-  if (!force) {
-    console.error(
-      'Refusing to seed database without explicit confirmation.\n' +
-      'Re-run with: node firebase-seed.js --force\n' +
-      'Target project: hintonn-pmo'
-    );
-    process.exit(1);
-  }
-
   const serviceAccount = loadServiceAccount();
 
   try {
@@ -50,16 +40,12 @@ function loadServiceAccount() {
 
   // ─── Helpers ───
   async function seedCollection(name, items) {
-    if (!Array.isArray(items) || items.length === 0) return;
-    for (let i = 0; i < items.length; i += 400) {
-      const chunk = items.slice(i, i + 400);
-      const batch = db.batch();
-      chunk.forEach(item => {
-        const ref = db.collection(name).doc(String(item.id));
-        batch.set(ref, item);
-      });
-      await batch.commit();
-    }
+    const batch = db.batch();
+    items.forEach(item => {
+      const ref = db.collection(name).doc(String(item.id));
+      batch.set(ref, item);
+    });
+    await batch.commit();
     console.log(`  ✅ ${name}: ${items.length} documents`);
   }
 
@@ -377,28 +363,6 @@ function loadServiceAccount() {
 
   // ═══════════════════════════════════════════════
   // SEED ALL COLLECTIONS
-  const tenantCompanies = [
-    { id: 'comp_hintonn', name: 'Hintonn PMO (HQ)', code: 'HIN', adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'], status: 'active', createdAt: now },
-    { id: 'comp_lnt', name: 'Larsen & Toubro PMO', code: 'LNT', adminEmails: ['lnt.admin@hintonn.com'], status: 'active', createdAt: now },
-    { id: 'comp_tata', name: 'Tata Projects PMO', code: 'TATA', adminEmails: ['tata.admin@hintonn.com'], status: 'active', createdAt: now }
-  ];
-
-  const teams = [
-    { id: 'team_ai', companyId: 'comp_hintonn', name: 'AI & Software Engineering', leadId: 'm2', memberIds: ['m2', 'm4', 'm_1790601440429'], description: 'Antigravity AI PMO, ML agents, and full-stack delivery', createdAt: now },
-    { id: 'team_civil', companyId: 'comp_hintonn', name: 'Civil & EPC Site Operations', leadId: 'm1', memberIds: ['m1'], description: 'Site works, execution, and subcontractor delivery', createdAt: now },
-    { id: 'team_finance', companyId: 'comp_hintonn', name: 'Commercial & Financial Control', leadId: 'm3', memberIds: ['m3'], description: 'Invoicing, bank guarantees, DLP, and cash flow', createdAt: now }
-  ];
-
-  const adminRecords = [
-    { id: 'admin_hintonn_1', userId: 'mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true, assignedAt: now },
-    { id: 'admin_hintonn_2', userId: 'admin_hintonn', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true, assignedAt: now }
-  ];
-
-  const superAdmins = [
-    { id: 'super_1', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true, createdAt: now },
-    { id: 'super_2', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true, createdAt: now }
-  ];
-
   // ═══════════════════════════════════════════════
   console.log('\n🚀 Seeding Firestore...\n');
 
@@ -407,10 +371,7 @@ function loadServiceAccount() {
   await seedCollection('tasks', tasks);
   await seedCollection('milestones', milestones);
   await seedCollection('issues', issues);
-  await seedCollection('companies', tenantCompanies);
-  await seedCollection('teams', teams);
-  await seedCollection('admins', adminRecords);
-  await seedCollection('super_admins', superAdmins);
+  // companies + invoices intentionally NOT seeded — created from real data in the app
   await seedCollection('bankGuarantees', bankGuarantees);
   await seedCollection('dlpRecords', dlpRecords);
   await seedCollection('retentionRecords', retentionRecords);
@@ -421,21 +382,18 @@ function loadServiceAccount() {
   await seedCollection('users', users);
 
   // Summary
-  console.log('\n🎉 All 17 Firestore collections seeded successfully!');
+  console.log('\n🎉 All 14 Firestore collections seeded successfully!');
   console.log('   Collections: members, projects, tasks, milestones, issues,');
-  console.log('   companies, teams, admins, super_admins, bankGuarantees, dlpRecords,');
-  console.log('   retentionRecords, comments, activities, notifications, settings, users');
-  console.log('   (invoices intentionally generated in-app from real projects via engine)');
+  console.log('   bankGuarantees, dlpRecords, retentionRecords, comments,');
+  console.log('   activities, notifications, settings, users');
+  console.log('   (invoices + companies intentionally omitted — generated in-app from real projects)');
   console.log('\n📊 Data Summary:');
   console.log(`   Members:              ${members.length}`);
   console.log(`   Projects:             ${projects.length}`);
   console.log(`   Tasks:                ${tasks.length}`);
   console.log(`   Milestones:           ${milestones.length}`);
   console.log(`   Issues:               ${issues.length}`);
-  console.log(`   Companies (Tenants):  ${tenantCompanies.length}`);
-  console.log(`   Teams:                ${teams.length}`);
-  console.log(`   Admins:               ${adminRecords.length}`);
-  console.log(`   SuperAdmins:          ${superAdmins.length}`);
+  console.log(`   Companies:            0 (created from real clients via Billing screen)`);
   console.log(`   Invoices:             0 (generated from existing projects via invoice engine)`);
   console.log(`   Bank Guarantees:      ${bankGuarantees.length}`);
   console.log(`   DLP Records:          ${dlpRecords.length}`);
@@ -446,7 +404,7 @@ function loadServiceAccount() {
   console.log(`   Settings:             1 (workspace_settings)`);
   console.log(`   Users:                ${users.length}`);
   console.log(`   ─────────────────────────────`);
-  const total = members.length + projects.length + tasks.length + milestones.length + issues.length + tenantCompanies.length + teams.length + adminRecords.length + superAdmins.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
+  const total = members.length + projects.length + tasks.length + milestones.length + issues.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
   console.log(`   TOTAL:                ${total} documents\n`);
 }
 

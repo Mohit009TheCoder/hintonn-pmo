@@ -11,41 +11,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // SuperAdmin — platform-level authority (Mohit / Hintonn leadership)
-    function isSuperAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email in [
-          'mohithintonn@gmail.com',
-          'admin@hintonn.com'
-        ] ||
-        exists(/databases/$(database)/documents/super_admins/$(request.auth.uid))
-      );
-    }
-
     // Admin emails — must match Auth._ADMIN_EMAILS / FirebaseAuth ADMIN_EMAILS
-    // Supports SuperAdmins, Company-specific Admins in admins collection, and active Admin users
     function isAdmin() {
-      return isSignedIn() && (
-        isSuperAdmin() ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true) ||
-        request.auth.token.email in [
-          'mohithintonn@gmail.com',
-          'admin@hintonn.com'
-        ]
-      );
-    }
-
-    // Pre-approved emails (must match FirebaseAuth PRE_APPROVED_EMAILS)
-    function isPreApproved() {
       return isSignedIn() && request.auth.token.email in [
         'mohithintonn@gmail.com',
-        'admin@hintonn.com',
-        'hirvihintonn@gmail.com',
-        'preethintonn@gmail.com',
-        'mohitjain12104@gmail.com'
+        'admin@hintonn.com'
       ];
     }
 
@@ -53,7 +23,6 @@ service cloud.firestore {
     function isApprovedUser() {
       return isSignedIn() && (
         isAdmin() ||
-        isPreApproved() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true)
       );
@@ -67,7 +36,8 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
     }
 
-    // Pre-approved emails may create their own user doc already active — they skip the
+    // Pre-approved emails (must match FirebaseAuth PRE_APPROVED_EMAILS)
+    // may create their own user doc already active — they skip the
     // admin-approval queue by design.
     function isPreApprovedSelfCreate() {
       return isSignedIn()
@@ -87,25 +57,7 @@ service cloud.firestore {
     // fcmToken / fcmTopics feed push subscriptions (js/fcm.js).
     function selfEditFieldsValid() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'role', 'companyId', 'companyName', 'teamId', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
-    }
-
-    // ─── Super Admin & Company Admin Tables ─────────────────────
-    // Super admins manage companies and company admins platform-wide.
-    match /super_admins/{docId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    // Company Admins manage their own company and teams.
-    match /admins/{docId} {
-      allow read: if isApprovedUser();
-      allow write: if isSuperAdmin();
-    }
-
-    // Teams within companies
-    match /teams/{docId} {
-      allow read: if isApprovedUser();
-      allow write: if isAdmin();
+        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'role', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
     }
 
     // ─── Users (accounts, approvals) ────────────────────────────
@@ -114,7 +66,7 @@ service cloud.firestore {
       allow read: if isApprovedUser() || isOwner(userId);
       // Self-signup (pending), pre-approved signup, admin full control.
       allow create: if isAdmin() || isSelfSignup() || isPreApprovedSelfCreate();
-      allow update: if isAdmin() || (isPreApproved() && isOwner(userId)) || (isOwner(userId) && selfEditFieldsValid());
+      allow update: if isAdmin() || (isOwner(userId) && selfEditFieldsValid());
       allow delete: if isAdmin();
     }
 
@@ -154,15 +106,6 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
-
-    // ─── n8n Automation & Telemetry collections ─────────────────
-    // Written by n8n workflows authenticated via Admin Google OAuth2.
-    match /syncLogs/{docId}         { allow read, write: if isAdmin(); }
-    match /bgAlerts/{docId}         { allow read, write: if isAdmin(); }
-    match /healthSnapshots/{docId}   { allow read, write: if isAdmin(); }
-    match /reportLogs/{docId}       { allow read, write: if isAdmin(); }
-    match /dlpAuditLogs/{docId}     { allow read, write: if isAdmin(); }
-    match /executionHealth/{docId}  { allow read, write: if isAdmin(); }
 
     // ─── Deny everything else by default ────────────────────────
     match /{document=**} {

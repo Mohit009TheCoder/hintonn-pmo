@@ -241,27 +241,12 @@ const FirebaseAuth = {
     const defaultName = user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
     const emailLower = (fallbackEmail || '').toLowerCase();
 
-    // ─── SuperAdmin & Company Admin check ───
-    const SUPER_ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
+    // ─── Admin check — mohithintonn@gmail.com, admin@hintonn.com ───
+    const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
     const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com', 'mohitjain12104@gmail.com'];
-    const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(emailLower);
-    let isAdmin = isSuperAdmin;
-    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isSuperAdmin;
+    const isAdmin = ADMIN_EMAILS.includes(emailLower);
+    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
-
-    // Check if user is registered in the admins table in Firestore
-    if (!isAdmin && this._db) {
-      try {
-        const adminDoc = await this._db.collection('admins').doc(user.uid).get();
-        if (adminDoc.exists && adminDoc.data().isActive !== false) {
-          isAdmin = true;
-        }
-      } catch (e) {}
-    }
-
-    const defaultCompanyId = 'comp_hintonn';
-    const defaultCompanyName = 'Hintonn PMO';
-    const defaultTeamId = isSuperAdmin ? 'team_exec' : 'team_ai';
 
     // ─── ADMIN APPROVAL GATE ───
     let existingUser = null;
@@ -369,21 +354,12 @@ const FirebaseAuth = {
       }
     }
 
-    const assignedRole = isSuperAdmin ? 'SuperAdmin' : (isAdmin ? 'Admin' : ((existingUser && existingUser.role) || 'AI Developer'));
-    const assignedTitle = isSuperAdmin ? 'Executive PMO & Lead' : (isAdmin ? 'Company PMO Admin' : ((existingUser && existingUser.title) || 'AI Developer'));
-    const assignedCompanyId = (existingUser && existingUser.companyId) || defaultCompanyId;
-    const assignedCompanyName = (existingUser && existingUser.companyName) || defaultCompanyName;
-    const assignedTeamId = (existingUser && existingUser.teamId) || defaultTeamId;
-
     const localUser = existingUser ? {
       ...existingUser,
       id: user.uid || existingUser.id,
       name: existingUser.name || defaultName,
-      role: assignedRole,
-      title: assignedTitle,
-      companyId: assignedCompanyId,
-      companyName: assignedCompanyName,
-      teamId: assignedTeamId,
+      role: isAdmin ? 'Admin' : (existingUser.role || 'AI Developer'),
+      title: isAdmin ? 'Executive PMO & Lead' : (existingUser.title || 'AI Developer'),
       approved: true
     } : {
       id: user.uid,
@@ -392,14 +368,11 @@ const FirebaseAuth = {
       email: fallbackEmail || '',
       googleEmail: fallbackEmail || '',
       name: defaultName,
-      role: assignedRole,
+      role: isAdmin ? 'Admin' : 'AI Developer',
       avatar: initials,
       initials: initials,
       color: '#2563EB',
-      title: assignedTitle,
-      companyId: assignedCompanyId,
-      companyName: assignedCompanyName,
-      teamId: assignedTeamId,
+      title: isAdmin ? 'Executive PMO & Lead' : 'AI Developer',
       photoURL: user.photoURL || null,
       approved: true
     };
@@ -437,12 +410,9 @@ const FirebaseAuth = {
         Store.createMember({
           id: localUser.memberId,
           name: localUser.name,
-          role: localUser.role || 'AI Developer',
-          designation: localUser.title || 'AI Developer',
+          role: 'AI Developer',
+          designation: 'AI Developer',
           email: localUser.email,
-          companyId: assignedCompanyId,
-          companyName: assignedCompanyName,
-          teamId: assignedTeamId,
           initials: initials,
           color: localUser.color || '#2563EB'
         });
@@ -468,58 +438,27 @@ const FirebaseAuth = {
           ? firebase.firestore.FieldValue.serverTimestamp()
           : new Date().toISOString();
 
+        // Approval state (isActive / isRejected) is ADMIN-ONLY under
+        // firestore.rules — a client self-write of isActive is DENIED, and
+        // because rules evaluate the WHOLE set(), the denial also killed
+        // lastLogin / profile sync. Only write rule-allowed fields here;
+        // admin accounts pass isAdmin() and may set isActive directly.
         if (!doc.exists) {
           await userRef.set({
-            uid: user.uid,
-            name: localUser.name || defaultName,
-            email: fallbackEmail,
-            photoURL: user.photoURL || null,
-            role: assignedRole,
-            companyId: assignedCompanyId,
-            companyName: assignedCompanyName,
-            teamId: assignedTeamId,
-            isActive: isPreApproved || isAdmin,
-            provider: providerType || 'password',
-            createdAt: nowTs,
-            lastLogin: nowTs
+            uid: user.uid, name: localUser.name || defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
+            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: isAdmin, provider: providerType || 'password',
+            createdAt: nowTs, lastLogin: nowTs
           });
         } else {
           const existingData = doc.data() || {};
           const patch = {
-            email: fallbackEmail,
-            name: existingData.name || localUser.name || defaultName,
+            email: fallbackEmail, name: existingData.name || localUser.name || defaultName,
             photoURL: existingData.photoURL || user.photoURL || null,
-            role: assignedRole,
-            companyId: existingData.companyId || assignedCompanyId,
-            companyName: existingData.companyName || assignedCompanyName,
-            teamId: existingData.teamId || assignedTeamId,
+            role: isAdmin ? 'Admin' : (existingData.role || localUser.role || 'AI Developer'),
             lastLogin: nowTs
           };
-          if (isPreApproved || isAdmin) patch.isActive = true;
+          if (isAdmin) patch.isActive = true; // admins may self-activate; others await approval
           await userRef.set(patch, { merge: true });
-        }
-
-        // Sync SuperAdmin / Admin tables in Firestore for backend isolation
-        if (isSuperAdmin) {
-          await this._db.collection('super_admins').doc(user.uid).set({
-            userId: user.uid,
-            email: fallbackEmail,
-            name: localUser.name || defaultName,
-            role: 'SuperAdmin',
-            isActive: true,
-            updatedAt: nowTs
-          }, { merge: true }).catch(() => {});
-        } else if (isAdmin) {
-          await this._db.collection('admins').doc(user.uid).set({
-            userId: user.uid,
-            email: fallbackEmail,
-            name: localUser.name || defaultName,
-            role: 'Admin',
-            companyId: assignedCompanyId,
-            companyName: assignedCompanyName,
-            isActive: true,
-            updatedAt: nowTs
-          }, { merge: true }).catch(() => {});
         }
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);
@@ -536,26 +475,15 @@ const FirebaseAuth = {
       }
       const name = (extra && extra.name) || user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
       const emailLower = (fallbackEmail || '').toLowerCase();
-      const SUPER_ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
+      const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
       const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com', 'mohitjain12104@gmail.com'];
-      const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(emailLower);
-      const isAdmin = isSuperAdmin;
-      const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isSuperAdmin;
+      const isAdmin = ADMIN_EMAILS.includes(emailLower);
+      const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
 
       await userRef.set({
-        uid: user.uid,
-        name: name,
-        email: fallbackEmail,
-        photoURL: user.photoURL || null,
-        role: isSuperAdmin ? 'SuperAdmin' : (isAdmin ? 'Admin' : 'AI Developer'),
-        companyId: (extra && extra.companyId) || 'comp_hintonn',
-        companyName: (extra && extra.companyName) || 'Hintonn PMO',
-        teamId: (extra && extra.teamId) || (isSuperAdmin ? 'team_exec' : 'team_ai'),
-        isActive: isPreApproved,
-        isRejected: false,
-        provider: providerType || 'password',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+        uid: user.uid, name: name, email: fallbackEmail, photoURL: user.photoURL || null,
+        role: isAdmin ? 'Admin' : 'AI Developer', isActive: isPreApproved, isRejected: false, provider: providerType || 'password',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(), lastLogin: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (err) {
       console.error('Error creating user document in Firestore:', err);

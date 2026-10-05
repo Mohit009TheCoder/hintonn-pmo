@@ -33,31 +33,17 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies','teams','admins','super_admins']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
       if (this._data.members.length === 0) {
         this._data.members = defaultMembers;
       }
-      if (!this._data.companies || this._data.companies.length === 0) {
-        this._data.companies = [
-          { id: 'comp_hintonn', name: 'Hintonn PMO (HQ)', code: 'HIN', adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
-          { id: 'comp_lnt', name: 'Larsen & Toubro PMO', code: 'LNT', adminEmails: ['lnt.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
-          { id: 'comp_tata', name: 'Tata Projects PMO', code: 'TATA', adminEmails: ['tata.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() }
-        ];
-      }
-      if (!this._data.teams || this._data.teams.length === 0) {
-        this._data.teams = [
-          { id: 'team_ai', companyId: 'comp_hintonn', name: 'AI & Software Engineering', leadId: 'm2', memberIds: ['m2', 'm4', 'm_1790601440429'], description: 'Antigravity AI PMO, ML agents, and full-stack delivery' },
-          { id: 'team_civil', companyId: 'comp_hintonn', name: 'Civil & EPC Site Operations', leadId: 'm1', memberIds: ['m1'], description: 'Site works, execution, and subcontractor delivery' },
-          { id: 'team_finance', companyId: 'comp_hintonn', name: 'Commercial & Financial Control', leadId: 'm3', memberIds: ['m3'], description: 'Invoicing, bank guarantees, DLP, and cash flow' }
-        ];
-      }
       if (!this._data.settings) this._data.settings = {};
       this._data.settings.currentUser = 'm2';
 
-      // Ensure tasks have start dates, valid assignees, companyId, and subtasks array
+      // Ensure tasks have start dates, valid assignees, and subtasks array (Admin m1 excluded from tasks)
       if (this._data.tasks) {
         this._data.tasks.forEach(t => {
           if (t.assigneeId === 'm5' || t.assigneeId === 'm1') t.assigneeId = 'm3';
@@ -70,14 +56,6 @@ const Store = {
           if (!Array.isArray(t.assigneeIds)) {
             t.assigneeIds = t.assigneeId ? [t.assigneeId] : [];
           }
-          if (!t.companyId) {
-            t.companyId = 'comp_hintonn';
-          }
-        });
-      }
-      if (this._data.projects) {
-        this._data.projects.forEach(p => {
-          if (!p.companyId) p.companyId = 'comp_hintonn';
         });
       }
     } else {
@@ -170,7 +148,7 @@ const Store = {
     if (!this._db) return;
     this._unsubFirestore = [];
 
-    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'teams', 'admins', 'super_admins', 'notifications'];
+    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
 
     syncCollections.forEach(colName => {
       const unsub = this._db.collection(colName).onSnapshot(snapshot => {
@@ -305,43 +283,11 @@ const Store = {
   // ─── CRUD helpers ───
   _genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
 
-  // ─── Multi-Tenant Isolation & Scoping ───
-  _activeCompanyId: 'all',
-  getActiveCompanyId() {
-    if (typeof Auth !== 'undefined' && Auth.getCurrentUser && Auth.getCurrentUser()) {
-      if (Auth.isSuperAdmin && Auth.isSuperAdmin()) {
-        return this._activeCompanyId || 'all';
-      }
-      return (Auth.getCompanyId && Auth.getCompanyId()) || 'comp_hintonn';
-    }
-    return this._activeCompanyId || 'all';
-  },
-  setActiveCompanyId(companyId) {
-    if (typeof Auth !== 'undefined' && Auth.isSuperAdmin && !Auth.isSuperAdmin()) {
-      return false; // Company admins and developers are locked to their own company
-    }
-    this._activeCompanyId = companyId || 'all';
-    this._save();
-    this._notify();
-    return true;
-  },
-  isCompanyIsolated() {
-    return this.getActiveCompanyId() !== 'all';
-  },
-
   // Projects
-  getProjects(companyId) {
-    const list = (this._data && this._data.projects) || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(p => p.companyId === targetComp || (!p.companyId && targetComp === 'comp_hintonn'));
-  },
+  getProjects() { return (this._data && this._data.projects) || []; },
   getProject(id) { return ((this._data && this._data.projects) || []).find(p => p.id === id); },
   createProject(d) {
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const compId = d.companyId || activeComp;
     const p = { id: this._genId(), name: d.name, description: d.description||'', type: d.type||'Business',
-      companyId: compId, teamId: d.teamId || '',
       status: 'planning', priority: d.priority||'medium', progress: 0,
       startDate: d.startDate||'', endDate: d.endDate||'', memberIds: d.memberIds||[],
       taskIds: [], milestoneIds: [], issueIds: [], tags: d.tags||[],
@@ -380,23 +326,9 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId, companyId, teamId) {
-    let tasks = (this._data && this._data.tasks) || [];
-    if (projectId) {
-      tasks = tasks.filter(t => t.projectId === projectId && !t.isPersonal);
-    }
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (targetComp) {
-      tasks = tasks.filter(t => {
-        if (t.companyId) return t.companyId === targetComp;
-        const p = this.getProject(t.projectId);
-        return (p && p.companyId) ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
-      });
-    }
-    if (teamId) {
-      tasks = tasks.filter(t => t.teamId === teamId);
-    }
-    return tasks;
+  getTasks(projectId) {
+    const tasks = (this._data && this._data.tasks) || [];
+    return projectId ? tasks.filter(t => t.projectId === projectId && !t.isPersonal) : tasks;
   },
   getTask(id) { return ((this._data && this._data.tasks) || []).find(t => t.id === id); },
   createTask(d) {
@@ -426,14 +358,7 @@ const Store = {
     const createdBy = d.createdBy || (authUser ? (authUser.name || '') : '');
     const userId = d.userId || (authUser ? authUser.id : '') || creatorId;
 
-    const proj = d.projectId ? this.getProject(d.projectId) : null;
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const taskCompanyId = d.companyId || (proj ? (proj.companyId || activeComp) : activeComp);
-    const taskTeamId = d.teamId || (proj ? (proj.teamId || '') : '');
-
     const t = { id: this._genId(), projectId: d.projectId || '', title: d.title, description: d.description||'',
-      companyId: taskCompanyId,
-      teamId: taskTeamId,
       isPersonal: isPersonal,
       completed: completed,
       status: d.status || (completed ? 'done' : 'todo'), priority: d.priority||'medium',
@@ -567,13 +492,8 @@ const Store = {
   },
 
   // Members
-  getMembers(companyId) {
-    const list = (this._data && this._data.members) || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(m => m.companyId === targetComp || (!m.companyId && targetComp === 'comp_hintonn'));
-  },
-  getAssignees(companyId) { return this.getMembers(companyId).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
+  getMembers() { return (this._data && this._data.members) || []; },
+  getAssignees() { return ((this._data && this._data.members) || []).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
   getMember(id) {
     if (!id) return null;
     return ((this._data && this._data.members) || []).find(m =>
@@ -589,11 +509,8 @@ const Store = {
 
   // Member CRUD
   createMember(d) {
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
     const m = { id: d.id || this._genId(), name: d.name, role: d.role || 'AI Developer',
       designation: d.designation || d.role || 'AI Developer', email: d.email || '',
-      companyId: d.companyId || activeComp,
-      teamId: d.teamId || '',
       initials: d.initials || '', color: d.color || '#2563EB' };
     this._data.members.push(m);
     this._addActivity('member', `Added team member <strong>${this._esc(m.name)}</strong> as ${m.designation}`);
@@ -665,12 +582,7 @@ const Store = {
   // ─── Invoices (Billing) ───
   // No seed data: invoices only exist when created through the Billing
   // screen or generated from real projects via the engine below.
-  getInvoices(companyId) {
-    const list = (this._data && this._data.invoices) || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(i => i.companyId === targetComp || (!i.companyId && targetComp === 'comp_hintonn'));
-  },
+  getInvoices() { return (this._data && this._data.invoices) || []; },
   getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
   createInvoice(d) {
     // Project-based fill: derive display fields from the linked project
@@ -678,13 +590,8 @@ const Store = {
       const proj = this.getProject(d.projectId);
       if (proj) d.projectName = proj.name;
     }
-    const proj = d.projectId ? this.getProject(d.projectId) : null;
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const invCompanyId = d.companyId || (proj ? (proj.companyId || activeComp) : activeComp);
-
     const inv = {
       id: d.id || d.billNumber || this._genId(),
-      companyId: invCompanyId,
       version: 'v1.0', isRevised: false,
       items: [], versionHistory: [],
       ...d,
@@ -969,16 +876,10 @@ const Store = {
   },
 
   // ─── Bank Guarantees ───
-  getBankGuarantees(companyId) {
-    const list = this._data.bankGuarantees || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(b => b.companyId === targetComp || (!b.companyId && targetComp === 'comp_hintonn'));
-  },
+  getBankGuarantees() { return this._data.bankGuarantees || []; },
   getBankGuarantee(id) { return (this._data.bankGuarantees || []).find(b => b.id === id || b.ref === id); },
   createBankGuarantee(d) {
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const bg = { id: d.id || d.ref || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const bg = { id: d.id || d.ref || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.bankGuarantees.push(bg);
     this._addActivity('bankGuarantee', `Registered BG <strong>${this._esc(bg.ref)}</strong> — ${bg.projectName || ''}`);
     this._save(); this._notify();
@@ -1002,16 +903,10 @@ const Store = {
   },
 
   // ─── DLP Records ───
-  getDlpRecords(companyId) {
-    const list = this._data.dlpRecords || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(r => r.companyId === targetComp || (!r.companyId && targetComp === 'comp_hintonn'));
-  },
+  getDlpRecords() { return this._data.dlpRecords || []; },
   getDlpRecord(id) { return (this._data.dlpRecords || []).find(r => r.id === id); },
   createDlpRecord(d) {
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const r = { id: d.id || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.dlpRecords.push(r);
     this._addActivity('dlpRecord', `Created DLP record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1035,16 +930,10 @@ const Store = {
   },
 
   // ─── Retention Records ───
-  getRetentionRecords(companyId) {
-    const list = this._data.retentionRecords || [];
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    if (!targetComp) return list;
-    return list.filter(r => r.companyId === targetComp || (!r.companyId && targetComp === 'comp_hintonn'));
-  },
+  getRetentionRecords() { return this._data.retentionRecords || []; },
   getRetentionRecord(id) { return (this._data.retentionRecords || []).find(r => r.id === id); },
   createRetentionRecord(d) {
-    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
-    const r = { id: d.id || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.retentionRecords.push(r);
     this._addActivity('retentionRecord', `Created retention record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1065,91 +954,6 @@ const Store = {
     this._addActivity('retentionRecord', `Deleted retention record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('retentionRecords', id);
-  },
-
-  // ─── Teams (within Companies) ───
-  getTeams(companyId) {
-    const list = (this._data && this._data.teams) || [];
-    const target = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    return target ? list.filter(t => t.companyId === target) : list;
-  },
-  getTeam(id) {
-    return ((this._data && this._data.teams) || []).find(t => t.id === id);
-  },
-  createTeam(d) {
-    const targetComp = d.companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn');
-    const team = {
-      id: d.id || ('team_' + Date.now().toString(36)),
-      companyId: targetComp,
-      name: d.name || 'New Team',
-      leadId: d.leadId || '',
-      memberIds: Array.isArray(d.memberIds) ? d.memberIds : [],
-      description: d.description || '',
-      createdAt: new Date().toISOString()
-    };
-    if (!Array.isArray(this._data.teams)) this._data.teams = [];
-    this._data.teams.push(team);
-    this._addActivity('team', `Created team <strong>${this._esc(team.name)}</strong>`);
-    this._save(); this._notify();
-    this._syncToFirestore('teams', team.id, team);
-    return team;
-  },
-  updateTeam(id, d) {
-    const team = this.getTeam(id); if (!team) return null;
-    Object.assign(team, d, { updatedAt: new Date().toISOString() });
-    this._save(); this._notify();
-    this._syncToFirestore('teams', team.id, team);
-    return team;
-  },
-  deleteTeam(id) {
-    const team = this.getTeam(id); if (!team) return;
-    this._data.teams = (this._data.teams || []).filter(t => t.id !== id);
-    this._save(); this._notify();
-    this._deleteFromFirestore('teams', id);
-  },
-
-  // ─── Company Admins & SuperAdmins ───
-  getAdmins(companyId) {
-    const list = (this._data && this._data.admins) || [];
-    const target = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    return target ? list.filter(a => a.companyId === target) : list;
-  },
-  getSuperAdmins() {
-    return (this._data && this._data.super_admins) || [];
-  },
-  assignCompanyAdmin(email, companyId, name) {
-    const comp = this.getCompany ? this.getCompany(companyId) : null;
-    const admin = {
-      id: 'admin_' + Date.now().toString(36),
-      email: email.trim().toLowerCase(),
-      name: name || email.split('@')[0],
-      role: 'Admin',
-      companyId: companyId,
-      companyName: comp ? comp.name : 'PMO Workspace',
-      isActive: true,
-      assignedAt: new Date().toISOString()
-    };
-    if (!Array.isArray(this._data.admins)) this._data.admins = [];
-    this._data.admins.push(admin);
-    if (comp && !comp.adminEmails.includes(admin.email)) {
-      comp.adminEmails.push(admin.email);
-      this._syncToFirestore('companies', comp.id, comp);
-    }
-    this._save(); this._notify();
-    this._syncToFirestore('admins', admin.id, admin);
-    return admin;
-  },
-  revokeCompanyAdmin(adminId) {
-    const admin = ((this._data && this._data.admins) || []).find(a => a.id === adminId || a.email === adminId);
-    if (!admin) return;
-    this._data.admins = (this._data.admins || []).filter(a => a.id !== admin.id);
-    const comp = this.getCompany ? this.getCompany(admin.companyId) : null;
-    if (comp) {
-      comp.adminEmails = comp.adminEmails.filter(e => e.toLowerCase() !== admin.email.toLowerCase());
-      this._syncToFirestore('companies', comp.id, comp);
-    }
-    this._save(); this._notify();
-    this._deleteFromFirestore('admins', admin.id);
   },
 
   // Milestones
@@ -1176,8 +980,6 @@ const Store = {
     const m = this._data.milestones.find(x => x.id === id); if (!m) return null;
     Object.assign(m, d);
     this._addActivity('milestone', `Updated milestone <strong>${this._esc(m.name)}</strong>`);
-    const proj = this.getProject(m.projectId);
-    if (proj) this._syncToFirestore('projects', proj.id, proj);
     this._save(); this._notify();
     this._syncToFirestore('milestones', m.id, m);
     return m;
@@ -1218,8 +1020,6 @@ const Store = {
   updateIssue(id, d) {
     const i = this._data.issues.find(x => x.id === id); if (!i) return null;
     Object.assign(i, d, { updatedAt: new Date().toISOString() });
-    const proj = this.getProject(i.projectId);
-    if (proj) this._syncToFirestore('projects', proj.id, proj);
     this._save(); this._notify();
     this._syncToFirestore('issues', i.id, i);
     return i;
@@ -1407,18 +1207,10 @@ const Store = {
   },
 
   // Stats
-  getStats(companyId) {
-    const projects = this.getProjects(companyId);
-    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
-    const tasks = targetComp ? this.getTasks(null, targetComp) : (this._data.tasks || []);
-    const issues = targetComp ? (this._data.issues || []).filter(i => {
-      const p = this.getProject(i.projectId);
-      return p ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
-    }) : (this._data.issues || []);
-    const milestones = targetComp ? (this._data.milestones || []).filter(m => {
-      const p = this.getProject(m.projectId);
-      return p ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
-    }) : (this._data.milestones || []);
+  getStats() {
+    const projects = this._data.projects;
+    const tasks = this._data.tasks;
+    const issues = this._data.issues;
     const now = new Date();
     return {
       totalProjects: projects.length,
@@ -1428,8 +1220,8 @@ const Store = {
       completedTasks: tasks.filter(t => t.status === 'done').length,
       overdueTasks: tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done').length,
       openIssues: issues.filter(i => i.status === 'open').length,
-      totalMilestones: milestones.length,
-      completedMilestones: milestones.filter(m => m.status === 'completed').length,
+      totalMilestones: this._data.milestones.length,
+      completedMilestones: this._data.milestones.filter(m => m.status === 'completed').length,
     };
   },
 
@@ -1712,30 +1504,8 @@ const Store = {
 
   // ─── Seed Data ───
   _seedData() {
-    const companies = [
-      { id: 'comp_hintonn', name: 'Hintonn PMO (HQ)', code: 'HIN', adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
-      { id: 'comp_lnt', name: 'Larsen & Toubro PMO', code: 'LNT', adminEmails: ['lnt.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
-      { id: 'comp_tata', name: 'Tata Projects PMO', code: 'TATA', adminEmails: ['tata.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() }
-    ];
-
-    const teams = [
-      { id: 'team_ai', companyId: 'comp_hintonn', name: 'AI & Software Engineering', leadId: 'm2', memberIds: ['m2', 'm4', 'm_1790601440429'], description: 'Antigravity AI PMO, ML agents, and full-stack delivery' },
-      { id: 'team_civil', companyId: 'comp_hintonn', name: 'Civil & EPC Site Operations', leadId: 'm1', memberIds: ['m1'], description: 'Site works, execution, and subcontractor delivery' },
-      { id: 'team_finance', companyId: 'comp_hintonn', name: 'Commercial & Financial Control', leadId: 'm3', memberIds: ['m3'], description: 'Invoicing, bank guarantees, DLP, and cash flow' }
-    ];
-
-    const admins = [
-      { id: 'admin_1', userId: 'mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true },
-      { id: 'admin_2', userId: 'admin_hintonn', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true }
-    ];
-
-    const super_admins = [
-      { id: 'super_1', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true },
-      { id: 'super_2', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true }
-    ];
-
     const members = [
-      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', teamId: 'team_finance', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
+      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
     ];
 
     const projects = [];
@@ -1749,9 +1519,10 @@ const Store = {
     const bankGuarantees = [];
     const dlpRecords = [];
     const retentionRecords = [];
+    const companies = [];
 
     return { projects, tasks, members, milestones, issues, comments, notifications, activities,
-      invoices, bankGuarantees, dlpRecords, retentionRecords, companies, teams, admins, super_admins,
+      invoices, bankGuarantees, dlpRecords, retentionRecords, companies,
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };

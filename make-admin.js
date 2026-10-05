@@ -20,8 +20,8 @@ function loadServiceAccount() {
 
   const serviceAccount = loadServiceAccount();
 
-  if (serviceAccount) admin.initializeApp({ credential: cert(serviceAccount) });
-  else admin.initializeApp(); // ADC
+  if (serviceAccount) admin.initializeApp({ credential: cert(serviceAccount), projectId: 'hintonn-pmo' });
+  else admin.initializeApp({ projectId: 'hintonn-pmo' }); // ADC — pinned to the real project
 
   const firestoreMod = await import('firebase-admin/firestore');
   const db = firestoreMod.getFirestore();

@@ -438,20 +438,27 @@ const FirebaseAuth = {
           ? firebase.firestore.FieldValue.serverTimestamp()
           : new Date().toISOString();
 
+        // Approval state (isActive / isRejected) is ADMIN-ONLY under
+        // firestore.rules — a client self-write of isActive is DENIED, and
+        // because rules evaluate the WHOLE set(), the denial also killed
+        // lastLogin / profile sync. Only write rule-allowed fields here;
+        // admin accounts pass isAdmin() and may set isActive directly.
         if (!doc.exists) {
           await userRef.set({
             uid: user.uid, name: localUser.name || defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
-            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: true, provider: providerType || 'password',
+            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: isAdmin, provider: providerType || 'password',
             createdAt: nowTs, lastLogin: nowTs
           });
         } else {
           const existingData = doc.data() || {};
-          await userRef.set({
+          const patch = {
             email: fallbackEmail, name: existingData.name || localUser.name || defaultName,
             photoURL: existingData.photoURL || user.photoURL || null,
             role: isAdmin ? 'Admin' : (existingData.role || localUser.role || 'AI Developer'),
-            isActive: true, lastLogin: nowTs
-          }, { merge: true });
+            lastLogin: nowTs
+          };
+          if (isAdmin) patch.isActive = true; // admins may self-activate; others await approval
+          await userRef.set(patch, { merge: true });
         }
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);

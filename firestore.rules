@@ -36,18 +36,36 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
     }
 
-    // Users may only change approval-sensitive fields on their own doc
+    // Pre-approved emails (must match FirebaseAuth PRE_APPROVED_EMAILS)
+    // may create their own user doc already active — they skip the
+    // admin-approval queue by design.
+    function isPreApprovedSelfCreate() {
+      return isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.isActive == true
+        && request.resource.data.email == request.auth.token.email
+        && request.auth.token.email in [
+          'hirvihintonn@gmail.com',
+          'preethintonn@gmail.com',
+          'mohitjain12104@gmail.com'
+        ];
+    }
+
+    // Users may only change approval-sensitive fields on their own doc.
+    // isActive / isRejected / isRevoked are ADMIN-ONLY — a client can never
+    // approve itself. role is cosmetic/UI (real gates check email + isActive).
+    // fcmToken / fcmTopics feed push subscriptions (js/fcm.js).
     function selfEditFieldsValid() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
+        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'role', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
     }
 
     // ─── Users (accounts, approvals) ────────────────────────────
     match /users/{userId} {
       // Approved users can read user directory; pending signups read their own doc only.
       allow read: if isApprovedUser() || isOwner(userId);
-      // Self-signup (pending), self profile update, admin full control.
-      allow create: if isAdmin() || isSelfSignup();
+      // Self-signup (pending), pre-approved signup, admin full control.
+      allow create: if isAdmin() || isSelfSignup() || isPreApprovedSelfCreate();
       allow update: if isAdmin() || (isOwner(userId) && selfEditFieldsValid());
       allow delete: if isAdmin();
     }

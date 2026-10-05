@@ -552,8 +552,17 @@ export const checkDlpExpiry = onSchedule(
           });
         }
 
-        // Notify if within threshold
-        if (daysLeft <= NOTIFICATION_EXPIRY_THRESHOLD_DAYS && daysLeft > 0) {
+        // Notify ONCE per expiry date when the record first enters the
+        // threshold window — no weekly spam for the whole countdown.
+        const expiryRaw = rec.dlpExpiry;
+        const expiryKey = expiryRaw?.toDate
+          ? expiryRaw.toDate().toISOString()
+          : String(expiryRaw ?? "");
+        if (
+          daysLeft <= NOTIFICATION_EXPIRY_THRESHOLD_DAYS &&
+          daysLeft > 0 &&
+          rec.dlpNotifiedFor !== expiryKey
+        ) {
           const notifRef = db.collection("notifications").doc();
           await batchMgr.set(notifRef, {
             type: "dlpExpiry",
@@ -563,6 +572,7 @@ export const checkDlpExpiry = onSchedule(
             dlpId: doc.id,
             createdAt: FieldValue.serverTimestamp(),
           });
+          await batchMgr.update(doc.ref, { dlpNotifiedFor: expiryKey });
           alerts++;
         }
       }

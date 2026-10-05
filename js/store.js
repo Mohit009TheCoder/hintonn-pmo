@@ -420,13 +420,17 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId, companyId) {
+  getTasks(projectId, companyId, team) {
     let tasks = (this._data && this._data.tasks) || [];
     if (projectId) tasks = tasks.filter(t => t.projectId === projectId && !t.isPersonal);
-    if (companyId === '__all__') return tasks;
-    const scope = companyId || this._resolveTenantScope();
-    if (scope && scope !== 'all') {
-      tasks = tasks.filter(t => !t.companyId || t.companyId === scope || (scope === 'comp_hintonn' && !t.companyId));
+    if (companyId !== '__all__') {
+      const scope = companyId || this._resolveTenantScope();
+      if (scope && scope !== 'all') {
+        tasks = tasks.filter(t => !t.companyId || t.companyId === scope || (scope === 'comp_hintonn' && !t.companyId));
+      }
+    }
+    if (team && team !== 'all' && team !== 'All Teams') {
+      tasks = tasks.filter(t => t.team === team);
     }
     return tasks;
   },
@@ -458,7 +462,20 @@ const Store = {
     const createdBy = d.createdBy || (authUser ? (authUser.name || '') : '');
     const userId = d.userId || (authUser ? authUser.id : '') || creatorId;
 
+    let companyId = d.companyId;
+    if (!companyId && d.projectId) {
+      const proj = this.getProject(d.projectId);
+      if (proj && proj.companyId) companyId = proj.companyId;
+    }
+    if (!companyId) {
+      const scope = this._resolveTenantScope();
+      companyId = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    }
+    const team = d.team || (authUser ? authUser.team : '') || '';
+
     const t = { id: this._genId(), projectId: d.projectId || '', title: d.title, description: d.description||'',
+      companyId: companyId,
+      team: team,
       isPersonal: isPersonal,
       completed: completed,
       status: d.status || (completed ? 'done' : 'todo'), priority: d.priority||'medium',
@@ -592,8 +609,22 @@ const Store = {
   },
 
   // Members
-  getMembers() { return (this._data && this._data.members) || []; },
-  getAssignees() { return ((this._data && this._data.members) || []).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
+  getMembers(companyId, team) {
+    let list = (this._data && this._data.members) || [];
+    if (companyId !== '__all__') {
+      const scope = companyId || this._resolveTenantScope();
+      if (scope && scope !== 'all') {
+        list = list.filter(m => !m.companyId || m.companyId === scope || (scope === 'comp_hintonn' && !m.companyId));
+      }
+    }
+    if (team && team !== 'all' && team !== 'All Teams') {
+      list = list.filter(m => m.team === team || (m.role === 'Admin' && (!m.team || m.team === 'PMO')));
+    }
+    return list;
+  },
+  getAssignees(companyId, team) {
+    return this.getMembers(companyId, team).filter(m => m.role !== 'Admin' && m.id !== 'm1');
+  },
   getMember(id) {
     if (!id) return null;
     return ((this._data && this._data.members) || []).find(m =>
@@ -609,8 +640,12 @@ const Store = {
 
   // Member CRUD
   createMember(d) {
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
     const m = { id: d.id || this._genId(), name: d.name, role: d.role || 'AI Developer',
       designation: d.designation || d.role || 'AI Developer', email: d.email || '',
+      companyId: d.companyId || assignedCid,
+      team: d.team || '',
       initials: d.initials || '', color: d.color || '#2563EB' };
     this._data.members.push(m);
     this._addActivity('member', `Added team member <strong>${this._esc(m.name)}</strong> as ${m.designation}`);

@@ -241,12 +241,27 @@ const FirebaseAuth = {
     const defaultName = user.displayName || (fallbackEmail ? fallbackEmail.split('@')[0] : 'User');
     const emailLower = (fallbackEmail || '').toLowerCase();
 
-    // ─── Admin check — mohithintonn@gmail.com, admin@hintonn.com ───
-    const ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
+    // ─── SuperAdmin & Company Admin check ───
+    const SUPER_ADMIN_EMAILS = ['mohithintonn@gmail.com', 'admin@hintonn.com'];
     const PRE_APPROVED_EMAILS = ['hirvihintonn@gmail.com', 'preethintonn@gmail.com', 'mohitjain12104@gmail.com'];
-    const isAdmin = ADMIN_EMAILS.includes(emailLower);
-    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isAdmin;
+    const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(emailLower);
+    let isAdmin = isSuperAdmin;
+    const isPreApproved = PRE_APPROVED_EMAILS.includes(emailLower) || isSuperAdmin;
     const initials = (defaultName.split(' ').map(w => w[0]).join('').slice(0, 2) || 'GU').toUpperCase();
+
+    // Check if user is registered in the admins table in Firestore
+    if (!isAdmin && this._db) {
+      try {
+        const adminDoc = await this._db.collection('admins').doc(user.uid).get();
+        if (adminDoc.exists && adminDoc.data().isActive !== false) {
+          isAdmin = true;
+        }
+      } catch (e) {}
+    }
+
+    const defaultCompanyId = 'comp_hintonn';
+    const defaultCompanyName = 'Hintonn PMO';
+    const defaultTeamId = isSuperAdmin ? 'team_exec' : 'team_ai';
 
     // ─── ADMIN APPROVAL GATE ───
     let existingUser = null;

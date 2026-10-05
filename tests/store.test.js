@@ -342,7 +342,7 @@ describe('Multi-tenant isolation & Admin governance', () => {
     };
 
     Store.setActiveCompany('all');
-    let allProjects = Store.getProjects();
+    const allProjects = Store.getProjects();
     assert.ok(allProjects.some(p => p.id === p1.id));
     assert.ok(allProjects.some(p => p.id === p2.id));
 

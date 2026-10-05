@@ -717,7 +717,13 @@ const Store = {
   // ─── Invoices (Billing) ───
   // No seed data: invoices only exist when created through the Billing
   // screen or generated from real projects via the engine below.
-  getInvoices() { return (this._data && this._data.invoices) || []; },
+  getInvoices(companyId) {
+    const list = (this._data && this._data.invoices) || [];
+    if (companyId === '__all__') return list;
+    const scope = companyId || this._resolveTenantScope();
+    if (!scope || scope === 'all') return list;
+    return list.filter(i => !i.companyId || i.companyId === scope || (scope === 'comp_hintonn' && !i.companyId));
+  },
   getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
   createInvoice(d) {
     // Project-based fill: derive display fields from the linked project
@@ -725,10 +731,13 @@ const Store = {
       const proj = this.getProject(d.projectId);
       if (proj) d.projectName = proj.name;
     }
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
     const inv = {
       id: d.id || d.billNumber || this._genId(),
       version: 'v1.0', isRevised: false,
       items: [], versionHistory: [],
+      companyId: d.companyId || assignedCid,
       ...d,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };

@@ -446,7 +446,10 @@ const FirebaseAuth = {
         if (!doc.exists) {
           await userRef.set({
             uid: user.uid, name: localUser.name || defaultName, email: fallbackEmail, photoURL: user.photoURL || null,
-            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: isAdmin, provider: providerType || 'password',
+            role: isAdmin ? 'Admin' : (localUser.role || 'AI Developer'), isActive: isPreApproved, provider: providerType || 'password',
+            companyId: localUser.companyId || (isAdmin ? 'all' : 'comp_hintonn'),
+            companyName: localUser.companyName || (isAdmin ? 'All Companies' : 'Hintonn AI Infrastructure'),
+            team: localUser.team || 'AI & Tech',
             createdAt: nowTs, lastLogin: nowTs
           });
         } else {
@@ -455,10 +458,24 @@ const FirebaseAuth = {
             email: fallbackEmail, name: existingData.name || localUser.name || defaultName,
             photoURL: existingData.photoURL || user.photoURL || null,
             role: isAdmin ? 'Admin' : (existingData.role || localUser.role || 'AI Developer'),
+            companyId: existingData.companyId || localUser.companyId || (isAdmin ? 'all' : 'comp_hintonn'),
+            companyName: existingData.companyName || localUser.companyName || (isAdmin ? 'All Companies' : 'Hintonn AI Infrastructure'),
+            team: existingData.team || localUser.team || 'AI & Tech',
             lastLogin: nowTs
           };
-          if (isAdmin) patch.isActive = true; // admins may self-activate; others await approval
+          if (isPreApproved) patch.isActive = true;
           await userRef.set(patch, { merge: true });
+        }
+
+        // Keep super_admins and admins tables in sync
+        if (isAdmin && this._db) {
+          this._db.collection('super_admins').doc(user.uid).set({
+            uid: user.uid,
+            email: fallbackEmail,
+            name: localUser.name || defaultName,
+            role: 'Super Admin',
+            updatedAt: nowTs
+          }, { merge: true }).catch(() => {});
         }
     } catch (err) {
       console.warn('Firestore user session sync warning:', err.message || err);

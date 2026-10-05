@@ -10,6 +10,10 @@ const Auth = {
       loginId: 'Mohit',
       name: 'Mohit Jain',
       role: 'Admin',
+      isSuperAdmin: true,
+      companyId: 'all',
+      companyName: 'All Companies (Global Super Admin)',
+      team: 'Executive PMO',
       email: 'mohithintonn@gmail.com',
       googleEmail: 'mohithintonn@gmail.com',
       initials: 'MJ',
@@ -22,6 +26,10 @@ const Auth = {
       loginId: 'admin',
       name: 'Mohit Jain',
       role: 'Admin',
+      isSuperAdmin: true,
+      companyId: 'all',
+      companyName: 'All Companies (Global Super Admin)',
+      team: 'Executive PMO',
       email: 'admin@hintonn.com',
       googleEmail: 'mohithintonn@gmail.com',
       initials: 'MJ',
@@ -34,6 +42,9 @@ const Auth = {
       loginId: 'Preet',
       name: 'Preet Bhavsar',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn AI Infrastructure',
+      team: 'Project Management',
       email: 'preethintonn@gmail.com',
       googleEmail: 'preethintonn@gmail.com',
       initials: 'PB',
@@ -46,6 +57,9 @@ const Auth = {
       loginId: 'Hirvi',
       name: 'Hirvi Sanghavi',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn AI Infrastructure',
+      team: 'PMO & Compliance',
       email: 'hirvihintonn@gmail.com',
       googleEmail: 'hirvihintonn@gmail.com',
       initials: 'HS',
@@ -58,6 +72,9 @@ const Auth = {
       loginId: 'MohitDev',
       name: 'MOHIT JAIN',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn AI Infrastructure',
+      team: 'AI & Tech',
       email: 'mohitjain12104@gmail.com',
       googleEmail: 'mohitjain12104@gmail.com',
       initials: 'MJ',
@@ -140,39 +157,43 @@ const Auth = {
     return this.isAuthenticated();
   },
 
-  // ─── Admin email whitelist — ONLY this email gets Admin role ───
+  // ─── Super Admin & Admin email whitelist ───
+  _SUPER_ADMIN_EMAILS: ['mohithintonn@gmail.com', 'admin@hintonn.com'],
   _ADMIN_EMAILS: ['mohithintonn@gmail.com', 'admin@hintonn.com'],
 
   // RBAC Permission Matrix based on Role
   permissions: {
-    dashboard: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    projects: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    'project-detail': ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    tasks: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    calendar: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    team: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    reports: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    issues: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    milestones: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    'ai-assistant': ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    connectors: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    notifications: ['PM', 'ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
-    billing: ['PM', 'ADMIN', 'PMO', 'FIN'],
-    invoices: ['PM', 'ADMIN', 'PMO', 'FIN'],
-    retention: ['ADMIN', 'PMO', 'FIN'],
-    bg: ['ADMIN', 'PMO', 'FIN', 'CTR'],
-    'bank-guarantees': ['ADMIN', 'PMO', 'FIN', 'CTR'],
-    dlp: ['PM', 'ADMIN', 'PMO'],
-    'dlp-timelines': ['PM', 'ADMIN', 'PMO'],
-    settings: ['ADMIN'],
-    'audit-logs': ['ADMIN'],
-    timeline: ['ADMIN'],
-    'user-approvals': ['ADMIN']
+    dashboard: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    projects: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    'project-detail': ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    tasks: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    calendar: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    team: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    reports: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    issues: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    milestones: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    'ai-assistant': ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    connectors: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    notifications: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR', 'DEV'],
+    billing: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN'],
+    invoices: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN'],
+    retention: ['ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN'],
+    bg: ['ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR'],
+    'bank-guarantees': ['ADMIN', 'SUPER_ADMIN', 'PMO', 'FIN', 'CTR'],
+    dlp: ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO'],
+    'dlp-timelines': ['PM', 'ADMIN', 'SUPER_ADMIN', 'PMO'],
+    settings: ['ADMIN', 'SUPER_ADMIN'],
+    'audit-logs': ['ADMIN', 'SUPER_ADMIN'],
+    timeline: ['ADMIN', 'SUPER_ADMIN'],
+    'user-approvals': ['ADMIN', 'SUPER_ADMIN'],
+    companies: ['ADMIN', 'SUPER_ADMIN']
   },
 
   hasAccess(module) {
     if (!this.currentUser) return false;
+    if (this.isSuperAdmin()) return true;
     const roleMap = {
+      'Super Admin': 'SUPER_ADMIN',
       'Admin': 'ADMIN',
       'AI Developer': 'DEV',
       'Project Manager': 'PM',
@@ -186,17 +207,58 @@ const Auth = {
     return allowedRoles.includes(userRoleCode);
   },
 
+  isSuperAdmin() {
+    if (!this.currentUser) return false;
+    if (this.currentUser.role === 'Super Admin' || this.currentUser.isSuperAdmin === true) return true;
+    const emailLower = (this.currentUser.email || '').toLowerCase();
+    const googleEmailLower = (this.currentUser.googleEmail || '').toLowerCase();
+    return this._SUPER_ADMIN_EMAILS.includes(emailLower) || this._SUPER_ADMIN_EMAILS.includes(googleEmailLower);
+  },
+
+  isCompanyAdmin(companyId) {
+    if (!this.currentUser) return false;
+    if (this.isSuperAdmin()) return true;
+    if (this.currentUser.role === 'Admin') {
+      if (!companyId || !this.currentUser.companyId || this.currentUser.companyId === 'all') return true;
+      return this.currentUser.companyId === companyId;
+    }
+    return false;
+  },
+
+  getCompanyId() {
+    return this.currentUser ? (this.currentUser.companyId || 'comp_hintonn') : 'comp_hintonn';
+  },
+
+  getCompanyName() {
+    return this.currentUser ? (this.currentUser.companyName || 'Hintonn AI Infrastructure') : 'Hintonn AI Infrastructure';
+  },
+
+  getUserTeam() {
+    return this.currentUser ? (this.currentUser.team || 'AI & Tech') : 'AI & Tech';
+  },
+
   _enforceAdminRole(user) {
     if (!user) return user;
     const emailLower = (user.email || '').toLowerCase();
     const googleEmailLower = (user.googleEmail || '').toLowerCase();
     
-    const isAdmin = this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower);
+    const isSuper = this._SUPER_ADMIN_EMAILS.includes(emailLower) || this._SUPER_ADMIN_EMAILS.includes(googleEmailLower);
 
-    if (isAdmin) {
+    if (isSuper) {
       user.role = 'Admin';
+      user.isSuperAdmin = true;
+      user.companyId = user.companyId || 'all';
+      user.companyName = user.companyName || 'All Companies (Global Super Admin)';
       user.approved = true;
       user.title = user.title || 'Executive PMO & Lead';
+    } else if (user.role === 'Admin') {
+      user.approved = true;
+      user.companyId = user.companyId || 'comp_hintonn';
+      user.companyName = user.companyName || 'Hintonn AI Infrastructure';
+    } else {
+      user.companyId = user.companyId || 'comp_hintonn';
+      user.companyName = user.companyName || 'Hintonn AI Infrastructure';
+      user.team = user.team || 'AI & Tech';
     }
     return user;
   },
@@ -683,10 +745,14 @@ const Auth = {
   },
 
   // ─── Sign Up / Request Access (creates PENDING Firebase Auth user) ───
-  async signUp(name, email, password) {
+  async signUp(name, email, password, companyId, team) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPass = password || '';
+    const cleanCompanyId = companyId || 'comp_hintonn';
+    const cleanTeam = team || 'AI & Tech';
+    const cleanCompanyName = (typeof Store !== 'undefined' && Store.getCompany && Store.getCompany(cleanCompanyId))
+      ? Store.getCompany(cleanCompanyId).name : 'Hintonn AI Infrastructure';
 
     // All accounts are created in Firebase Authentication — the server
     // stores the credential hash; nothing password-related is kept here.
@@ -726,6 +792,9 @@ const Auth = {
       googleEmail: cleanEmail,
       initials: initials,
       color: chosenColor,
+      companyId: cleanCompanyId,
+      companyName: cleanCompanyName,
+      team: cleanTeam,
       approved: false,
       requestDate: new Date().toISOString(),
       requestSource: 'Sign Up'
@@ -749,6 +818,9 @@ const Auth = {
           role: 'AI Developer',
           initials: initials,
           color: chosenColor,
+          companyId: cleanCompanyId,
+          companyName: cleanCompanyName,
+          team: cleanTeam,
           isActive: false,
           isRejected: false,
           provider: 'sign_up',
@@ -785,11 +857,24 @@ const Auth = {
         Store.createMember({
           id: memberId, name: user.name, role: user.role || 'AI Developer',
           designation: user.role || 'AI Developer', email: user.email,
+          companyId: user.companyId || 'comp_hintonn',
+          team: user.team || 'AI & Tech',
           initials: user.initials || user.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
           color: user.color || '#2563EB', activeTasks: 0, completedTasks: 0, hoursLogged: 0
         });
       }
       user.memberId = memberId;
+    }
+
+    if (user.role === 'Admin') {
+      if (typeof Store !== 'undefined' && typeof Store.addCompanyAdmin === 'function') {
+        Store.addCompanyAdmin({
+          id: user.id, uid: user.id, email: user.email, name: user.name,
+          companyId: user.companyId || 'comp_hintonn',
+          companyName: user.companyName || 'Hintonn AI Infrastructure',
+          role: 'Admin'
+        });
+      }
     }
 
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
@@ -859,10 +944,18 @@ const Auth = {
     return this.users.filter(u => u.approved === false && u.rejected !== true && u.revoked !== true);
   },
 
-  getAllUsersWithStatus() {
-    return this.users.map(u => ({
+  getAllUsersWithStatus(companyId) {
+    let list = this.users;
+    const filterCid = companyId || (!this.isSuperAdmin() ? this.getCompanyId() : null);
+    if (filterCid && filterCid !== 'all') {
+      list = list.filter(u => !u.companyId || u.companyId === 'all' || u.companyId === filterCid);
+    }
+    return list.map(u => ({
       id: u.id, name: u.name, email: u.email || u.googleEmail,
       role: u.role || 'AI Developer',
+      companyId: u.companyId || 'comp_hintonn',
+      companyName: u.companyName || 'Hintonn AI Infrastructure',
+      team: u.team || 'AI & Tech',
       initials: u.initials || u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
       color: u.color || '#94A3B8', 
       approved: u.approved !== false && !u.revoked, 
@@ -927,10 +1020,14 @@ const Auth = {
   // ─── Admin: Add user directly (pre-approved) ───
   // No password handling here — the user signs up with their own password
   // through Firebase Authentication; this only registers the approved profile.
-  adminAddUser(name, email, role) {
+  adminAddUser(name, email, role, companyId, team) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanRole = role || 'AI Developer';
+    const cleanCompanyId = companyId || this.getCompanyId() || 'comp_hintonn';
+    const cleanCompanyName = (typeof Store !== 'undefined' && Store.getCompany && Store.getCompany(cleanCompanyId))
+      ? Store.getCompany(cleanCompanyId).name : this.getCompanyName();
+    const cleanTeam = team || 'AI & Tech';
 
     const existing = this.users.find(u =>
       (u.email && u.email.toLowerCase() === cleanEmail) ||
@@ -948,6 +1045,7 @@ const Auth = {
       id: newId, memberId: newMemberId, loginId: cleanName.split(' ')[0] || cleanName,
       name: cleanName, role: cleanRole, email: cleanEmail,
       googleEmail: cleanEmail, initials: initials, color: chosenColor,
+      companyId: cleanCompanyId, companyName: cleanCompanyName, team: cleanTeam,
       approved: true, approvedDate: new Date().toISOString(), requestSource: 'Admin Direct Add'
     };
     this.users.push(newUser);
@@ -956,11 +1054,29 @@ const Auth = {
     if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function') {
       const members = Store.getMembers();
       if (!members.some(m => m.email === cleanEmail)) {
-        Store.createMember({ id: newMemberId, name: cleanName, role: cleanRole, designation: cleanRole, email: cleanEmail, initials: initials, color: chosenColor, activeTasks: 0, completedTasks: 0, hoursLogged: 0 });
+        Store.createMember({
+          id: newMemberId, name: cleanName, role: cleanRole, designation: cleanRole,
+          email: cleanEmail, initials: initials, color: chosenColor,
+          companyId: cleanCompanyId, team: cleanTeam,
+          activeTasks: 0, completedTasks: 0, hoursLogged: 0
+        });
       }
     }
+
+    if (cleanRole === 'Admin') {
+      if (typeof Store !== 'undefined' && typeof Store.addCompanyAdmin === 'function') {
+        Store.addCompanyAdmin({
+          id: newId, uid: newId, email: cleanEmail, name: cleanName,
+          companyId: cleanCompanyId, companyName: cleanCompanyName, role: 'Admin'
+        });
+      }
+    }
+
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
-      Store.addNotification({ type: 'user-approval', text: `👤 New team member <strong>${cleanName}</strong> (${cleanRole}) added by admin. Access auto-approved.` });
+      Store.addNotification({
+        type: 'user-approval',
+        text: `👤 New team member <strong>${cleanName}</strong> (${cleanRole}) added for ${cleanCompanyName}. Access auto-approved.`
+      });
     }
     return { success: true, user: newUser };
   },
@@ -1000,5 +1116,7 @@ const Auth = {
     if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
   },
 
-  isAdmin() { return this.currentUser && this.currentUser.role === 'Admin'; }
+  isAdmin() {
+    return Boolean(this.currentUser && (this.currentUser.role === 'Admin' || this.currentUser.role === 'Super Admin' || this.isSuperAdmin()));
+  }
 };

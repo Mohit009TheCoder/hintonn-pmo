@@ -24,6 +24,13 @@ function loadServiceAccount() {
 }
 
 
+  if (!process.argv.includes('--force')) {
+    console.error('❌ [SAFETY GUARD] firebase-seed.js requires the explicit --force flag.');
+    console.error('   Usage: node firebase-seed.js --force');
+    console.error('   Operation aborted to prevent accidental database overwrite.');
+    process.exit(1);
+  }
+
   const serviceAccount = loadServiceAccount();
 
   try {
@@ -58,16 +65,30 @@ function loadServiceAccount() {
   const ts = (d) => Timestamp.fromDate(new Date(d));
 
   // ═══════════════════════════════════════════════
+  // 0. SUPER ADMINS & COMPANY ADMINS (Tenant Governance)
+  // ═══════════════════════════════════════════════
+  const super_admins = [
+    { id: 'sa_mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'Super Admin', createdAt: now },
+    { id: 'sa_admin', email: 'admin@hintonn.com', name: 'Hintonn Global Admin', role: 'Super Admin', createdAt: now }
+  ];
+
+  const admins = [
+    { id: 'adm_mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', companyId: 'comp_hintonn', companyName: 'Hintonn AI Infrastructure', team: 'PMO', role: 'Company Admin', createdAt: now },
+    { id: 'adm_riya', email: 'riya.sharma@buildcon.in', name: 'Riya Sharma', companyId: 'comp_buildcon', companyName: 'BuildCon Infrastructure', team: 'Civil Engineering', role: 'Company Admin', createdAt: now },
+    { id: 'adm_metro', email: 'metro.admin@mmrda.gov.in', name: 'MMRDA Admin', companyId: 'comp_metro', companyName: 'MMRDA Metro Rail', team: 'Viaduct Engineering', role: 'Company Admin', createdAt: now }
+  ];
+
+  // ═══════════════════════════════════════════════
   // 1. MEMBERS
   // ═══════════════════════════════════════════════
   const members = [
-    { id: 'm1', name: 'Ayush Desai', role: 'Admin', designation: 'Admin & Founder', email: 'ayush@hintonn.com', initials: 'AD', color: '#6366F1', activeTasks: 0, completedTasks: 0, hoursLogged: 0, createdAt: now, updatedAt: now },
-    { id: 'm2', name: 'Preet Hintonn', role: 'Project Manager', designation: 'Senior Project Manager', email: 'preethintonn@gmail.com', initials: 'PH', color: '#2563EB', activeTasks: 4, completedTasks: 12, hoursLogged: 320, createdAt: now, updatedAt: now },
-    { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', email: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5', activeTasks: 3, completedTasks: 18, hoursLogged: 480, createdAt: now, updatedAt: now },
-    { id: 'm4', name: 'Hirvi Hintonn', role: 'PMO', designation: 'PMO Analyst', email: 'hirvihintonn@gmail.com', initials: 'HH', color: '#7C3AED', activeTasks: 5, completedTasks: 8, hoursLogged: 210, createdAt: now, updatedAt: now },
-    { id: 'm5', name: 'Riya Sharma', role: 'Contractor', designation: 'Site Engineer', email: 'riya.sharma@buildcon.in', initials: 'RS', color: '#059669', activeTasks: 3, completedTasks: 6, hoursLogged: 180, createdAt: now, updatedAt: now },
-    { id: 'm6', name: 'Arjun Mehta', role: 'Finance', designation: 'Finance Manager', email: 'arjun@hintonn.com', initials: 'AM', color: '#D97706', activeTasks: 2, completedTasks: 5, hoursLogged: 140, createdAt: now, updatedAt: now },
-    { id: 'm7', name: 'Sneha Patil', role: 'PMO', designation: 'Quality & Compliance Lead', email: 'sneha@hintonn.com', initials: 'SP', color: '#EC4899', activeTasks: 2, completedTasks: 9, hoursLogged: 260, createdAt: now, updatedAt: now },
+    { id: 'm1', name: 'Ayush Desai', role: 'Admin', designation: 'Admin & Founder', email: 'ayush@hintonn.com', initials: 'AD', color: '#6366F1', companyId: 'comp_hintonn', team: 'Leadership', activeTasks: 0, completedTasks: 0, hoursLogged: 0, createdAt: now, updatedAt: now },
+    { id: 'm2', name: 'Preet Hintonn', role: 'Project Manager', designation: 'Senior Project Manager', email: 'preethintonn@gmail.com', initials: 'PH', color: '#2563EB', companyId: 'comp_hintonn', team: 'AI & Technology', activeTasks: 4, completedTasks: 12, hoursLogged: 320, createdAt: now, updatedAt: now },
+    { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', email: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5', isSuperAdmin: true, companyId: 'all', team: 'PMO', activeTasks: 3, completedTasks: 18, hoursLogged: 480, createdAt: now, updatedAt: now },
+    { id: 'm4', name: 'Hirvi Hintonn', role: 'PMO', designation: 'PMO Analyst', email: 'hirvihintonn@gmail.com', initials: 'HH', color: '#7C3AED', companyId: 'comp_hintonn', team: 'Operations & Site', activeTasks: 5, completedTasks: 8, hoursLogged: 210, createdAt: now, updatedAt: now },
+    { id: 'm5', name: 'Riya Sharma', role: 'Contractor', designation: 'Site Engineer', email: 'riya.sharma@buildcon.in', initials: 'RS', color: '#059669', companyId: 'comp_buildcon', team: 'Civil Engineering', activeTasks: 3, completedTasks: 6, hoursLogged: 180, createdAt: now, updatedAt: now },
+    { id: 'm6', name: 'Arjun Mehta', role: 'Finance', designation: 'Finance Manager', email: 'arjun@hintonn.com', initials: 'AM', color: '#D97706', companyId: 'comp_hintonn', team: 'Finance & Commercial', activeTasks: 2, completedTasks: 5, hoursLogged: 140, createdAt: now, updatedAt: now },
+    { id: 'm7', name: 'Sneha Patil', role: 'PMO', designation: 'Quality & Compliance Lead', email: 'sneha@hintonn.com', initials: 'SP', color: '#EC4899', companyId: 'comp_metro', team: 'Quality & Safety', activeTasks: 2, completedTasks: 9, hoursLogged: 260, createdAt: now, updatedAt: now },
   ];
 
   // ═══════════════════════════════════════════════

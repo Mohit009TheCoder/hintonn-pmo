@@ -1,7 +1,28 @@
 {
   "hosting": {
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "functions/**", "scratch/**", "_backups/**", "firebase-seed.js", "service-account.json", "package*.json", "hintonn design (1).md"],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "scratch/**",
+      "_backups/**",
+      "firebase-seed.js",
+      "service-account.json",
+      "package*.json",
+      "hintonn design (1).md",
+      "wipe-db.js",
+      "check-db.js",
+      "cleanup-seed-billing.js",
+      "make-admin.js",
+      "tests/**",
+      "n8n-workflows/**",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "eslint.config.js",
+      "README.md"
+    ],
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
     ]

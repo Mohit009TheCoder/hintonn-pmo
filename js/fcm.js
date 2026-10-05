@@ -79,6 +79,12 @@ const FCM = {
       if (window.FCM_VAPID_KEY && window.FCM_VAPID_KEY !== 'YOUR_VAPID_KEY') {
         opts.vapidKey = window.FCM_VAPID_KEY;
       }
+      if ('serviceWorker' in navigator) {
+        try {
+          const swReg = await navigator.serviceWorker.getRegistration();
+          if (swReg) opts.serviceWorkerRegistration = swReg;
+        } catch (_) {}
+      }
       this._token = await this._messaging.getToken(opts);
       console.log('[FCM] Token obtained:', this._token ? 'yes' : 'no');
       if (this._token && typeof Store !== 'undefined' && Store._db) {
@@ -92,15 +98,18 @@ const FCM = {
         }
       }
     } catch (err) {
-      console.warn('[FCM] Token acquisition notice:', err.message || err);
+      if (!window.FCM_VAPID_KEY) {
+        console.info('[FCM] Web Push requires a VAPID key. Configure window.FCM_VAPID_KEY from Firebase Console -> Project Settings -> Cloud Messaging.');
+      } else {
+        console.warn('[FCM] Token acquisition notice:', err.message || err);
+      }
     }
   },
 
-  // Subscribe to Cloud Function notification topics
+  // Save user notification topic preferences to Firestore
   async _subscribeToTopics() {
-    if (!this._messaging || !this._token) return;
+    if (!this._token) return;
     try {
-      // Subscribe to all notification topics based on user preferences
       const prefs = (typeof Store !== 'undefined' && Store.getNotificationPrefs) ? Store.getNotificationPrefs() : {};
       const topics = [];
 
@@ -114,7 +123,7 @@ const FCM = {
       // Always subscribe to critical alerts
       topics.push('critical-alerts');
 
-      // Save user topic subscription preferences to Firestore
+      // Save user topic subscription preferences to Firestore user document
       if (typeof Store !== 'undefined' && Store._db) {
         const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
         if (user) {
@@ -124,16 +133,9 @@ const FCM = {
           }, { merge: true });
         }
       }
-
-      // Safe topic subscription if supported by client environment
-      for (const topic of topics) {
-        if (typeof this._messaging.subscribeToTopic === 'function') {
-          await this._messaging.subscribeToTopic(topic).catch(() => {});
-        }
-        console.log(`[FCM] Topic preference registered: ${topic}`);
-      }
+      console.log(`[FCM] Registered topic preferences: ${topics.join(', ')}`);
     } catch (err) {
-      console.warn('[FCM] Topic subscription notice:', err.message || err);
+      console.warn('[FCM] Topic preference registration notice:', err.message || err);
     }
   },
 

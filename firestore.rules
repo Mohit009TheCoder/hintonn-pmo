@@ -19,6 +19,15 @@ service cloud.firestore {
       ];
     }
 
+    // Approved workspace users (Admin or active user document)
+    function isApprovedUser() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true)
+      );
+    }
+
     // Signed-in user may create only their OWN pending user document
     function isSelfSignup() {
       return isSignedIn()
@@ -30,13 +39,13 @@ service cloud.firestore {
     // Users may only change approval-sensitive fields on their own doc
     function selfEditFieldsValid() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider']);
+        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
     }
 
     // ─── Users (accounts, approvals) ────────────────────────────
     match /users/{userId} {
-      // Any signed-in user can read the directory; signups read their own doc.
-      allow read: if isSignedIn();
+      // Approved users can read user directory; pending signups read their own doc only.
+      allow read: if isApprovedUser() || isOwner(userId);
       // Self-signup (pending), self profile update, admin full control.
       allow create: if isAdmin() || isSelfSignup();
       allow update: if isAdmin() || (isOwner(userId) && selfEditFieldsValid());
@@ -44,20 +53,16 @@ service cloud.firestore {
     }
 
     // ─── Shared workspace data ──────────────────────────────────
-    // Authenticated collaborators read/write the shared PMO workspace.
-    // (Per-field authorization for projects/tasks lives in Cloud Functions,
-    //  which run with admin credentials and enforce server-side checks.)
-    match /projects/{docId}      { allow read, write: if isSignedIn(); }
-    match /tasks/{docId}         { allow read, write: if isSignedIn(); }
-    match /milestones/{docId}    { allow read, write: if isSignedIn(); }
-    match /issues/{docId}        { allow read, write: if isSignedIn(); }
-    match /comments/{docId}      { allow read, write: if isSignedIn(); }
-    match /activities/{docId}    { allow read: if isSignedIn();
-                                   allow write: if isSignedIn() || isAdmin(); }
-    match /notifications/{docId} { allow read: if isSignedIn();
-                                   allow write: if isSignedIn() || isAdmin(); }
-    match /members/{docId}       { allow read: if isSignedIn();
-                                   allow write: if isSignedIn() || isAdmin(); }
+    // Approved active collaborators read/write the shared PMO workspace.
+    // Unapproved or unauthenticated users have no access.
+    match /projects/{docId}      { allow read, write: if isApprovedUser(); }
+    match /tasks/{docId}         { allow read, write: if isApprovedUser(); }
+    match /milestones/{docId}    { allow read, write: if isApprovedUser(); }
+    match /issues/{docId}        { allow read, write: if isApprovedUser(); }
+    match /comments/{docId}      { allow read, write: if isApprovedUser(); }
+    match /activities/{docId}    { allow read, write: if isApprovedUser(); }
+    match /notifications/{docId} { allow read, write: if isApprovedUser(); }
+    match /members/{docId}       { allow read, write: if isApprovedUser(); }
 
     // ─── Commercial & financial data — ADMIN ONLY ───────────────
     // Billing, invoices, bank guarantees, DLP, retention and client
@@ -70,10 +75,11 @@ service cloud.firestore {
     match /companies/{docId}         { allow read, write: if isAdmin(); }
 
     // ─── Settings ───────────────────────────────────────────────
-    // Workspace settings doc is shared; notification prefs live here too.
+    // Workspace settings doc is readable by approved members;
+    // only admins can overwrite workspace-wide settings and health score.
     match /settings/{docId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read: if isApprovedUser();
+      allow write: if isAdmin();
     }
 
     // ─── Audit logs ─────────────────────────────────────────────

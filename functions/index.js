@@ -5,7 +5,7 @@
  *   Stage 6.1 — Core: health score, invoice notifications, BG expiry alerts
  *   Stage 6.2 — Scheduled: daily/weekly audits, portfolio aggregation, cleanup
  *
- * Runtime: firebase-functions v6.3.0 (2nd gen), firebase-admin v14
+ * Runtime: firebase-functions v6.3.0 (2nd gen), firebase-admin v13 (Node 22)
  * Module:  ES ("type": "module" in package.json)
  */
 
@@ -16,14 +16,31 @@ import {
   Timestamp,
 } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
-export { getMessaging };
 
 import {
   onDocumentWritten,
   onDocumentCreated,
 } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { params } from "firebase-functions/v2";
+
+// ---------------------------------------------------------------------------
+// Configuration / Environment Variables
+// ---------------------------------------------------------------------------
+const NOTIFICATION_EXPIRY_THRESHOLD_DAYS =
+  Number(process.env.NOTIFICATION_EXPIRY_THRESHOLD_DAYS) || 30;
+const HEALTH_SCORE_AT_RISK_THRESHOLD =
+  Number(process.env.HEALTH_SCORE_AT_RISK_THRESHOLD) || 60;
+const HEALTH_SCORE_PORTFOLIO_ALERT_THRESHOLD =
+  Number(
+    process.env.HEALTH_SCORE_PORTFOLIO_ALERT_THRESHOLD ||
+      process.env.HEALTH_SCORE_PORTFALERT_THRESHOLD
+  ) || 50;
+const SESSION_INACTIVE_DAYS =
+  Number(process.env.SESSION_INACTIVE_DAYS) || 30;
+const ACTIVITIES_RETAIN_DAYS =
+  Number(process.env.ACTIVITIES_RETAIN_DAYS) || 90;
+const AUDIT_LOGS_RETAIN_DAYS =
+  Number(process.env.AUDIT_LOGS_RETAIN_DAYS) || 180;
 
 // ---------------------------------------------------------------------------
 // Admin bootstrap
@@ -75,7 +92,98 @@ function classifyRisk(days) {
 function daysUntil(timestamp) {
   if (!timestamp) return Infinity;
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  if (isNaN(date.getTime())) return Infinity;
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
+/** Batch manager to prevent exceeding Firestore's 500 operations per batch limit. */
+class BatchManager {
+  constructor(firestore, maxOps = 400) {
+    this.db = firestore;
+    this.maxOps = maxOps;
+    this.batch = firestore.batch();
+    this.opCount = 0;
+  }
+  async update(ref, data) {
+    this.batch.update(ref, data);
+    this.opCount++;
+    if (this.opCount >= this.maxOps) await this.flush();
+  }
+  async set(ref, data, options) {
+    if (options) this.batch.set(ref, data, options);
+    else this.batch.set(ref, data);
+    this.opCount++;
+    if (this.opCount >= this.maxOps) await this.flush();
+  }
+  async delete(ref) {
+    this.batch.delete(ref);
+    this.opCount++;
+    if (this.opCount >= this.maxOps) await this.flush();
+  }
+  async flush() {
+    if (this.opCount > 0) {
+      await this.batch.commit();
+      this.batch = this.db.batch();
+      this.opCount = 0;
+    }
+  }
+}
+
+/**
+ * Dispatches push notifications to both a topic and active users' device tokens.
+ */
+async function dispatchPushNotification({ topic, role, notification, data }) {
+  const messaging = getMessagingSafe();
+  if (!messaging) return;
+
+  // 1. Topic broadcast
+  if (topic) {
+    try {
+      await messaging.send({ topic, notification, data });
+    } catch (topicErr) {
+      console.warn(`Topic send to ${topic} warning:`, topicErr.message);
+    }
+  }
+
+  // 2. Multicast to active users' fcmTokens
+  try {
+    let query = db.collection("users").where("isActive", "==", true);
+    if (role) {
+      query = query.where("role", "==", role);
+    }
+    const usersSnap = await query.get();
+    const tokens = usersSnap.docs
+      .map((d) => d.data().fcmToken)
+      .filter((t) => typeof t === "string" && t.trim().length > 0);
+
+    const uniqueTokens = [...new Set(tokens)];
+    if (uniqueTokens.length > 0) {
+      for (let i = 0; i < uniqueTokens.length; i += 400) {
+        const chunk = uniqueTokens.slice(i, i + 400);
+        const res = await messaging.sendEachForMulticast({
+          tokens: chunk,
+          notification,
+          data,
+        });
+        res.responses.forEach((resp, idx) => {
+          if (
+            !resp.success &&
+            resp.error?.code === "messaging/registration-token-not-registered"
+          ) {
+            const staleToken = chunk[idx];
+            const docToClean = usersSnap.docs.find(
+              (d) => d.data().fcmToken === staleToken
+            );
+            if (docToClean) {
+              docToClean.ref.update({ fcmToken: FieldValue.delete() }).catch(() => {});
+            }
+          }
+        });
+      }
+    }
+  } catch (tokenErr) {
+    console.warn(`Multicast send error for ${topic || "notification"}:`, tokenErr.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +206,7 @@ export const computeHealthScore = onDocumentWritten(
     try {
       const after = event.data?.after?.data();
       if (!after) return; // document was deleted
+      const before = event.data?.before?.data();
 
       // --- Tasks ---
       // NOTE: the client stores tasks in the TOP-LEVEL `tasks` collection
@@ -194,6 +303,17 @@ export const computeHealthScore = onDocumentWritten(
       const completionPercent =
         totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
+      // ── GUARD AGAINST INFINITE SELF-TRIGGER LOOP ──
+      // If the computed healthScore and completionPercent have not changed,
+      // skip writing to the watched document to prevent recursive invocation.
+      if (
+        before &&
+        before.healthScore === healthScore &&
+        before.completionPercent === completionPercent
+      ) {
+        return;
+      }
+
       await db
         .collection("projects")
         .doc(projectId)
@@ -247,22 +367,16 @@ export const sendInvoiceNotification = onDocumentCreated(
         createdAt: FieldValue.serverTimestamp(),
       });
 
-      // FCM push for new invoice
-      try {
-        const messaging = getMessagingSafe();
-        if (messaging) {
-          await messaging.send({
-            topic: "invoice-alerts",
-            notification: {
-              title: "📄 New Invoice Created",
-              body: `${billNumber} for ${projectName} (₹${amountLabel})`,
-            },
-            data: { invoiceId, type: "invoice", amount: String(amountNum) },
-          });
-        }
-      } catch (fcmErr) {
-        console.error("FCM send failed for invoice:", fcmErr.message);
-      }
+      // FCM push for new invoice (topic + active admin users multicast)
+      await dispatchPushNotification({
+        topic: "invoice-alerts",
+        role: "Admin",
+        notification: {
+          title: "📄 New Invoice Created",
+          body: `${billNumber} for ${projectName} (₹${amountLabel})`,
+        },
+        data: { invoiceId, type: "invoice", amount: String(amountNum) },
+      });
     } catch (err) {
       console.error(`sendInvoiceNotification failed for ${invoiceId}:`, err);
     }
@@ -270,7 +384,7 @@ export const sendInvoiceNotification = onDocumentCreated(
 );
 
 // ---------------------------------------------------------------------------
-// 4. scheduleExpiryCheck (BG created → immediate alert if ≤30 days)
+// 4. scheduleExpiryCheck (BG created → immediate alert if ≤ threshold)
 // ---------------------------------------------------------------------------
 /** Alerts when a newly created bank guarantee is nearing expiry. */
 export const scheduleExpiryCheck = onDocumentCreated(
@@ -279,10 +393,16 @@ export const scheduleExpiryCheck = onDocumentCreated(
     const bgId = event.params.bgId;
     try {
       const bg = event.data?.data();
-      if (!bg) return;
+      if (!bg || !bg.expiryDate) return;
 
       const daysLeft = daysUntil(bg.expiryDate);
-      if (daysLeft > 30 || daysLeft <= 0) return; // only alert within 30 days
+      if (
+        !Number.isFinite(daysLeft) ||
+        daysLeft > NOTIFICATION_EXPIRY_THRESHOLD_DAYS ||
+        daysLeft <= 0
+      ) {
+        return; // only alert within threshold
+      }
 
       await db.collection("notifications").add({
         type: "bankGuarantee",
@@ -294,21 +414,15 @@ export const scheduleExpiryCheck = onDocumentCreated(
       });
 
       // FCM push for approaching BG expiry
-      try {
-        const messaging = getMessagingSafe();
-        if (messaging) {
-          await messaging.send({
-            topic: "bg-alerts",
-            notification: {
-              title: "⚠️ BG Expiry Approaching",
-              body: `BG ${bg.ref || bgId} expires in ${daysLeft} days — Action required`,
-            },
-            data: { bgId, type: "bankGuarantee", daysLeft: String(daysLeft) },
-          });
-        }
-      } catch (fcmErr) {
-        console.error("FCM send failed for scheduleExpiryCheck:", fcmErr.message);
-      }
+      await dispatchPushNotification({
+        topic: "bg-alerts",
+        role: "Admin",
+        notification: {
+          title: "⚠️ BG Expiry Approaching",
+          body: `BG ${bg.ref || bgId} expires in ${daysLeft} days — Action required`,
+        },
+        data: { bgId, type: "bankGuarantee", daysLeft: String(daysLeft) },
+      });
     } catch (err) {
       console.error(`scheduleExpiryCheck failed for ${bgId}:`, err);
     }
@@ -321,6 +435,7 @@ export const scheduleExpiryCheck = onDocumentCreated(
 /**
  * Runs every day at 09:30 IST. Updates all active bank guarantees:
  * recalculates daysLeft, classifies risk, pushes FCM for critical ones.
+ * Uses BatchManager to chunk batches safely under 500 ops.
  */
 export const checkBgExpiry = onSchedule(
   "30 3 * * *",
@@ -331,26 +446,43 @@ export const checkBgExpiry = onSchedule(
         .where("status", "==", "active")
         .get();
 
-      const batch = db.batch();
+      const batchMgr = new BatchManager(db, 400);
       const criticalAlerts = [];
 
       for (const doc of snap.docs) {
         const bg = doc.data();
+        if (!bg.expiryDate) continue; // Skip docs with missing expiry dates
+
         const daysLeft = daysUntil(bg.expiryDate);
+        if (!Number.isFinite(daysLeft)) continue;
+
         const risk = classifyRisk(daysLeft);
         const newStatus = daysLeft <= 0 ? "expired" : bg.status;
 
-        batch.update(doc.ref, {
-          daysLeft,
-          risk,
-          status: newStatus,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+        // Guard against write amplification: update document ONLY if values changed
+        if (
+          bg.daysLeft !== daysLeft ||
+          bg.risk !== risk ||
+          bg.status !== newStatus
+        ) {
+          await batchMgr.update(doc.ref, {
+            daysLeft,
+            risk,
+            status: newStatus,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
 
-        // Notification for warning / critical
-        if (risk === "critical" || risk === "warning") {
+        // Notification for warning / critical:
+        // Alert on risk transitions or milestone countdowns to eliminate daily spam
+        const isMilestone =
+          risk === "critical"
+            ? [30, 15, 7, 3, 1, 0].includes(daysLeft) || bg.risk !== risk
+            : daysLeft % 7 === 0 || bg.risk !== risk;
+
+        if ((risk === "critical" || risk === "warning") && isMilestone) {
           const notifRef = db.collection("notifications").doc();
-          batch.set(notifRef, {
+          await batchMgr.set(notifRef, {
             type: "bankGuarantee",
             text: `BG ${bg.ref || doc.id} expires in ${daysLeft} days — ${risk.toUpperCase()}`,
             read: false,
@@ -369,27 +501,19 @@ export const checkBgExpiry = onSchedule(
         }
       }
 
-      await batch.commit();
+      await batchMgr.flush();
 
-      // FCM push for critical BGs (topic broadcast)
-      if (criticalAlerts.length > 0) {
-        const messaging = getMessagingSafe();
-        if (messaging) {
-          for (const alert of criticalAlerts) {
-            try {
-              await messaging.send({
-                topic: "bg-alerts",
-                notification: {
-                  title: alert.title,
-                  body: alert.body,
-                },
-                data: { bgId: alert.bgId, type: "bankGuarantee" },
-              });
-            } catch (fcmErr) {
-              console.error("FCM send failed:", fcmErr.message);
-            }
-          }
-        }
+      // FCM push for critical BGs
+      for (const alert of criticalAlerts) {
+        await dispatchPushNotification({
+          topic: "bg-alerts",
+          role: "Admin",
+          notification: {
+            title: alert.title,
+            body: alert.body,
+          },
+          data: { bgId: alert.bgId, type: "bankGuarantee" },
+        });
       }
 
       console.log(
@@ -410,23 +534,28 @@ export const checkDlpExpiry = onSchedule(
   async (_event) => {
     try {
       const snap = await db.collection("dlpRecords").get();
-      const batch = db.batch();
+      const batchMgr = new BatchManager(db, 400);
       let alerts = 0;
 
       for (const doc of snap.docs) {
         const rec = doc.data();
+        if (!rec.dlpExpiry) continue; // Skip docs with missing expiry dates
+
         const daysLeft = daysUntil(rec.dlpExpiry);
+        if (!Number.isFinite(daysLeft)) continue;
 
-        // Update countdown
-        batch.update(doc.ref, {
-          countdownDays: daysLeft,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+        // Update countdown only if changed
+        if (rec.countdownDays !== daysLeft) {
+          await batchMgr.update(doc.ref, {
+            countdownDays: daysLeft,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
 
-        // Notify if within 30 days
-        if (daysLeft <= 30 && daysLeft > 0) {
+        // Notify if within threshold
+        if (daysLeft <= NOTIFICATION_EXPIRY_THRESHOLD_DAYS && daysLeft > 0) {
           const notifRef = db.collection("notifications").doc();
-          batch.set(notifRef, {
+          await batchMgr.set(notifRef, {
             type: "dlpExpiry",
             text: `DLP record for ${rec.projectName || doc.id} expires in ${daysLeft} days`,
             read: false,
@@ -438,25 +567,19 @@ export const checkDlpExpiry = onSchedule(
         }
       }
 
-      await batch.commit();
+      await batchMgr.flush();
 
       // FCM push for DLP records nearing expiry
       if (alerts > 0) {
-        try {
-          const messaging = getMessagingSafe();
-          if (messaging) {
-            await messaging.send({
-              topic: "dlp-alerts",
-              notification: {
-                title: "⚠️ DLP Expiry Alert",
-                body: `${alerts} DLP warranty record(s) expire within 30 days`,
-              },
-              data: { type: "dlp", count: String(alerts) },
-            });
-          }
-        } catch (fcmErr) {
-          console.error("FCM send failed for DLP alert:", fcmErr.message);
-        }
+        await dispatchPushNotification({
+          topic: "dlp-alerts",
+          role: "Admin",
+          notification: {
+            title: "⚠️ DLP Expiry Alert",
+            body: `${alerts} DLP warranty record(s) expire within ${NOTIFICATION_EXPIRY_THRESHOLD_DAYS} days`,
+          },
+          data: { type: "dlp", count: String(alerts) },
+        });
       }
 
       console.log(`checkDlpExpiry: processed ${snap.size} records, ${alerts} alerts.`);
@@ -632,7 +755,7 @@ export const aggregatePortfolioHealth = onSchedule(
         const score = p.healthScore ?? 0;
         totalScore += score;
         if (score >= 80) onTrack++;
-        else if (score >= 50) atRisk++;
+        else if (score >= HEALTH_SCORE_AT_RISK_THRESHOLD) atRisk++;
         else critical++;
       }
 
@@ -664,52 +787,58 @@ export const aggregatePortfolioHealth = onSchedule(
 // ---------------------------------------------------------------------------
 /**
  * Purges old documents:
- *   notifications — older than 30 days
- *   activities    — older than 90 days
- *   audit_logs    — older than 180 days
+ *   notifications — older than SESSION_INACTIVE_DAYS (default 30 days)
+ *   activities    — older than ACTIVITIES_RETAIN_DAYS (default 90 days)
+ *   audit_logs    — older than AUDIT_LOGS_RETAIN_DAYS (default 180 days)
+ *
+ * Supports both Firestore Timestamp and client ISO 8601 strings to ensure
+ * cleanups succeed regardless of whether documents originated from server SDK
+ * or web client.
  */
 export const cleanupExpiredSessions = onSchedule(
   "30 21 * * *",
   async (_event) => {
     try {
-      const now = Timestamp.now();
       const stats = {};
 
-      // Notifications > 30 days
-      const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const notifSnap = await db
-        .collection("notifications")
-        .where("createdAt", "<", Timestamp.fromDate(cutoff30))
-        .limit(500)
-        .get();
-      stats.notificationsDeleted = notifSnap.size;
-      const notifBatch = db.batch();
-      notifSnap.docs.forEach((d) => notifBatch.delete(d.ref));
-      if (notifSnap.size > 0) await notifBatch.commit();
+      async function purgeOldDocs(collectionName, fieldName, cutoffDate, maxTotal = 2000) {
+        let deletedTotal = 0;
+        const cutoffTs = Timestamp.fromDate(cutoffDate);
+        const cutoffIso = cutoffDate.toISOString();
 
-      // Activities > 90 days
-      const cutoff90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      const actSnap = await db
-        .collection("activities")
-        .where("createdAt", "<", Timestamp.fromDate(cutoff90))
-        .limit(500)
-        .get();
-      stats.activitiesDeleted = actSnap.size;
-      const actBatch = db.batch();
-      actSnap.docs.forEach((d) => actBatch.delete(d.ref));
-      if (actSnap.size > 0) await actBatch.commit();
+        // Support both Firestore Timestamp and client ISO string representations
+        const queries = [
+          db.collection(collectionName).where(fieldName, "<", cutoffTs).limit(400),
+          db.collection(collectionName).where(fieldName, "<", cutoffIso).limit(400),
+        ];
 
-      // Audit logs > 180 days
-      const cutoff180 = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
-      const auditSnap = await db
-        .collection("audit_logs")
-        .where("timestamp", "<", Timestamp.fromDate(cutoff180))
-        .limit(500)
-        .get();
-      stats.auditLogsDeleted = auditSnap.size;
-      const auditBatch = db.batch();
-      auditSnap.docs.forEach((d) => auditBatch.delete(d.ref));
-      if (auditSnap.size > 0) await auditBatch.commit();
+        for (const q of queries) {
+          while (deletedTotal < maxTotal) {
+            const snap = await q.get().catch(() => null);
+            if (!snap || snap.empty) break;
+
+            const batch = db.batch();
+            snap.docs.forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+            deletedTotal += snap.size;
+
+            if (snap.size < 400) break;
+          }
+        }
+        return deletedTotal;
+      }
+
+      // Notifications > SESSION_INACTIVE_DAYS (default 30)
+      const cutoffNotifications = new Date(Date.now() - SESSION_INACTIVE_DAYS * 24 * 60 * 60 * 1000);
+      stats.notificationsDeleted = await purgeOldDocs("notifications", "createdAt", cutoffNotifications);
+
+      // Activities > ACTIVITIES_RETAIN_DAYS (default 90)
+      const cutoffActivities = new Date(Date.now() - ACTIVITIES_RETAIN_DAYS * 24 * 60 * 60 * 1000);
+      stats.activitiesDeleted = await purgeOldDocs("activities", "createdAt", cutoffActivities);
+
+      // Audit logs > AUDIT_LOGS_RETAIN_DAYS (default 180)
+      const cutoffAudit = new Date(Date.now() - AUDIT_LOGS_RETAIN_DAYS * 24 * 60 * 60 * 1000);
+      stats.auditLogsDeleted = await purgeOldDocs("audit_logs", "timestamp", cutoffAudit);
 
       console.log("cleanupExpiredSessions:", JSON.stringify(stats));
     } catch (err) {

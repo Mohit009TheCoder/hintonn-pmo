@@ -21,11 +21,11 @@ describe('firestore.rules', () => {
       assert.ok(re.test(rules), `${col} must be admin-only`);
     }
   });
-  test('signed-in requirement on shared workspace data', () => {
+  test('approved user requirement on shared workspace data', () => {
     for (const col of ['projects', 'tasks', 'milestones', 'issues']) {
       assert.ok(rules.includes(`match /${col}/{docId}`), `${col} rule missing`);
     }
-    assert.ok(/match \/tasks\/\{docId\}\s*\{\s*allow read, write: if isSignedIn\(\);/.test(rules));
+    assert.ok(/match \/tasks\/\{docId\}\s*\{\s*allow read, write: if isApprovedUser\(\);/.test(rules));
   });
   test('users self-signup guard requires own uid + pending state', () => {
     assert.ok(rules.includes('request.auth.uid == userId'));

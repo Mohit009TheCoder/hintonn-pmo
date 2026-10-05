@@ -23,6 +23,10 @@ const FirebaseAuth = {
       measurementId: "G-KZ4HC6C5VN"
     };
 
+    if (typeof window !== 'undefined') {
+      window.FCM_VAPID_KEY = window.FCM_VAPID_KEY || '';
+    }
+
     try {
       if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);

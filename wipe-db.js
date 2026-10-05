@@ -17,7 +17,16 @@ function loadServiceAccount() {
   return null;
 }
 
+  if (!process.argv.includes('--force')) {
+    console.error('❌ [SAFETY GUARD] wipe-db.js requires the explicit --force flag.');
+    console.error('   Usage: node wipe-db.js --force');
+    console.error('   Operation aborted to prevent accidental database wipe.');
+    process.exit(1);
+  }
+
   const serviceAccount = loadServiceAccount();
+  const projectId = serviceAccount?.project_id || process.env.GCLOUD_PROJECT || 'default';
+  console.log(`⚠️  Initiating database wipe for project: ${projectId}...`);
 
   try {
     if (serviceAccount) admin.initializeApp({ credential: cert(serviceAccount) });
@@ -31,13 +40,21 @@ function loadServiceAccount() {
 
   for (const collection of collections) {
     const snapshot = await db.collection(collection).get();
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    await batch.commit();
-    console.log(`Wiped ${snapshot.docs.length} docs from ${collection}`);
+    let deleted = 0;
+    for (let i = 0; i < snapshot.docs.length; i += 400) {
+      const chunk = snapshot.docs.slice(i, i + 400);
+      const batch = db.batch();
+      chunk.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      deleted += chunk.length;
+    }
+    console.log(`Wiped ${deleted} docs from ${collection}`);
   }
 }
 
-wipe().then(() => process.exit(0)).catch(console.error);
+wipe().then(() => process.exit(0)).catch((err) => {
+  console.error('Wipe failed:', err);
+  process.exit(1);
+});

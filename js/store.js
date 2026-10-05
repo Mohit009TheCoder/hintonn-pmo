@@ -665,7 +665,12 @@ const Store = {
   // ─── Invoices (Billing) ───
   // No seed data: invoices only exist when created through the Billing
   // screen or generated from real projects via the engine below.
-  getInvoices() { return (this._data && this._data.invoices) || []; },
+  getInvoices(companyId) {
+    const list = (this._data && this._data.invoices) || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(i => i.companyId === targetComp || (!i.companyId && targetComp === 'comp_hintonn'));
+  },
   getInvoice(id) { return (this._data.invoices || []).find(i => i.id === id); },
   createInvoice(d) {
     // Project-based fill: derive display fields from the linked project
@@ -673,8 +678,13 @@ const Store = {
       const proj = this.getProject(d.projectId);
       if (proj) d.projectName = proj.name;
     }
+    const proj = d.projectId ? this.getProject(d.projectId) : null;
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const invCompanyId = d.companyId || (proj ? (proj.companyId || activeComp) : activeComp);
+
     const inv = {
       id: d.id || d.billNumber || this._genId(),
+      companyId: invCompanyId,
       version: 'v1.0', isRevised: false,
       items: [], versionHistory: [],
       ...d,

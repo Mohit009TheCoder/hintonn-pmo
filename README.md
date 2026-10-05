@@ -377,6 +377,42 @@ firebase deploy --only functions
 firebase deploy
 ```
 
+### ⚠️ Production Hardening — Deploy Checklist
+
+Run these in order when deploying the hardened backend:
+
+```bash
+# 1. Composite index for the role-filtered push multicast query
+#    (users: isActive ASC + role ASC) — without it, role-targeted
+#    FCM multicasts fail silently at runtime.
+firebase deploy --only firestore:indexes
+
+# 2. Security rules (workspace now requires an approved/active user)
+firebase deploy --only firestore:rules
+
+# 3. Cloud Functions (Node 22 runtime, loop guards, chunked batches)
+firebase deploy --only functions
+
+# 4. Hosting (internal scripts/workflows are now excluded from publish)
+firebase deploy --only hosting
+```
+
+**Manual steps that cannot be scripted from the repo:**
+
+1. **Web Push VAPID key** — generate in Firebase Console → Project Settings →
+   Cloud Messaging → *Web Push certificates*, then set
+   `window.FCM_VAPID_KEY = '<your-key>';` in `js/firebase-auth.js` (placeholder
+   line near the top). Without it `getToken()` fails on every modern browser
+   and no push notification can ever be delivered to web clients.
+2. **Approve existing users** — the hardened rules gate the workspace on
+   `users/{uid}.isActive == true`. After deploying rules, open
+   *User Approvals* and approve any existing member whose user doc lacks
+   `isActive: true`, or they will get permission-denied on workspace data.
+3. **Verify Auth settings** — in Firebase Console → Authentication →
+   Settings, confirm only intended signup methods are enabled (self-signups
+   land as pending until approved; the rules no longer trust client-set
+   `isActive`).
+
 ### Local Production Server
 
 ```bash

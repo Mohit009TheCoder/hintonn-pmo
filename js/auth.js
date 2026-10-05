@@ -931,6 +931,9 @@ const Auth = {
     return this.users.map(u => ({
       id: u.id, name: u.name, email: u.email || u.googleEmail,
       role: u.role || 'AI Developer',
+      companyId: u.companyId || this._DEFAULT_COMPANY_ID,
+      companyName: u.companyName || this._DEFAULT_COMPANY_NAME,
+      teamId: u.teamId || '',
       initials: u.initials || u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
       color: u.color || '#94A3B8', 
       approved: u.approved !== false && !u.revoked, 

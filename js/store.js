@@ -714,6 +714,80 @@ const Store = {
     return c;
   },
 
+  // ─── Super Admins & Company Admins (Tenant Isolation & Management) ───
+  getSuperAdmins() {
+    return (this._data && this._data.super_admins) || [];
+  },
+  isSuperAdminEmail(email) {
+    if (!email) return false;
+    const clean = String(email).toLowerCase().trim();
+    const list = this.getSuperAdmins();
+    return list.some(sa => (sa.email || '').toLowerCase() === clean);
+  },
+  addSuperAdmin(d) {
+    const sa = {
+      id: d.id || ('sa_' + this._genId()),
+      email: (d.email || '').toLowerCase().trim(),
+      name: d.name || '',
+      role: 'Super Admin',
+      createdAt: d.createdAt || new Date().toISOString()
+    };
+    if (!this._data.super_admins) this._data.super_admins = [];
+    const idx = this._data.super_admins.findIndex(x => x.email === sa.email || x.id === sa.id);
+    if (idx >= 0) {
+      this._data.super_admins[idx] = Object.assign({}, this._data.super_admins[idx], sa);
+    } else {
+      this._data.super_admins.push(sa);
+    }
+    this._save();
+    this._notify();
+    this._syncToFirestore('super_admins', sa.id, sa);
+    return sa;
+  },
+  removeSuperAdmin(id) {
+    if (!this._data.super_admins) return;
+    this._data.super_admins = this._data.super_admins.filter(x => x.id !== id && x.email !== id);
+    this._save();
+    this._notify();
+    this._deleteFromFirestore('super_admins', id);
+  },
+
+  getCompanyAdmins(companyId) {
+    const list = (this._data && this._data.admins) || [];
+    if (!companyId || companyId === 'all' || companyId === '__all__') return list;
+    return list.filter(a => a.companyId === companyId);
+  },
+  addCompanyAdmin(d) {
+    const adm = {
+      id: d.id || ('adm_' + this._genId()),
+      email: (d.email || '').toLowerCase().trim(),
+      name: d.name || '',
+      companyId: d.companyId || 'comp_hintonn',
+      companyName: d.companyName || '',
+      team: d.team || 'PMO',
+      role: 'Company Admin',
+      createdAt: d.createdAt || new Date().toISOString()
+    };
+    if (!this._data.admins) this._data.admins = [];
+    const idx = this._data.admins.findIndex(x => (x.email === adm.email && x.companyId === adm.companyId) || x.id === adm.id);
+    if (idx >= 0) {
+      this._data.admins[idx] = Object.assign({}, this._data.admins[idx], adm);
+    } else {
+      this._data.admins.push(adm);
+    }
+    this._save();
+    this._notify();
+    this._syncToFirestore('admins', adm.id, adm);
+    return adm;
+  },
+  removeCompanyAdmin(id) {
+    if (!this._data.admins) return;
+    this._data.admins = this._data.admins.filter(x => x.id !== id);
+    this._save();
+    this._notify();
+    this._deleteFromFirestore('admins', id);
+  },
+
   // ─── Invoices (Billing) ───
   // No seed data: invoices only exist when created through the Billing
   // screen or generated from real projects via the engine below.

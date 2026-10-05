@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── Helpers ────────────────────────────────────────────────
+    // ─── Authentication & Identity Helpers ─────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
@@ -11,18 +11,51 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Admin emails — must match Auth._ADMIN_EMAILS / FirebaseAuth ADMIN_EMAILS
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.email in [
-        'mohithintonn@gmail.com',
-        'admin@hintonn.com'
-      ];
+    // ─── Super Admin (Global Platform PMO) ─────────────────────────
+    // Has universal access across all companies/tenants.
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email in [
+          'mohithintonn@gmail.com',
+          'admin@hintonn.com'
+        ] ||
+        (exists(/databases/$(database)/documents/super_admins/$(request.auth.uid))) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super Admin')
+      );
     }
 
-    // Approved workspace users (Admin or active user document)
+    // ─── Company Admin & Super Admin Check ─────────────────────────
+    // Satisfies `isAdmin()` requirement across the system and tests.
+    function isAdmin() {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid))) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true)
+      );
+    }
+
+    // Pre-approved core emails — skip pending state
+    function isPreApproved() {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        request.auth.token.email in [
+          'mohithintonn@gmail.com',
+          'admin@hintonn.com',
+          'hirvihintonn@gmail.com',
+          'preethintonn@gmail.com',
+          'mohitjain12104@gmail.com'
+        ]
+      );
+    }
+
+    // Approved workspace users (Admin, Pre-approved, or active user document)
     function isApprovedUser() {
       return isSignedIn() && (
         isAdmin() ||
+        isPreApproved() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true)
       );
@@ -36,43 +69,57 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
     }
 
-    // Pre-approved emails (must match FirebaseAuth PRE_APPROVED_EMAILS)
-    // may create their own user doc already active — they skip the
-    // admin-approval queue by design.
+    // Pre-approved emails may create their own user doc already active
     function isPreApprovedSelfCreate() {
       return isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.isActive == true
         && request.resource.data.email == request.auth.token.email
-        && request.auth.token.email in [
-          'hirvihintonn@gmail.com',
-          'preethintonn@gmail.com',
-          'mohitjain12104@gmail.com'
-        ];
+        && isPreApproved();
     }
 
-    // Users may only change approval-sensitive fields on their own doc.
-    // isActive / isRejected / isRevoked are ADMIN-ONLY — a client can never
-    // approve itself. role is cosmetic/UI (real gates check email + isActive).
-    // fcmToken / fcmTopics feed push subscriptions (js/fcm.js).
+    // Users may only change non-critical approval fields on their own doc.
     function selfEditFieldsValid() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['name', 'photoURL', 'lastLogin', 'provider', 'role', 'fcmToken', 'fcmTokenUpdatedAt', 'fcmTopics', 'fcmTopicsUpdatedAt']);
+        .hasOnly([
+          'name', 'photoURL', 'lastLogin', 'provider', 'role', 'team',
+          'companyId', 'companyName', 'fcmToken', 'fcmTokenUpdatedAt',
+          'fcmTopics', 'fcmTopicsUpdatedAt'
+        ]);
     }
 
-    // ─── Users (accounts, approvals) ────────────────────────────
+    // ─── Super Admin Table ──────────────────────────────────────
+    // Global platform administrators table
+    match /super_admins/{adminId} {
+      allow read: if isApprovedUser();
+      allow write: if isSuperAdmin();
+    }
+
+    // ─── Company Admin Table ────────────────────────────────────
+    // Company-specific administrators table
+    match /admins/{adminId} {
+      allow read: if isApprovedUser();
+      allow write: if isAdmin();
+    }
+
+    // ─── Users (Accounts, Approvals, Profile) ────────────────────
     match /users/{userId} {
       // Approved users can read user directory; pending signups read their own doc only.
       allow read: if isApprovedUser() || isOwner(userId);
-      // Self-signup (pending), pre-approved signup, admin full control.
+      // Self-signup (pending), pre-approved signup, or admin creation.
       allow create: if isAdmin() || isSelfSignup() || isPreApprovedSelfCreate();
-      allow update: if isAdmin() || (isOwner(userId) && selfEditFieldsValid());
+      allow update: if isAdmin() || (isPreApproved() && isOwner(userId)) || (isOwner(userId) && selfEditFieldsValid());
       allow delete: if isAdmin();
     }
 
-    // ─── Shared workspace data ──────────────────────────────────
-    // Approved active collaborators read/write the shared PMO workspace.
-    // Unapproved or unauthenticated users have no access.
+    // ─── Companies (Tenant Organizations) ────────────────────────
+    // Admins and Super Admins manage company data; approved users read their workspace company
+    match /companies/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Shared Workspace Data (Projects, Tasks, Team) ───────────
+    // Approved active collaborators read/write PMO workspace data.
     match /projects/{docId}      { allow read, write: if isApprovedUser(); }
     match /tasks/{docId}         { allow read, write: if isApprovedUser(); }
     match /milestones/{docId}    { allow read, write: if isApprovedUser(); }
@@ -82,30 +129,33 @@ service cloud.firestore {
     match /notifications/{docId} { allow read, write: if isApprovedUser(); }
     match /members/{docId}       { allow read, write: if isApprovedUser(); }
 
-    // ─── Commercial & financial data — ADMIN ONLY ───────────────
-    // Billing, invoices, bank guarantees, DLP, retention and client
-    // records are restricted to admin accounts. Non-admin clients get
-    // permission-denied on these collections (the UI already gates them).
+    // ─── Commercial & Financial Data — ADMIN ONLY ───────────────
+    // Billing, invoices, bank guarantees, DLP, and retention records
     match /invoices/{docId}          { allow read, write: if isAdmin(); }
     match /bankGuarantees/{docId}    { allow read, write: if isAdmin(); }
     match /dlpRecords/{docId}        { allow read, write: if isAdmin(); }
     match /retentionRecords/{docId}  { allow read, write: if isAdmin(); }
-    match /companies/{docId}         { allow read, write: if isAdmin(); }
 
-    // ─── Settings ───────────────────────────────────────────────
-    // Workspace settings doc is readable by approved members;
-    // only admins can overwrite workspace-wide settings and health score.
+    // ─── Workspace Settings ─────────────────────────────────────
     match /settings/{docId} {
       allow read: if isApprovedUser();
       allow write: if isAdmin();
     }
 
-    // ─── Audit logs ─────────────────────────────────────────────
-    // Written ONLY by Cloud Functions (admin SDK bypasses rules).
+    // ─── Audit Logs ─────────────────────────────────────────────
+    // Written ONLY by Cloud Functions (Admin SDK bypasses rules).
     match /audit_logs/{docId} {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // ─── n8n Automation & Telemetry Collections ─────────────────
+    match /syncLogs/{docId}         { allow read, write: if isAdmin(); }
+    match /bgAlerts/{docId}         { allow read, write: if isAdmin(); }
+    match /healthSnapshots/{docId}   { allow read, write: if isAdmin(); }
+    match /reportLogs/{docId}       { allow read, write: if isAdmin(); }
+    match /dlpAuditLogs/{docId}     { allow read, write: if isAdmin(); }
+    match /executionHealth/{docId}  { allow read, write: if isAdmin(); }
 
     // ─── Deny everything else by default ────────────────────────
     match /{document=**} {

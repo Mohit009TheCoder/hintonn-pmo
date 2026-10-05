@@ -100,6 +100,7 @@ function loadServiceAccount() {
       status: 'active', priority: 'high', progress: 62, startDate: '2025-06-01', endDate: '2027-03-31',
       memberIds: ['m2', 'm3', 'm4', 'm5'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['metro', 'infrastructure', 'government', 'mumbai'], healthScore: 71, completionPercent: 62,
+      companyId: 'comp_metro', team: 'Viaduct Engineering',
       createdAt: now, updatedAt: now
     },
     {
@@ -107,6 +108,7 @@ function loadServiceAccount() {
       status: 'active', priority: 'high', progress: 45, startDate: '2025-09-15', endDate: '2027-06-30',
       memberIds: ['m2', 'm3', 'm7'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['commercial', 'it-park', 'green-building', 'pune'], healthScore: 68, completionPercent: 45,
+      companyId: 'comp_buildcon', team: 'Civil Engineering',
       createdAt: now, updatedAt: now
     },
     {
@@ -114,6 +116,7 @@ function loadServiceAccount() {
       status: 'active', priority: 'medium', progress: 78, startDate: '2025-01-10', endDate: '2026-12-31',
       memberIds: ['m3', 'm4', 'm5', 'm7'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['smart-city', 'water', 'nagpur', 'government'], healthScore: 82, completionPercent: 78,
+      companyId: 'comp_buildcon', team: 'Operations & Site',
       createdAt: now, updatedAt: now
     },
     {
@@ -121,6 +124,7 @@ function loadServiceAccount() {
       status: 'active', priority: 'critical', progress: 55, startDate: '2025-04-01', endDate: '2026-12-15',
       memberIds: ['m2', 'm3', 'm4'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['software', 'ai', 'saas', 'internal'], healthScore: 65, completionPercent: 55,
+      companyId: 'comp_hintonn', team: 'AI & Technology',
       createdAt: now, updatedAt: now
     },
     {
@@ -128,6 +132,7 @@ function loadServiceAccount() {
       status: 'planning', priority: 'medium', progress: 12, startDate: '2026-01-15', endDate: '2028-06-30',
       memberIds: ['m2', 'm5'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['railway', 'heritage', 'ahmedabad', 'government'], healthScore: 45, completionPercent: 12,
+      companyId: 'comp_hintonn', team: 'Civil & Infrastructure',
       createdAt: now, updatedAt: now
     },
     {
@@ -135,6 +140,7 @@ function loadServiceAccount() {
       status: 'completed', priority: 'low', progress: 100, startDate: '2025-03-01', endDate: '2025-11-30',
       memberIds: ['m3', 'm7'], taskIds: [], milestoneIds: [], issueIds: [],
       tags: ['bridge', 'audit', 'structural', 'thane'], healthScore: 95, completionPercent: 100,
+      companyId: 'comp_hintonn', team: 'Operations & Site',
       createdAt: now, updatedAt: now
     },
   ];
@@ -144,31 +150,31 @@ function loadServiceAccount() {
   // ═══════════════════════════════════════════════
   const tasks = [
     // --- Mumbai Metro ---
-    { id: 't1', projectId: 'p1', title: 'Station Dwg 30% Review', description: 'Review 30% station structural drawings for 4 elevated stations.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st1',title:'Structural Dwg',completed:true},{id:'st2',title:'Architectural Dwg',completed:false}], startDate: '2026-09-01', dueDate: '2026-10-15', tags: ['engineering', 'review'], order: 0, createdAt: now, updatedAt: now },
-    { id: 't2', projectId: 'p1', title: 'Piling Progress — Pier P42-P58', description: 'Drive bored piles from Pier P42 to P58 section. 32 piles pending.', isPersonal: false, completed: false, status: 'in-progress', priority: 'critical', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [], startDate: '2026-09-10', dueDate: '2026-10-30', tags: ['piling', 'critical-path'], order: 1, createdAt: now, updatedAt: now },
-    { id: 't3', projectId: 'p1', title: 'Monthly Progress Report — Sep', description: 'Compile September monthly progress report for MMRDA review meeting.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st3',title:'Civil Progress',completed:false},{id:'st4',title:'Financial Summary',completed:false}], startDate: '2026-09-25', dueDate: '2026-10-05', tags: ['report', 'monthly'], order: 2, createdAt: now, updatedAt: now },
-    { id: 't4', projectId: 'p1', title: 'Elevation Survey — Station 5-8', description: 'Topographical survey for elevated corridor between Station 5 to Station 8 alignment.', isPersonal: false, completed: true, status: 'done', priority: 'medium', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st5',title:'Field Survey',completed:true},{id:'st6',title:'Data Processing',completed:true}], startDate: '2026-08-01', dueDate: '2026-09-10', tags: ['survey'], order: 3, createdAt: now, updatedAt: now },
+    { id: 't1', projectId: 'p1', title: 'Station Dwg 30% Review', description: 'Review 30% station structural drawings for 4 elevated stations.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st1',title:'Structural Dwg',completed:true},{id:'st2',title:'Architectural Dwg',completed:false}], startDate: '2026-09-01', dueDate: '2026-10-15', tags: ['engineering', 'review'], order: 0, companyId: 'comp_metro', team: 'Viaduct Engineering', createdAt: now, updatedAt: now },
+    { id: 't2', projectId: 'p1', title: 'Piling Progress — Pier P42-P58', description: 'Drive bored piles from Pier P42 to P58 section. 32 piles pending.', isPersonal: false, completed: false, status: 'in-progress', priority: 'critical', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [], startDate: '2026-09-10', dueDate: '2026-10-30', tags: ['piling', 'critical-path'], order: 1, companyId: 'comp_metro', team: 'Viaduct Engineering', createdAt: now, updatedAt: now },
+    { id: 't3', projectId: 'p1', title: 'Monthly Progress Report — Sep', description: 'Compile September monthly progress report for MMRDA review meeting.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st3',title:'Civil Progress',completed:false},{id:'st4',title:'Financial Summary',completed:false}], startDate: '2026-09-25', dueDate: '2026-10-05', tags: ['report', 'monthly'], order: 2, companyId: 'comp_metro', team: 'Viaduct Engineering', createdAt: now, updatedAt: now },
+    { id: 't4', projectId: 'p1', title: 'Elevation Survey — Station 5-8', description: 'Topographical survey for elevated corridor between Station 5 to Station 8 alignment.', isPersonal: false, completed: true, status: 'done', priority: 'medium', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st5',title:'Field Survey',completed:true},{id:'st6',title:'Data Processing',completed:true}], startDate: '2026-08-01', dueDate: '2026-09-10', tags: ['survey'], order: 3, companyId: 'comp_metro', team: 'Viaduct Engineering', createdAt: now, updatedAt: now },
 
     // --- Pune IT Park ---
-    { id: 't5', projectId: 'p2', title: 'Tower B — Foundation RCC', description: 'Reinforced concrete foundation works for Tower B — 3 basement levels.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st7',title:'PCC',completed:true},{id:'st8',title:'RCC Mat',completed:false}], startDate: '2026-09-05', dueDate: '2026-11-15', tags: ['rcc', 'foundation'], order: 0, createdAt: now, updatedAt: now },
-    { id: 't6', projectId: 'p2', title: 'GRIHA Certification Docs', description: 'Compile GRIHA 5-star green building certification documentation.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [], startDate: '2026-10-01', dueDate: '2026-12-31', tags: ['green', 'griha', 'certification'], order: 1, createdAt: now, updatedAt: now },
-    { id: 't7', projectId: 'p2', title: 'MEP Coordination Meeting', description: 'Resolve clashes between structural and MEP services in Tower A basement.', isPersonal: false, completed: false, status: 'todo', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [], startDate: '2026-09-28', dueDate: '2026-10-02', tags: ['mep', 'coordination'], order: 2, createdAt: now, updatedAt: now },
+    { id: 't5', projectId: 'p2', title: 'Tower B — Foundation RCC', description: 'Reinforced concrete foundation works for Tower B — 3 basement levels.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [{id:'st7',title:'PCC',completed:true},{id:'st8',title:'RCC Mat',completed:false}], startDate: '2026-09-05', dueDate: '2026-11-15', tags: ['rcc', 'foundation'], order: 0, companyId: 'comp_buildcon', team: 'Civil Engineering', createdAt: now, updatedAt: now },
+    { id: 't6', projectId: 'p2', title: 'GRIHA Certification Docs', description: 'Compile GRIHA 5-star green building certification documentation.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [], startDate: '2026-10-01', dueDate: '2026-12-31', tags: ['green', 'griha', 'certification'], order: 1, companyId: 'comp_buildcon', team: 'Civil Engineering', createdAt: now, updatedAt: now },
+    { id: 't7', projectId: 'p2', title: 'MEP Coordination Meeting', description: 'Resolve clashes between structural and MEP services in Tower A basement.', isPersonal: false, completed: false, status: 'todo', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [], startDate: '2026-09-28', dueDate: '2026-10-02', tags: ['mep', 'coordination'], order: 2, companyId: 'comp_buildcon', team: 'Civil Engineering', createdAt: now, updatedAt: now },
 
     // --- Nagpur Water ---
-    { id: 't8', projectId: 'p3', title: 'Zone 3 — Pipe Laying 80%', description: 'Complete HDPE pipe laying for Zone 3 distribution network.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st9',title:'Pipe Supply',completed:true},{id:'st10',title:'Trenching',completed:true},{id:'st11',title:'Pipe Laying',completed:false},{id:'st12',title:'Backfill',completed:false}], startDate: '2026-08-15', dueDate: '2026-10-31', tags: ['pipe', 'zone-3'], order: 0, createdAt: now, updatedAt: now },
-    { id: 't9', projectId: 'p3', title: 'SCADA Integration Testing', description: 'End-to-end SCADA integration test for Zone 1 and Zone 2 meters.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st13',title:'Hardware Setup',completed:true},{id:'st14',title:'Software Config',completed:true},{id:'st15',title:'Integration Test',completed:true}], startDate: '2026-07-01', dueDate: '2026-09-15', tags: ['scada', 'testing'], order: 1, createdAt: now, updatedAt: now },
+    { id: 't8', projectId: 'p3', title: 'Zone 3 — Pipe Laying 80%', description: 'Complete HDPE pipe laying for Zone 3 distribution network.', isPersonal: false, completed: false, status: 'in-progress', priority: 'high', assigneeId: 'm5', assigneeIds: ['m5'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st9',title:'Pipe Supply',completed:true},{id:'st10',title:'Trenching',completed:true},{id:'st11',title:'Pipe Laying',completed:false},{id:'st12',title:'Backfill',completed:false}], startDate: '2026-08-15', dueDate: '2026-10-31', tags: ['pipe', 'zone-3'], order: 0, companyId: 'comp_buildcon', team: 'Operations & Site', createdAt: now, updatedAt: now },
+    { id: 't9', projectId: 'p3', title: 'SCADA Integration Testing', description: 'End-to-end SCADA integration test for Zone 1 and Zone 2 meters.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st13',title:'Hardware Setup',completed:true},{id:'st14',title:'Software Config',completed:true},{id:'st15',title:'Integration Test',completed:true}], startDate: '2026-07-01', dueDate: '2026-09-15', tags: ['scada', 'testing'], order: 1, companyId: 'comp_buildcon', team: 'Operations & Site', createdAt: now, updatedAt: now },
 
     // --- Hintonn PMO ---
-    { id: 't10', projectId: 'p4', title: 'Firebase Backend — Seed Data', description: 'Populate Firestore with realistic EPC/PMO seed data across all 15 collections.', isPersonal: false, completed: false, status: 'todo', priority: 'high', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st16',title:'Define schemas',completed:true},{id:'st17',title:'Write seed script',completed:false}], startDate: '2026-09-28', dueDate: '2026-09-30', tags: ['firebase', 'backend', 'seed'], order: 0, createdAt: now, updatedAt: now },
-    { id: 't11', projectId: 'p4', title: 'Dashboard Screen — Real-time KPIs', description: 'Wire dashboard KPI cards to live Firestore data with onSnapshot.', isPersonal: false, completed: false, status: 'in-progress', priority: 'critical', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st18',title:'KPI queries',completed:true},{id:'st19',title:'Chart rendering',completed:false}], startDate: '2026-09-20', dueDate: '2026-10-10', tags: ['dashboard', 'realtime'], order: 1, createdAt: now, updatedAt: now },
-    { id: 't12', projectId: 'p4', title: 'RBAC — Role Permissions Matrix', description: 'Define and implement granular role-based access control for all 6 roles.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st20',title:'Matrix Design',completed:true},{id:'st21',title:'Implementation',completed:true},{id:'st22',title:'Testing',completed:true}], startDate: '2026-08-01', dueDate: '2026-09-01', tags: ['rbac', 'auth'], order: 2, createdAt: now, updatedAt: now },
+    { id: 't10', projectId: 'p4', title: 'Firebase Backend — Seed Data', description: 'Populate Firestore with realistic EPC/PMO seed data across all 15 collections.', isPersonal: false, completed: false, status: 'todo', priority: 'high', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st16',title:'Define schemas',completed:true},{id:'st17',title:'Write seed script',completed:false}], startDate: '2026-09-28', dueDate: '2026-09-30', tags: ['firebase', 'backend', 'seed'], order: 0, companyId: 'comp_hintonn', team: 'AI & Technology', createdAt: now, updatedAt: now },
+    { id: 't11', projectId: 'p4', title: 'Dashboard Screen — Real-time KPIs', description: 'Wire dashboard KPI cards to live Firestore data with onSnapshot.', isPersonal: false, completed: false, status: 'in-progress', priority: 'critical', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st18',title:'KPI queries',completed:true},{id:'st19',title:'Chart rendering',completed:false}], startDate: '2026-09-20', dueDate: '2026-10-10', tags: ['dashboard', 'realtime'], order: 1, companyId: 'comp_hintonn', team: 'AI & Technology', createdAt: now, updatedAt: now },
+    { id: 't12', projectId: 'p4', title: 'RBAC — Role Permissions Matrix', description: 'Define and implement granular role-based access control for all 6 roles.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm4', assigneeIds: ['m4'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st20',title:'Matrix Design',completed:true},{id:'st21',title:'Implementation',completed:true},{id:'st22',title:'Testing',completed:true}], startDate: '2026-08-01', dueDate: '2026-09-01', tags: ['rbac', 'auth'], order: 2, companyId: 'comp_hintonn', team: 'AI & Technology', createdAt: now, updatedAt: now },
 
     // --- Ahmedabad ---
-    { id: 't13', projectId: 'p5', title: 'Heritage Assessment Report', description: 'Prepare heritage impact assessment for the existing station facade.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [], startDate: '2026-10-01', dueDate: '2026-12-15', tags: ['heritage', 'assessment'], order: 0, createdAt: now, updatedAt: now },
+    { id: 't13', projectId: 'p5', title: 'Heritage Assessment Report', description: 'Prepare heritage impact assessment for the existing station facade.', isPersonal: false, completed: false, status: 'todo', priority: 'medium', assigneeId: 'm7', assigneeIds: ['m7'], creatorId: 'm2', createdBy: 'Preet Hintonn', subtasks: [], startDate: '2026-10-01', dueDate: '2026-12-15', tags: ['heritage', 'assessment'], order: 0, companyId: 'comp_hintonn', team: 'Civil & Infrastructure', createdAt: now, updatedAt: now },
 
     // --- Thane Bridge (completed) ---
-    { id: 't14', projectId: 'p6', title: 'Load Rating Calculation', description: 'Complete load rating per IRC standards for all 14 spans.', isPersonal: false, completed: true, status: 'done', priority: 'medium', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st23',title:'Span 1-7',completed:true},{id:'st24',title:'Span 8-14',completed:true}], startDate: '2025-08-01', dueDate: '2025-10-15', tags: ['load-rating', 'structural'], order: 0, createdAt: now, updatedAt: now },
-    { id: 't15', projectId: 'p6', title: 'Final Audit Report Submission', description: 'Submit comprehensive structural audit report to Maharashtra PWD.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st25',title:'Draft',completed:true},{id:'st26',title:'Review',completed:true},{id:'st27',title:'Submit',completed:true}], startDate: '2025-10-15', dueDate: '2025-11-30', tags: ['audit', 'final'], order: 1, createdAt: now, updatedAt: now },
+    { id: 't14', projectId: 'p6', title: 'Load Rating Calculation', description: 'Complete load rating per IRC standards for all 14 spans.', isPersonal: false, completed: true, status: 'done', priority: 'medium', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st23',title:'Span 1-7',completed:true},{id:'st24',title:'Span 8-14',completed:true}], startDate: '2025-08-01', dueDate: '2025-10-15', tags: ['load-rating', 'structural'], order: 0, companyId: 'comp_hintonn', team: 'Operations & Site', createdAt: now, updatedAt: now },
+    { id: 't15', projectId: 'p6', title: 'Final Audit Report Submission', description: 'Submit comprehensive structural audit report to Maharashtra PWD.', isPersonal: false, completed: true, status: 'done', priority: 'high', assigneeId: 'm3', assigneeIds: ['m3'], creatorId: 'm3', createdBy: 'Mohit Jain', subtasks: [{id:'st25',title:'Draft',completed:true},{id:'st26',title:'Review',completed:true},{id:'st27',title:'Submit',completed:true}], startDate: '2025-10-15', dueDate: '2025-11-30', tags: ['audit', 'final'], order: 1, companyId: 'comp_hintonn', team: 'Operations & Site', createdAt: now, updatedAt: now },
   ];
 
   // Link taskIds to projects
@@ -186,16 +192,16 @@ function loadServiceAccount() {
   // 4. MILESTONES
   // ═══════════════════════════════════════════════
   const milestones = [
-    { id: 'ms1', projectId: 'p1', name: 'Piling Completion — Section A', dueDate: '2026-12-31', status: 'in-progress', taskIds: ['t2'], description: 'Complete all piling for Section A (P42-P58)', createdAt: now },
-    { id: 'ms2', projectId: 'p1', name: 'Station Structural — 60%', dueDate: '2027-02-28', status: 'pending', taskIds: ['t1'], description: 'Reach 60% structural completion on all 8 stations', createdAt: now },
-    { id: 'ms3', projectId: 'p1', name: 'Viaduct Launch — 50%', dueDate: '2027-01-31', status: 'pending', taskIds: [], description: 'Launch girder for 50% of the elevated corridor', createdAt: now },
-    { id: 'ms4', projectId: 'p2', name: 'Tower A — Topping Out', dueDate: '2026-11-30', status: 'in-progress', taskIds: ['t5'], description: 'Complete structural framework for Tower A', createdAt: now },
-    { id: 'ms5', projectId: 'p2', name: 'GRIHA Submission', dueDate: '2027-01-15', status: 'pending', taskIds: ['t6'], description: 'Submit GRIHA 5-star certification application', createdAt: now },
-    { id: 'ms6', projectId: 'p3', name: 'Zone 3 — Complete Laying', dueDate: '2026-10-31', status: 'in-progress', taskIds: ['t8'], description: 'Finish HDPE pipe laying for Zone 3', createdAt: now },
-    { id: 'ms7', projectId: 'p3', name: 'SCADA Go-Live', dueDate: '2026-11-15', status: 'completed', taskIds: ['t9'], description: 'Full SCADA system operational across Zone 1-2', createdAt: now },
-    { id: 'ms8', projectId: 'p4', name: 'MVP Launch', dueDate: '2026-12-15', status: 'in-progress', taskIds: ['t10', 't11'], description: 'Ship MVP of Hintonn PMO platform', createdAt: now },
-    { id: 'ms9', projectId: 'p5', name: 'Heritage Approval', dueDate: '2027-03-31', status: 'pending', taskIds: ['t13'], description: 'Obtain heritage committee approval for redevelopment', createdAt: now },
-    { id: 'ms10', projectId: 'p6', name: 'Report Submitted', dueDate: '2025-11-30', status: 'completed', taskIds: ['t15'], description: 'Final audit report submitted to PWD', createdAt: now },
+    { id: 'ms1', projectId: 'p1', name: 'Piling Completion — Section A', dueDate: '2026-12-31', status: 'in-progress', taskIds: ['t2'], description: 'Complete all piling for Section A (P42-P58)', companyId: 'comp_metro', createdAt: now },
+    { id: 'ms2', projectId: 'p1', name: 'Station Structural — 60%', dueDate: '2027-02-28', status: 'pending', taskIds: ['t1'], description: 'Reach 60% structural completion on all 8 stations', companyId: 'comp_metro', createdAt: now },
+    { id: 'ms3', projectId: 'p1', name: 'Viaduct Launch — 50%', dueDate: '2027-01-31', status: 'pending', taskIds: [], description: 'Launch girder for 50% of the elevated corridor', companyId: 'comp_metro', createdAt: now },
+    { id: 'ms4', projectId: 'p2', name: 'Tower A — Topping Out', dueDate: '2026-11-30', status: 'in-progress', taskIds: ['t5'], description: 'Complete structural framework for Tower A', companyId: 'comp_buildcon', createdAt: now },
+    { id: 'ms5', projectId: 'p2', name: 'GRIHA Submission', dueDate: '2027-01-15', status: 'pending', taskIds: ['t6'], description: 'Submit GRIHA 5-star certification application', companyId: 'comp_buildcon', createdAt: now },
+    { id: 'ms6', projectId: 'p3', name: 'Zone 3 — Complete Laying', dueDate: '2026-10-31', status: 'in-progress', taskIds: ['t8'], description: 'Finish HDPE pipe laying for Zone 3', companyId: 'comp_buildcon', createdAt: now },
+    { id: 'ms7', projectId: 'p3', name: 'SCADA Go-Live', dueDate: '2026-11-15', status: 'completed', taskIds: ['t9'], description: 'Full SCADA system operational across Zone 1-2', companyId: 'comp_buildcon', createdAt: now },
+    { id: 'ms8', projectId: 'p4', name: 'MVP Launch', dueDate: '2026-12-15', status: 'in-progress', taskIds: ['t10', 't11'], description: 'Ship MVP of Hintonn PMO platform', companyId: 'comp_hintonn', createdAt: now },
+    { id: 'ms9', projectId: 'p5', name: 'Heritage Approval', dueDate: '2027-03-31', status: 'pending', taskIds: ['t13'], description: 'Obtain heritage committee approval for redevelopment', companyId: 'comp_hintonn', createdAt: now },
+    { id: 'ms10', projectId: 'p6', name: 'Report Submitted', dueDate: '2025-11-30', status: 'completed', taskIds: ['t15'], description: 'Final audit report submitted to PWD', companyId: 'comp_hintonn', createdAt: now },
   ];
 
   // Link milestoneIds to projects
@@ -213,12 +219,12 @@ function loadServiceAccount() {
   // 5. ISSUES
   // ═══════════════════════════════════════════════
   const issues = [
-    { id: 'i1', projectId: 'p1', title: 'Pile P48 — Rebar Corrosion Detected', description: 'Rebar corrosion observed in bored pile P48 during integrity testing. Requires remedial action.', status: 'open', priority: 'high', assigneeId: 'm5', createdAt: now, updatedAt: now },
-    { id: 'i2', projectId: 'p1', title: 'Land Acquisition Delay — Zone 2', description: 'MMRDA land acquisition for Zone 2 alignment behind schedule by 4 weeks.', status: 'open', priority: 'critical', assigneeId: 'm2', createdAt: now, updatedAt: now },
-    { id: 'i3', projectId: 'p2', title: 'MEP Clash — Basement Level B2', description: 'Major clash between fire services duct and structural beam at B2 level — Tower A.', status: 'open', priority: 'high', assigneeId: 'm4', createdAt: now, updatedAt: now },
-    { id: 'i4', projectId: 'p2', title: 'Concrete Mix Design — Deviation', description: 'M30 concrete cubes from Batch 47 showing 5% lower strength than design mix.', status: 'in-progress', priority: 'medium', assigneeId: 'm7', createdAt: now, updatedAt: now },
-    { id: 'i5', projectId: 'p3', title: 'SCADA Signal Loss — Meter M-142', description: 'Intermittent SCADA signal loss from pressure transmitter M-142 in Zone 2.', status: 'resolved', priority: 'medium', assigneeId: 'm7', createdAt: now, updatedAt: now },
-    { id: 'i6', projectId: 'p4', title: 'Firebase Auth — Popup Blocker Issue', description: 'Google sign-in popup blocked on Safari and Firefox — needs redirect fallback.', status: 'open', priority: 'high', assigneeId: 'm3', createdAt: now, updatedAt: now },
+    { id: 'i1', projectId: 'p1', title: 'Pile P48 — Rebar Corrosion Detected', description: 'Rebar corrosion observed in bored pile P48 during integrity testing. Requires remedial action.', status: 'open', priority: 'high', assigneeId: 'm5', companyId: 'comp_metro', createdAt: now, updatedAt: now },
+    { id: 'i2', projectId: 'p1', title: 'Land Acquisition Delay — Zone 2', description: 'MMRDA land acquisition for Zone 2 alignment behind schedule by 4 weeks.', status: 'open', priority: 'critical', assigneeId: 'm2', companyId: 'comp_metro', createdAt: now, updatedAt: now },
+    { id: 'i3', projectId: 'p2', title: 'MEP Clash — Basement Level B2', description: 'Major clash between fire services duct and structural beam at B2 level — Tower A.', status: 'open', priority: 'high', assigneeId: 'm4', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'i4', projectId: 'p2', title: 'Concrete Mix Design — Deviation', description: 'M30 concrete cubes from Batch 47 showing 5% lower strength than design mix.', status: 'in-progress', priority: 'medium', assigneeId: 'm7', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'i5', projectId: 'p3', title: 'SCADA Signal Loss — Meter M-142', description: 'Intermittent SCADA signal loss from pressure transmitter M-142 in Zone 2.', status: 'resolved', priority: 'medium', assigneeId: 'm7', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'i6', projectId: 'p4', title: 'Firebase Auth — Popup Blocker Issue', description: 'Google sign-in popup blocked on Safari and Firefox — needs redirect fallback.', status: 'open', priority: 'high', assigneeId: 'm3', companyId: 'comp_hintonn', createdAt: now, updatedAt: now },
   ];
 
   // Link issueIds to projects
@@ -251,12 +257,12 @@ function loadServiceAccount() {
   // 8. BANK GUARANTEES
   // ═══════════════════════════════════════════════
   const bankGuarantees = [
-    { id: 'bg1', ref: 'BG/MMRDA/PBG/001', projectName: 'Mumbai Metro Line 3', type: 'Performance BG', bank: 'State Bank of India', amount: 14250000, issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'active', daysLeft: 610, risk: 'safe', createdAt: now, updatedAt: now },
-    { id: 'bg2', ref: 'BG/MMRDA/ABG/001', projectName: 'Mumbai Metro Line 3', type: 'Advance BG', bank: 'HDFC Bank', amount: 28500000, issueDate: '2025-06-15', expiryDate: '2026-12-15', status: 'active', daysLeft: 77, risk: 'warning', createdAt: now, updatedAt: now },
-    { id: 'bg3', ref: 'BG/PUNE/PBG/001', projectName: 'Pune IT Park — Phase 2', type: 'Performance BG', bank: 'ICICI Bank', amount: 8720000, issueDate: '2025-09-15', expiryDate: '2027-09-15', status: 'active', daysLeft: 716, risk: 'safe', createdAt: now, updatedAt: now },
-    { id: 'bg4', ref: 'BG/NAGPUR/PBG/001', projectName: 'Nagpur Smart City', type: 'Performance BG', bank: 'Bank of Baroda', amount: 5680000, issueDate: '2025-01-10', expiryDate: '2026-06-30', status: 'expired', daysLeft: 0, risk: 'expired', createdAt: now, updatedAt: now },
-    { id: 'bg5', ref: 'BG/NAGPUR/MBG/001', projectName: 'Nagpur Smart City', type: 'Retention BG', bank: 'Punjab National Bank', amount: 2840000, issueDate: '2025-07-01', expiryDate: '2027-01-01', status: 'active', daysLeft: 459, risk: 'safe', createdAt: now, updatedAt: now },
-    { id: 'bg6', ref: 'BG/PUNE/ABG/001', projectName: 'Pune IT Park — Phase 2', type: 'Advance BG', bank: 'Axis Bank', amount: 17440000, issueDate: '2025-09-20', expiryDate: '2026-10-15', status: 'active', daysLeft: 16, risk: 'critical', createdAt: now, updatedAt: now },
+    { id: 'bg1', ref: 'BG/MMRDA/PBG/001', projectName: 'Mumbai Metro Line 3', type: 'Performance BG', bank: 'State Bank of India', amount: 14250000, issueDate: '2025-06-01', expiryDate: '2027-06-01', status: 'active', daysLeft: 610, risk: 'safe', companyId: 'comp_metro', createdAt: now, updatedAt: now },
+    { id: 'bg2', ref: 'BG/MMRDA/ABG/001', projectName: 'Mumbai Metro Line 3', type: 'Advance BG', bank: 'HDFC Bank', amount: 28500000, issueDate: '2025-06-15', expiryDate: '2026-12-15', status: 'active', daysLeft: 77, risk: 'warning', companyId: 'comp_metro', createdAt: now, updatedAt: now },
+    { id: 'bg3', ref: 'BG/PUNE/PBG/001', projectName: 'Pune IT Park — Phase 2', type: 'Performance BG', bank: 'ICICI Bank', amount: 8720000, issueDate: '2025-09-15', expiryDate: '2027-09-15', status: 'active', daysLeft: 716, risk: 'safe', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'bg4', ref: 'BG/NAGPUR/PBG/001', projectName: 'Nagpur Smart City', type: 'Performance BG', bank: 'Bank of Baroda', amount: 5680000, issueDate: '2025-01-10', expiryDate: '2026-06-30', status: 'expired', daysLeft: 0, risk: 'expired', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'bg5', ref: 'BG/NAGPUR/MBG/001', projectName: 'Nagpur Smart City', type: 'Retention BG', bank: 'Punjab National Bank', amount: 2840000, issueDate: '2025-07-01', expiryDate: '2027-01-01', status: 'active', daysLeft: 459, risk: 'safe', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'bg6', ref: 'BG/PUNE/ABG/001', projectName: 'Pune IT Park — Phase 2', type: 'Advance BG', bank: 'Axis Bank', amount: 17440000, issueDate: '2025-09-20', expiryDate: '2026-10-15', status: 'active', daysLeft: 16, risk: 'critical', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
   ];
 
   // ═══════════════════════════════════════════════
@@ -274,6 +280,7 @@ function loadServiceAccount() {
       defectClaims: [
         { id: 'dc1', description: 'Expansion joint sealant peeling at Span 6 — re-application required', severity: 'Minor', sla: '7 Days', status: 'open', raisedBy: 'Mohit Jain', raisedAt: '2026-09-12' }
       ],
+      companyId: 'comp_hintonn',
       createdAt: now, updatedAt: now
     },
     {
@@ -287,6 +294,7 @@ function loadServiceAccount() {
         { id: 'dc2', description: 'Leak at HDPE fusion joint Ch-4+350, Zone 3 — hydrostatic test failure', severity: 'Critical', sla: '24 Hours', status: 'open', raisedBy: 'Mohit Jain', raisedAt: '2026-09-18' },
         { id: 'dc3', description: 'SCADA pressure transmitter M-142 reading drift — recalibration required', severity: 'Moderate', sla: '48 Hours', status: 'open', raisedBy: 'Preet Hintonn', raisedAt: '2026-09-24' }
       ],
+      companyId: 'comp_buildcon',
       createdAt: now, updatedAt: now
     },
   ];
@@ -295,10 +303,10 @@ function loadServiceAccount() {
   // 10. RETENTION RECORDS
   // ═══════════════════════════════════════════════
   const retentionRecords = [
-    { id: 'ret1', projectName: 'Mumbai Metro Line 3', projectId: 'p1', clientName: 'MMRDA', retentionPercent: 5, contractValue: 1425000000, retentionAmount: 71250000, releasedAmount: 28500000, pendingRelease: 42750000, status: 'Partial', releaseDate: '2027-06-30', remarks: '5% retention — released in 2 tranches post DLP', createdAt: now, updatedAt: now },
-    { id: 'ret2', projectName: 'Nagpur Smart City — Water Supply', projectId: 'p3', clientName: 'Nagpur Smart City Corp', retentionPercent: 5, contractValue: 568000000, retentionAmount: 28400000, releasedAmount: 14200000, pendingRelease: 14200000, status: 'Partial', releaseDate: '2026-12-31', remarks: 'First tranche released on SCADA go-live', createdAt: now, updatedAt: now },
-    { id: 'ret3', projectName: 'Pune IT Park — Phase 2', projectId: 'p2', clientName: 'Pune MIRADA', retentionPercent: 5, contractValue: 872000000, retentionAmount: 43600000, releasedAmount: 0, pendingRelease: 43600000, status: 'Held', releaseDate: '2027-09-30', remarks: 'No release yet — project in progress', createdAt: now, updatedAt: now },
-    { id: 'ret4', projectName: 'Thane Creek Bridge Audit', projectId: 'p6', clientName: 'Maharashtra PWD', retentionPercent: 10, contractValue: 4200000, retentionAmount: 420000, releasedAmount: 210000, pendingRelease: 210000, status: 'Partial', releaseDate: '2026-11-30', remarks: '50% released on interim completion certificate; final tranche pending DLP exit sign-off', createdAt: now, updatedAt: now },
+    { id: 'ret1', projectName: 'Mumbai Metro Line 3', projectId: 'p1', clientName: 'MMRDA', retentionPercent: 5, contractValue: 1425000000, retentionAmount: 71250000, releasedAmount: 28500000, pendingRelease: 42750000, status: 'Partial', releaseDate: '2027-06-30', remarks: '5% retention — released in 2 tranches post DLP', companyId: 'comp_metro', createdAt: now, updatedAt: now },
+    { id: 'ret2', projectName: 'Nagpur Smart City — Water Supply', projectId: 'p3', clientName: 'Nagpur Smart City Corp', retentionPercent: 5, contractValue: 568000000, retentionAmount: 28400000, releasedAmount: 14200000, pendingRelease: 14200000, status: 'Partial', releaseDate: '2026-12-31', remarks: 'First tranche released on SCADA go-live', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'ret3', projectName: 'Pune IT Park — Phase 2', projectId: 'p2', clientName: 'Pune MIRADA', retentionPercent: 5, contractValue: 872000000, retentionAmount: 43600000, releasedAmount: 0, pendingRelease: 43600000, status: 'Held', releaseDate: '2027-09-30', remarks: 'No release yet — project in progress', companyId: 'comp_buildcon', createdAt: now, updatedAt: now },
+    { id: 'ret4', projectName: 'Thane Creek Bridge Audit', projectId: 'p6', clientName: 'Maharashtra PWD', retentionPercent: 10, contractValue: 4200000, retentionAmount: 420000, releasedAmount: 210000, pendingRelease: 210000, status: 'Partial', releaseDate: '2026-11-30', remarks: '50% released on interim completion certificate; final tranche pending DLP exit sign-off', companyId: 'comp_hintonn', createdAt: now, updatedAt: now },
   ];
 
   // ═══════════════════════════════════════════════
@@ -376,10 +384,10 @@ function loadServiceAccount() {
   // 15. USERS (auth records)
   // ═══════════════════════════════════════════════
   const users = [
-    { uid: 'seed_mohit2', name: 'Mohit Jain', email: 'mohithintonn@gmail.com', photoURL: null, role: 'Admin', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-04-01'), lastLogin: ts('2026-09-28') },
-    { uid: 'seed_preet1', name: 'Preet Hintonn', email: 'preethintonn@gmail.com', photoURL: null, role: 'Project Manager', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-06-01'), lastLogin: ts('2026-09-27') },
-    { uid: 'seed_hirvi1', name: 'Hirvi Hintonn', email: 'hirvihintonn@gmail.com', photoURL: null, role: 'PMO', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-07-01'), lastLogin: ts('2026-09-26') },
-    { uid: 'seed_ayush1', name: 'Ayush Desai', email: 'ayush@hintonn.com', photoURL: null, role: 'Admin', isActive: true, isRejected: false, provider: 'password', createdAt: ts('2025-04-01'), lastLogin: ts('2026-09-20') },
+    { uid: 'seed_mohit2', name: 'Mohit Jain', email: 'mohithintonn@gmail.com', photoURL: null, role: 'Admin', isSuperAdmin: true, companyId: 'all', companyName: 'Hintonn Global', team: 'PMO', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-04-01'), lastLogin: ts('2026-09-28') },
+    { uid: 'seed_preet1', name: 'Preet Hintonn', email: 'preethintonn@gmail.com', photoURL: null, role: 'Project Manager', isSuperAdmin: false, companyId: 'comp_hintonn', companyName: 'Hintonn AI Infrastructure', team: 'AI & Technology', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-06-01'), lastLogin: ts('2026-09-27') },
+    { uid: 'seed_hirvi1', name: 'Hirvi Hintonn', email: 'hirvihintonn@gmail.com', photoURL: null, role: 'PMO', isSuperAdmin: false, companyId: 'comp_hintonn', companyName: 'Hintonn AI Infrastructure', team: 'Operations & Site', isActive: true, isRejected: false, provider: 'google', createdAt: ts('2025-07-01'), lastLogin: ts('2026-09-26') },
+    { uid: 'seed_ayush1', name: 'Ayush Desai', email: 'ayush@hintonn.com', photoURL: null, role: 'Admin', isSuperAdmin: false, companyId: 'comp_hintonn', companyName: 'Hintonn AI Infrastructure', team: 'Leadership', isActive: true, isRejected: false, provider: 'password', createdAt: ts('2025-04-01'), lastLogin: ts('2026-09-20') },
   ];
 
   // ═══════════════════════════════════════════════
@@ -387,6 +395,8 @@ function loadServiceAccount() {
   // ═══════════════════════════════════════════════
   console.log('\n🚀 Seeding Firestore...\n');
 
+  await seedCollection('super_admins', super_admins);
+  await seedCollection('admins', admins);
   await seedCollection('members', members);
   await seedCollection('projects', projects);
   await seedCollection('tasks', tasks);
@@ -403,12 +413,14 @@ function loadServiceAccount() {
   await seedCollection('users', users);
 
   // Summary
-  console.log('\n🎉 All 14 Firestore collections seeded successfully!');
-  console.log('   Collections: members, projects, tasks, milestones, issues,');
+  console.log('\n🎉 All 16 Firestore collections seeded successfully!');
+  console.log('   Collections: super_admins, admins, members, projects, tasks, milestones, issues,');
   console.log('   bankGuarantees, dlpRecords, retentionRecords, comments,');
   console.log('   activities, notifications, settings, users');
   console.log('   (invoices + companies intentionally omitted — generated in-app from real projects)');
   console.log('\n📊 Data Summary:');
+  console.log(`   Super Admins:         ${super_admins.length}`);
+  console.log(`   Admins (Company):     ${admins.length}`);
   console.log(`   Members:              ${members.length}`);
   console.log(`   Projects:             ${projects.length}`);
   console.log(`   Tasks:                ${tasks.length}`);
@@ -425,7 +437,7 @@ function loadServiceAccount() {
   console.log(`   Settings:             1 (workspace_settings)`);
   console.log(`   Users:                ${users.length}`);
   console.log(`   ─────────────────────────────`);
-  const total = members.length + projects.length + tasks.length + milestones.length + issues.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
+  const total = super_admins.length + admins.length + members.length + projects.length + tasks.length + milestones.length + issues.length + bankGuarantees.length + dlpRecords.length + retentionRecords.length + comments.length + activities.length + notifications.length + 1 + users.length;
   console.log(`   TOTAL:                ${total} documents\n`);
 }
 

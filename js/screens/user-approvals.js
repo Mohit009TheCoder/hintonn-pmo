@@ -626,10 +626,11 @@ const UserApprovalsScreen = {
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="font-size:15px;font-weight:700;color:var(--color-text-primary);">${Utils.escapeHtml(u.name)}</span>
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-bg-page);border:1px solid var(--color-border-subtle);color:var(--color-text-secondary)">🏢 ${Utils.escapeHtml(u.companyName || 'Hintonn AI')} · ${Utils.escapeHtml(u.team || 'AI & Tech')}</span>
             <span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:0.03em;">Pending</span>
           </div>
           <div style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">${Utils.escapeHtml(u.email)}</div>
-          <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <span>Role: <strong style="color:var(--color-text-muted);">${Utils.escapeHtml(u.role)}</strong></span>
             <span>Source: <strong style="color:var(--color-text-muted);">${u.requestSource || 'Sign Up'}</strong></span>
             <span>Requested: <strong style="color:var(--color-text-muted);">${requestTime}</strong></span>
@@ -682,9 +683,10 @@ const UserApprovalsScreen = {
       <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--color-surface);border:1px solid ${isRevoked ? '#FECACA' : 'var(--color-border)'};border-radius:var(--radius-md);transition:border-color 150ms;" onmouseover="this.style.borderColor='var(--color-primary-200)'" onmouseout="this.style.borderColor='${isRevoked ? '#FECACA' : 'var(--color-border)'}'">
         <div class="avatar avatar-md" style="background:${u.color || '#94A3B8'};font-weight:700;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;">${u.initials || '??'}</div>
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="font-size:14px;font-weight:700;color:var(--color-text-primary);">${Utils.escapeHtml(u.name)}</span>
             ${isCore ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 6px;border-radius:var(--radius-pill);font-weight:600;">Core</span>' : ''}
+            <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-bg-page);border:1px solid var(--color-border-subtle);color:var(--color-text-secondary)">🏢 ${Utils.escapeHtml(u.companyName || 'Hintonn AI')} · ${Utils.escapeHtml(u.team || 'AI & Tech')}</span>
             <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:var(--radius-pill);background:${statusBg};color:${statusColor};">
               ${statusIcon} ${statusText}
             </span>

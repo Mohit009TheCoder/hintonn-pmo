@@ -81,6 +81,16 @@ const Store = {
       }
     }
   },
+
+  // Debounced save for Firestore realtime snapshots to prevent repeated
+  // full-collection JSON stringify operations during burst events.
+  _scheduleSave() {
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      this._save();
+      this._saveTimer = null;
+    }, 150);
+  },
   _notify() { this._listeners.forEach(fn => fn()); },
   subscribe(fn) { this._listeners.push(fn); },
 
@@ -144,11 +154,13 @@ const Store = {
       const unsub = this._db.collection(colName).onSnapshot(snapshot => {
         if (!snapshot) return;
 
-        // If collection is completely empty on remote, update if remote is authoritative
+        // If collection is completely empty on remote, update only if local previously had items
         if (snapshot.empty) {
-          this._data[colName] = [];
-          this._save();
-          this._notify();
+          if (Array.isArray(this._data[colName]) && this._data[colName].length > 0) {
+            this._data[colName] = [];
+            this._scheduleSave();
+            this._notify();
+          }
           return;
         }
 
@@ -191,7 +203,7 @@ const Store = {
             this._data.projects.forEach(p => this._recalcProgress(p.id));
           }
 
-          this._save();
+          this._scheduleSave();
           this._notify();
         }
       }, err => {

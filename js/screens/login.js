@@ -604,11 +604,15 @@ const LoginScreen = {
   async handleSignUp() {
     const nameEl = document.getElementById('signup-name');
     const emailEl = document.getElementById('signup-email');
+    const companyEl = document.getElementById('signup-company');
+    const teamEl = document.getElementById('signup-team');
     const passEl = document.getElementById('signup-password');
     const confirmEl = document.getElementById('signup-confirm-password');
 
     const name = nameEl ? nameEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
+    const companyId = companyEl ? companyEl.value : 'comp_hintonn';
+    const team = teamEl ? teamEl.value : 'AI & Technology';
     const pass = passEl ? passEl.value : '';
     const confirm = confirmEl ? confirmEl.value : '';
 
@@ -623,7 +627,7 @@ const LoginScreen = {
       return;
     }
 
-    if (pass.length < 8 || !/[0-9]/.test(pass) || !/[!@#$%^&*(),.?":{}|<>_\-+=\/\[\]~`]/.test(pass)) {
+    if (pass.length < 8 || !/[0-9]/.test(pass) || !/[!@#$%^&*(),.?":{}|<>_\-+=/[\]~`]/.test(pass)) {
       this.showError('Password must be at least 8 characters long, including one number and one special character.');
       return;
     }
@@ -633,7 +637,7 @@ const LoginScreen = {
       return;
     }
 
-    const res = await Auth.signUp(name, email, pass);
+    const res = await Auth.signUp(name, email, pass, companyId, team);
     if (res.success || res.pendingApproval) {
       this.clearError();
       if (typeof Toast !== 'undefined') Toast.show('Access request submitted! Waiting for admin approval.', 'success');

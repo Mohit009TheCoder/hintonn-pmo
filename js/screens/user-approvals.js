@@ -268,13 +268,24 @@ const UserApprovalsScreen = {
     }
   },
 
+  _companyFilter: 'all',
+
+  setCompanyFilter(cid) {
+    this._companyFilter = cid;
+    this.refresh();
+  },
+
   openAddUserModal() {
+    const isSuperAdmin = typeof Auth !== 'undefined' && typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin();
+    const currentCompanyId = (typeof Auth !== 'undefined' && Auth.getCompanyId && Auth.getCompanyId()) || 'comp_hintonn';
+    const companies = (typeof Store !== 'undefined' && typeof Store.getCompanies === 'function') ? Store.getCompanies() : [];
+
     const bodyHtml = `
       <form id="admin-add-user-form" onsubmit="event.preventDefault(); UserApprovalsScreen.saveNewUser();" style="display:flex;flex-direction:column;gap:14px;">
         <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:8px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" width="16" height="16" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <div style="font-size:12px;color:#1E40AF;line-height:1.5;">
-            <strong>Admin Direct Add</strong> — User will be pre-approved and can login immediately with the credentials you set.
+            <strong>Admin Direct Add</strong> — User will be pre-approved for their company & team workspace.
           </div>
         </div>
         <div>
@@ -286,11 +297,28 @@ const UserApprovalsScreen = {
           <input type="email" id="admin-add-email" class="form-input" placeholder="e.g. john@hintonn.com" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
         </div>
         <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Company / Organization</label>
+          <select id="admin-add-company" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            ${companies.map(c => `<option value="${Utils.escapeHtml(c.id)}" ${(!isSuperAdmin && currentCompanyId === c.id) ? 'selected' : ''}>${Utils.escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Department / Team</label>
+          <select id="admin-add-team" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            <option value="AI & Technology">🤖 AI & Technology</option>
+            <option value="Civil & Infrastructure">🏗️ Civil & Infrastructure</option>
+            <option value="Project Management">📋 Project Management (PMO)</option>
+            <option value="Operations & Site">🚜 Operations & Site</option>
+            <option value="Finance & Commercial">💼 Finance & Commercial</option>
+          </select>
+        </div>
+        <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role</label>
           <select id="admin-add-role" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
             <option value="AI Developer">AI Developer</option>
             <option value="Senior AI Engineer">Senior AI Engineer</option>
             <option value="Project Manager">Project Manager</option>
+            <option value="Admin">Company Admin</option>
             <option value="Data Engineer">Data Engineer</option>
             <option value="QA Specialist">QA Specialist</option>
             <option value="UI/UX Designer">UI/UX Designer</option>
@@ -313,17 +341,21 @@ const UserApprovalsScreen = {
     const nameEl = document.getElementById('admin-add-name');
     const emailEl = document.getElementById('admin-add-email');
     const roleEl = document.getElementById('admin-add-role');
+    const companyEl = document.getElementById('admin-add-company');
+    const teamEl = document.getElementById('admin-add-team');
 
     const name = nameEl ? nameEl.value.trim() : '';
     const email = emailEl ? emailEl.value.trim() : '';
     const role = roleEl ? roleEl.value : 'AI Developer';
+    const companyId = companyEl ? companyEl.value : 'comp_hintonn';
+    const team = teamEl ? teamEl.value : 'AI & Technology';
 
     if (!name) { Toast.show('Please enter a name.', 'error'); return; }
     if (!email || !email.includes('@')) { Toast.show('Please enter a valid email.', 'error'); return; }
 
-    const res = Auth.adminAddUser(name, email, role);
+    const res = Auth.adminAddUser(name, email, role, companyId, team);
     if (res && res.success) {
-      Toast.show(`✅ ${name} added and approved.`, 'success');
+      Toast.show(`✅ ${name} added and approved for ${res.user?.companyName || 'company'}.`, 'success');
       Modal.closeAll();
       this.refresh();
     } else {

@@ -1779,7 +1779,16 @@ const Store = {
   // ─── Seed Data ───
   _seedData() {
     const members = [
-      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
+      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', activeTasks: 0, completedTasks: 0, hoursLogged: 0, isSuperAdmin: true, companyId: 'all', team: 'PMO' }
+    ];
+
+    const super_admins = [
+      { id: 'sa_mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'Super Admin', createdAt: '2025-01-01T00:00:00.000Z' },
+      { id: 'sa_admin', email: 'admin@hintonn.com', name: 'Hintonn Global Admin', role: 'Super Admin', createdAt: '2025-01-01T00:00:00.000Z' }
+    ];
+
+    const admins = [
+      { id: 'adm_mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', companyId: 'comp_hintonn', companyName: 'Hintonn AI Infrastructure', team: 'PMO', role: 'Company Admin', createdAt: '2025-01-01T00:00:00.000Z' }
     ];
 
     const projects = [];
@@ -1793,10 +1802,10 @@ const Store = {
     const bankGuarantees = [];
     const dlpRecords = [];
     const retentionRecords = [];
-    const companies = [];
+    const companies = this._defaultCompanies();
 
     return { projects, tasks, members, milestones, issues, comments, notifications, activities,
-      invoices, bankGuarantees, dlpRecords, retentionRecords, companies,
+      invoices, bankGuarantees, dlpRecords, retentionRecords, companies, super_admins, admins,
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };

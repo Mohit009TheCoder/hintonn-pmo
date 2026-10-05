@@ -1066,7 +1066,5 @@ const Auth = {
     }
     window.location.hash = '#login';
     if (typeof App !== 'undefined' && typeof App.handleRoute === 'function') App.handleRoute();
-  },
-
-  isAdmin() { return this.currentUser && this.currentUser.role === 'Admin'; }
+  }
 };

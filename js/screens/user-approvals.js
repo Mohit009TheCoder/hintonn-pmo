@@ -400,7 +400,13 @@ const UserApprovalsScreen = {
       });
     }
 
-    const allUsers = Auth.getAllUsersWithStatus();
+    const isSuperAdmin = typeof Auth !== 'undefined' && typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin();
+    const companies = (typeof Store !== 'undefined' && typeof Store.getCompanies === 'function') ? Store.getCompanies() : [];
+
+    let allUsers = Auth.getAllUsersWithStatus();
+    if (isSuperAdmin && this._companyFilter && this._companyFilter !== 'all') {
+      allUsers = allUsers.filter(u => u.companyId === this._companyFilter);
+    }
     const pending = allUsers.filter(u => !u.approved && !u.rejected && !u.revoked);
     const approved = allUsers.filter(u => u.approved && !u.revoked);
     const revoked = allUsers.filter(u => u.revoked);
@@ -436,6 +442,17 @@ const UserApprovalsScreen = {
           </button>
         </div>
       </div>
+
+      ${isSuperAdmin ? `
+      <!-- Super Admin Company Filter -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:8px 14px;width:fit-content;">
+        <span style="font-size:13px;font-weight:600;color:var(--color-text-secondary);">🏢 Company View:</span>
+        <select id="approvalsCompanyFilter" onchange="UserApprovalsScreen.setCompanyFilter(this.value)" style="padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--color-border);background:var(--color-surface);font-size:13px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">
+          <option value="all" ${this._companyFilter === 'all' ? 'selected' : ''}>All Companies (Global)</option>
+          ${companies.map(c => `<option value="${Utils.escapeHtml(c.id)}" ${this._companyFilter === c.id ? 'selected' : ''}>${Utils.escapeHtml(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      ` : ''}
 
       <!-- Filter Tabs -->
       <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:4px;width:fit-content;flex-wrap:wrap;">

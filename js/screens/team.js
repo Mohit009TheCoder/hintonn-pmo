@@ -2,6 +2,56 @@
 const TeamScreen = {
   _expandedMembers: {},
   _expandedProjects: {},
+  _teamFilter: 'all',
+
+  setTeamFilter(teamId) {
+    this._teamFilter = teamId;
+    this.refresh();
+  },
+
+  openCreateTeamModal() {
+    const bodyHtml = `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="padding:10px 12px;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:12.5px;color:var(--color-text-muted);line-height:1.5;">
+          Squads partition members and workflows within the active company.
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Squad Name <span style="color:#EF4444">*</span></label>
+          <input type="text" id="new-team-name" class="form-input" placeholder="e.g. AI Prompt & Model Ops" required style="width:100%;height:40px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong);font-size:14px;" />
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Description / Responsibilities</label>
+          <input type="text" id="new-team-desc" class="form-input" placeholder="e.g. LLM fine-tuning, latency optimization & prompt architectures" style="width:100%;height:40px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong);font-size:14px;" />
+        </div>
+      </div>
+    `;
+    const footerHtml = `
+      <button type="button" class="btn btn-secondary" onclick="Modal.closeAll()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="TeamScreen.saveNewTeam()">Create Squad</button>
+    `;
+    Modal.open('Create Team Squad', bodyHtml, footerHtml);
+  },
+
+  saveNewTeam() {
+    const nameEl = document.getElementById('new-team-name');
+    const descEl = document.getElementById('new-team-desc');
+    const name = nameEl ? nameEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+    if (!name) { Toast.show('Please provide a squad name.', 'error'); return; }
+
+    const activeComp = Store.getActiveCompanyId() !== 'all' ? Store.getActiveCompanyId() : (typeof Auth !== 'undefined' ? Auth.getCompanyId() : 'comp_hintonn');
+    const teamId = 'team_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 16);
+
+    Store.createTeam({
+      id: teamId,
+      companyId: activeComp,
+      name,
+      description: desc
+    });
+    Toast.show(`Squad "${name}" created successfully.`, 'success');
+    Modal.closeAll();
+    this.refresh();
+  },
 
   toggleMemberTasks(memberId, e) {
     if (e) {
@@ -72,6 +122,7 @@ const TeamScreen = {
       'AI Developer', 'Senior AI Engineer', 'Project Manager',
       'Data Engineer', 'QA Specialist', 'UI/UX Designer'
     ];
+    const teams = Store.getTeams();
     const bodyHtml = `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
@@ -81,6 +132,12 @@ const TeamScreen = {
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Email Address <span style="color:#EF4444">*</span></label>
           <input type="email" id="member-email" class="form-input" placeholder="e.g. alex@hintonn.com" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Team Squad</label>
+          <select id="member-team-select" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            ${teams.map(t => `<option value="${t.id}">${Utils.escapeHtml(t.name)}</option>`).join('')}
+          </select>
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role / Designation</label>
@@ -127,8 +184,13 @@ const TeamScreen = {
     const emailInput = document.getElementById('member-email');
     const roleSelect = document.getElementById('member-role-select');
     const customInput = document.getElementById('member-custom-designation');
+    const teamSelect = document.getElementById('member-team-select');
+
     const name = nameInput ? nameInput.value.trim() : '';
     const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    const teamId = teamSelect ? teamSelect.value : (typeof Auth !== 'undefined' ? Auth.getTeamId() : 'team_ai');
+    const activeComp = Store.getActiveCompanyId() !== 'all' ? Store.getActiveCompanyId() : (typeof Auth !== 'undefined' ? Auth.getCompanyId() : 'comp_hintonn');
+
     if (!name) { Toast.show('Please enter the team member full name.', 'error'); return; }
     if (!email || !email.includes('@')) { Toast.show('Please enter a valid email address.', 'error'); return; }
     let designation = 'AI Developer';
@@ -144,12 +206,13 @@ const TeamScreen = {
     const chosenColor = colors[Math.floor(Math.random() * colors.length)];
 
     // Use Store.createMember to sync to Firebase
-    Store.createMember({ id: newId, name, role: designation, designation, email, initials, color: chosenColor });
+    Store.createMember({ id: newId, name, role: designation, designation, email, initials, color: chosenColor, teamId, companyId: activeComp });
 
     // Also add to Auth users for login (pre-approved by admin)
     if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
       Auth.users.push({
         id: 'user_' + Date.now(), memberId: newId, loginId: name.split(' ')[0] || name,
+        companyId: activeComp, teamId,
         // No password stored — the member signs up with their own password
         // through Firebase Authentication; this profile only gates approval.
         name, role: designation, designation, title: designation,
@@ -160,7 +223,7 @@ const TeamScreen = {
       });
       Auth._saveUserDb();
     }
-    Toast.show(`Added ${name} (${designation}) to team.`, 'success');
+    Toast.show(`Added ${name} (${designation}) to squad.`, 'success');
     Modal.closeAll();
     this.refresh();
   },
@@ -171,6 +234,9 @@ const TeamScreen = {
     const currentDesignation = m.designation || m.role || 'AI Developer';
     const presets = ['AI Developer','Senior AI Engineer','Project Manager','Data Engineer','QA Specialist','UI/UX Designer'];
     const isPreset = presets.includes(currentDesignation);
+    const teams = Store.getTeams();
+    const currentTeamId = m.teamId || 'team_ai';
+
     const bodyHtml = `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--color-bg-page,#F8FAFC);border-radius:8px;border:1px solid var(--color-border,#E2E8F0);">
@@ -179,6 +245,12 @@ const TeamScreen = {
             <div style="font-weight:700;color:var(--color-text-primary);font-size:15px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${Utils.escapeHtml(m.name)}</div>
             <div style="font-size:12px;color:var(--color-text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;">${Utils.escapeHtml(m.email)}</div>
           </div>
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Team Squad</label>
+          <select id="member-edit-team-select" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            ${teams.map(t => `<option value="${t.id}" ${t.id === currentTeamId ? 'selected' : ''}>${Utils.escapeHtml(t.name)}</option>`).join('')}
+          </select>
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role / Designation</label>
@@ -278,6 +350,7 @@ const TeamScreen = {
   saveMemberRole(memberId) {
     const hiddenInput = document.getElementById('member-role-select');
     const customInput = document.getElementById('member-custom-designation');
+    const teamSelect = document.getElementById('member-edit-team-select');
     if (!hiddenInput) { Toast.show('Could not read role selection.', 'error'); return; }
     let finalDesignation = '';
     if (hiddenInput.value === '__custom__') {
@@ -288,8 +361,10 @@ const TeamScreen = {
     const member = Store.getMember(memberId);
     if (!member) { Toast.show('Member not found.', 'error'); return; }
 
-    // Build update payload — role and designation always stay in sync
-    const updateData = { designation: finalDesignation, role: finalDesignation };
+    const teamId = teamSelect ? teamSelect.value : (member.teamId || 'team_ai');
+
+    // Build update payload — role, designation, and teamId stay in sync
+    const updateData = { designation: finalDesignation, role: finalDesignation, teamId };
 
     // Use Store.updateMember to sync to Firebase
     Store.updateMember(memberId, updateData);
@@ -297,7 +372,7 @@ const TeamScreen = {
     // Also write directly to Firestore to avoid snapshot-listener race condition
     if (Store._db) {
       try {
-        Store._db.collection('members').doc(String(memberId)).set({ role: finalDesignation, designation: finalDesignation, updatedAt: new Date().toISOString() }, { merge: true });
+        Store._db.collection('members').doc(String(memberId)).set({ role: finalDesignation, designation: finalDesignation, teamId, updatedAt: new Date().toISOString() }, { merge: true });
       } catch(e) {}
     }
 
@@ -308,6 +383,7 @@ const TeamScreen = {
         authUser.designation = finalDesignation;
         authUser.title = finalDesignation;
         authUser.role = finalDesignation;
+        authUser.teamId = teamId;
       }
     }
     Toast.show(`Updated designation for ${member.name} to "${finalDesignation}".`, 'success');
@@ -611,20 +687,50 @@ const TeamScreen = {
     const totalActiveTasks = developersList.reduce((sum, m) => sum + this._getMemberTasks(m).filter(t => t.status !== 'done').length, 0);
     const totalOverdueTasks = developersList.reduce((sum, m) => sum + this._getMemberTasks(m).filter(t => t.status !== 'done' && Utils.isOverdue(t.dueDate)).length, 0);
 
+    const teams = Store.getTeams();
+    const compName = typeof Auth !== 'undefined' ? Auth.getCompanyName() : 'Hintonn PMO';
+    const allSquadMembers = [...developersList];
+    if (this._teamFilter && this._teamFilter !== 'all') {
+      developersList = developersList.filter(m => (m.teamId || 'team_ai') === this._teamFilter);
+    }
+
     return `
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
         <div class="page-header-left">
-          <h1>Team & Workload</h1>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h1>Team & Workload</h1>
+            <span class="badge" style="background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;font-size:12px;">🏢 ${Utils.escapeHtml(compName)}</span>
+          </div>
           <p>${developersList.length} member${developersList.length===1?'':'s'} · ${totalActiveTasks} active task${totalActiveTasks===1?'':'s'}${totalOverdueTasks > 0 ? ` · <span style="color:var(--color-error-600)">${totalOverdueTasks} overdue</span>` : ''}</p>
         </div>
         ${isAdmin ? `
-          <div class="page-header-right">
+          <div class="page-header-right" style="display:flex;gap:10px;">
+            <button type="button" class="btn btn-secondary" onclick="TeamScreen.openCreateTeamModal()" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
+              <span>+</span>
+              <span>New Squad</span>
+            </button>
             <button type="button" class="btn btn-primary" onclick="TeamScreen.openAddMemberModal()" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
               ${Icons.plus || '+'}
               <span>Add Member</span>
             </button>
           </div>
         ` : ''}
+      </div>
+
+      <!-- Squad Filter Pills -->
+      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button type="button" onclick="TeamScreen.setTeamFilter('all')" style="padding:6px 14px;border-radius:var(--radius-pill);border:1px solid var(--color-border);font-size:12.5px;font-weight:600;cursor:pointer;${this._teamFilter === 'all' ? 'background:var(--color-primary-50);color:var(--color-primary-700);border-color:var(--color-primary-300);font-weight:700;' : 'background:var(--color-surface);color:var(--color-text-secondary);'}">
+          All Squads (${allSquadMembers.length})
+        </button>
+        ${teams.map(t => {
+          const count = allSquadMembers.filter(m => (m.teamId || 'team_ai') === t.id).length;
+          const isActive = this._teamFilter === t.id;
+          return `
+            <button type="button" onclick="TeamScreen.setTeamFilter('${t.id}')" style="padding:6px 14px;border-radius:var(--radius-pill);border:1px solid var(--color-border);font-size:12.5px;font-weight:600;cursor:pointer;${isActive ? 'background:var(--color-primary-50);color:var(--color-primary-700);border-color:var(--color-primary-300);font-weight:700;' : 'background:var(--color-surface);color:var(--color-text-secondary);'}">
+              👥 ${Utils.escapeHtml(t.name)} (${count})
+            </button>
+          `;
+        }).join('')}
       </div>
 
       <!-- Team Work Grid -->
@@ -643,6 +749,8 @@ const TeamScreen = {
           const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
           const isExpanded = !!this._expandedMembers[m.id];
           const designationText = m.designation || m.role || 'AI Developer';
+          const teamObj = Store.getTeam(m.teamId);
+          const teamName = teamObj ? teamObj.name : 'Engineering & AI';
 
           // Group active tasks by project
           const projectGroups = this._groupTasksByProject(activeTasks);
@@ -669,6 +777,11 @@ const TeamScreen = {
                   </div>
                   <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:3px;font-weight:500;white-space:normal;word-break:break-word;" title="${designationText}">${designationText}</div>
                   <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;white-space:normal;word-break:break-word;" title="${Utils.escapeHtml(m.email)}">${Utils.escapeHtml(m.email)}</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;">
+                    <span class="badge" style="font-size:10.5px;background:var(--color-bg-page);border:1px solid var(--color-border);padding:2px 7px;color:var(--color-text-secondary);font-weight:600;">
+                      👥 ${Utils.escapeHtml(teamName)}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div class="team-card-actions" style="position:relative;flex-shrink:0;margin-left:8px;">

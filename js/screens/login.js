@@ -322,6 +322,30 @@ const LoginScreen = {
           </div>
 
           <div class="login-field-group">
+            <div class="login-field-label"><label for="signup-company">Company / Tenant <span class="login-required">*</span></label></div>
+            <div class="login-input-wrap">
+              <select id="signup-company" class="login-input" required onchange="LoginScreen.clearError()" style="cursor:pointer;">
+                <option value="comp_hintonn">🏢 Hintonn AI Infrastructure</option>
+                <option value="comp_buildcon">🏢 BuildCon Infrastructure</option>
+                <option value="comp_metro">🏢 MMRDA Metro Rail</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="login-field-group">
+            <div class="login-field-label"><label for="signup-team">Department / Team <span class="login-required">*</span></label></div>
+            <div class="login-input-wrap">
+              <select id="signup-team" class="login-input" required onchange="LoginScreen.clearError()" style="cursor:pointer;">
+                <option value="AI & Technology">🤖 AI & Technology</option>
+                <option value="Civil & Infrastructure">🏗️ Civil & Infrastructure</option>
+                <option value="Project Management">📋 Project Management (PMO)</option>
+                <option value="Operations & Site">🚜 Operations & Site</option>
+                <option value="Finance & Commercial">💼 Finance & Commercial</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="login-field-group">
             <div class="login-field-label"><label for="signup-password">Password <span class="login-required">*</span></label></div>
             <div class="login-input-wrap">
               <input type="password" id="signup-password" class="login-input" placeholder="Min 8 chars, 1 number & 1 special" autocomplete="new-password" required oninput="LoginScreen.clearError()" style="padding-right:44px" />

@@ -67,10 +67,19 @@ const TeamScreen = {
     }
   },
 
+  _activeTeamFilter: 'all',
+  setTeamFilter(team) {
+    this._activeTeamFilter = team;
+    this.refresh();
+  },
+
   openAddMemberModal() {
+    const isSuper = typeof Auth !== 'undefined' && typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin();
+    const currentCompanyId = (typeof Auth !== 'undefined' && Auth.getCompanyId && Auth.getCompanyId()) || 'comp_hintonn';
+    const companies = (typeof Store !== 'undefined' && typeof Store.getCompanies === 'function') ? Store.getCompanies() : [];
     const presets = [
       'AI Developer', 'Senior AI Engineer', 'Project Manager',
-      'Data Engineer', 'QA Specialist', 'UI/UX Designer'
+      'Data Engineer', 'QA Specialist', 'UI/UX Designer', 'Civil Engineer', 'Site Supervisor', 'Commercial Lead'
     ];
     const bodyHtml = `
       <div style="display:flex;flex-direction:column;gap:14px;">
@@ -81,6 +90,22 @@ const TeamScreen = {
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Email Address <span style="color:#EF4444">*</span></label>
           <input type="email" id="member-email" class="form-input" placeholder="e.g. alex@hintonn.com" required style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;" />
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Company / Organization</label>
+          <select id="member-company" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            ${companies.map(c => `<option value="${Utils.escapeHtml(c.id)}" ${(!isSuper && currentCompanyId === c.id) ? 'selected' : ''}>${Utils.escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Department / Team</label>
+          <select id="member-team" style="width:100%;height:42px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--color-border-strong,#D1D5DB);background:var(--color-surface,#FFF);color:var(--color-text-primary,#111827);font-size:14px;font-weight:500;">
+            <option value="AI & Technology">🤖 AI & Technology</option>
+            <option value="Civil & Infrastructure">🏗️ Civil & Infrastructure</option>
+            <option value="Project Management">📋 Project Management (PMO)</option>
+            <option value="Operations & Site">🚜 Operations & Site</option>
+            <option value="Finance & Commercial">💼 Finance & Commercial</option>
+          </select>
         </div>
         <div>
           <label class="form-label" style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--color-text-primary);">Role / Designation</label>
@@ -127,8 +152,14 @@ const TeamScreen = {
     const emailInput = document.getElementById('member-email');
     const roleSelect = document.getElementById('member-role-select');
     const customInput = document.getElementById('member-custom-designation');
+    const companySelect = document.getElementById('member-company');
+    const teamSelect = document.getElementById('member-team');
+
     const name = nameInput ? nameInput.value.trim() : '';
     const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    const companyId = companySelect ? companySelect.value : 'comp_hintonn';
+    const team = teamSelect ? teamSelect.value : 'AI & Technology';
+
     if (!name) { Toast.show('Please enter the team member full name.', 'error'); return; }
     if (!email || !email.includes('@')) { Toast.show('Please enter a valid email address.', 'error'); return; }
     let designation = 'AI Developer';
@@ -144,21 +175,11 @@ const TeamScreen = {
     const chosenColor = colors[Math.floor(Math.random() * colors.length)];
 
     // Use Store.createMember to sync to Firebase
-    Store.createMember({ id: newId, name, role: designation, designation, email, initials, color: chosenColor });
+    Store.createMember({ id: newId, name, role: designation, designation, email, companyId, team, initials, color: chosenColor });
 
     // Also add to Auth users for login (pre-approved by admin)
-    if (typeof Auth !== 'undefined' && Array.isArray(Auth.users)) {
-      Auth.users.push({
-        id: 'user_' + Date.now(), memberId: newId, loginId: name.split(' ')[0] || name,
-        // No password stored — the member signs up with their own password
-        // through Firebase Authentication; this profile only gates approval.
-        name, role: designation, designation, title: designation,
-        email, initials, color: chosenColor,
-        approved: true, // Admin-added member is pre-approved
-        approvedDate: new Date().toISOString(),
-        requestSource: 'Admin Team Add'
-      });
-      Auth._saveUserDb();
+    if (typeof Auth !== 'undefined' && typeof Auth.adminAddUser === 'function') {
+      Auth.adminAddUser(name, email, designation, companyId, team);
     }
     Toast.show(`Added ${name} (${designation}) to team.`, 'success');
     Modal.closeAll();
@@ -607,6 +628,11 @@ const TeamScreen = {
       developersList = selfMember ? [selfMember] : [];
     }
 
+    // Filter by department/team tab if active
+    if (this._activeTeamFilter && this._activeTeamFilter !== 'all') {
+      developersList = developersList.filter(m => m.team === this._activeTeamFilter);
+    }
+
     // Overall team stats
     const totalActiveTasks = developersList.reduce((sum, m) => sum + this._getMemberTasks(m).filter(t => t.status !== 'done').length, 0);
     const totalOverdueTasks = developersList.reduce((sum, m) => sum + this._getMemberTasks(m).filter(t => t.status !== 'done' && Utils.isOverdue(t.dueDate)).length, 0);
@@ -627,6 +653,17 @@ const TeamScreen = {
         ` : ''}
       </div>
 
+      <!-- Department / Team Filter Tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:4px;width:fit-content;">
+        ${['all', 'AI & Technology', 'Civil & Infrastructure', 'Project Management', 'Operations & Site', 'Finance & Commercial'].map(t => {
+          const active = this._activeTeamFilter === t;
+          const label = t === 'all' ? 'All Departments' : t;
+          return `<button type="button" onclick="TeamScreen.setTeamFilter('${t}')" style="padding:6px 14px;border-radius:var(--radius-sm);border:none;font-size:12.5px;font-weight:600;cursor:pointer;transition:all 150ms;${active ? 'background:var(--color-surface);color:var(--color-primary-700);box-shadow:var(--shadow-sm);' : 'background:transparent;color:var(--color-text-muted);'}">
+            ${label}
+          </button>`;
+        }).join('')}
+      </div>
+
       <!-- Team Work Grid -->
       <div class="team-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:20px">
         ${developersList.map(m => {
@@ -643,6 +680,7 @@ const TeamScreen = {
           const initials = m.initials || m.name.split(' ').map(w=>w[0]).join('').slice(0,2);
           const isExpanded = !!this._expandedMembers[m.id];
           const designationText = m.designation || m.role || 'AI Developer';
+          const compName = m.companyName || (typeof Store !== 'undefined' && Store.getCompany && Store.getCompany(m.companyId)?.name) || 'Hintonn AI';
 
           // Group active tasks by project
           const projectGroups = this._groupTasksByProject(activeTasks);
@@ -667,8 +705,12 @@ const TeamScreen = {
                     <span>${Utils.escapeHtml(m.name)}</span>
                     ${isYou ? '<span style="font-size:10px;background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);padding:1px 7px;border-radius:var(--radius-pill);font-weight:600;flex-shrink:0;">You</span>' : ''}
                   </div>
-                  <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:3px;font-weight:500;white-space:normal;word-break:break-word;" title="${designationText}">${designationText}</div>
-                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:2px;white-space:normal;word-break:break-word;" title="${Utils.escapeHtml(m.email)}">${Utils.escapeHtml(m.email)}</div>
+                  <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:3px;font-weight:500;white-space:normal;word-break:break-word;display:flex;align-items:center;gap:6px;flex-wrap:wrap;" title="${designationText}">
+                    <span>${designationText}</span>
+                    <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:var(--radius-pill);background:var(--color-bg-page);border:1px solid var(--color-border-subtle);color:var(--color-text-secondary)">🏢 ${Utils.escapeHtml(compName)} · ${Utils.escapeHtml(m.team || 'AI & Tech')}</span>
+                    ${m.role === 'Admin' ? '<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);">Admin</span>' : ''}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--color-text-disabled);margin-top:3px;white-space:normal;word-break:break-word;" title="${Utils.escapeHtml(m.email)}">${Utils.escapeHtml(m.email)}</div>
                 </div>
               </div>
               <div class="team-card-actions" style="position:relative;flex-shrink:0;margin-left:8px;">

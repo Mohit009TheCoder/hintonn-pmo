@@ -36,7 +36,7 @@ function loadServiceAccount() {
   const firestoreMod = await import('firebase-admin/firestore');
   const db = firestoreMod.getFirestore();
 
-  const collections = ['users', 'members', 'projects', 'tasks', 'milestones', 'issues', 'companies', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'comments', 'activities', 'notifications'];
+  const collections = ['users', 'super_admins', 'admins', 'members', 'projects', 'tasks', 'milestones', 'issues', 'companies', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'comments', 'activities', 'notifications'];
 
   for (const collection of collections) {
     const snapshot = await db.collection(collection).get();

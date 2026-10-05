@@ -281,3 +281,77 @@ describe('Stats', () => {
     assert.strictEqual(s.completedMilestones, 1);
   });
 });
+
+describe('Multi-Tenant & Team Isolation', () => {
+  test('seeds default tenant companies, teams, and admins', () => {
+    const companies = Store.getCompanies();
+    assert.ok(companies.length >= 3, 'seeded tenant companies');
+    assert.ok(companies.some(c => c.id === 'comp_hintonn'));
+    assert.ok(companies.some(c => c.id === 'comp_lnt'));
+
+    const teams = Store.getTeams();
+    assert.ok(teams.length >= 3, 'seeded teams');
+    assert.ok(teams.some(t => t.id === 'team_ai'));
+
+    const admins = Store.getAdmins();
+    assert.ok(admins.length >= 2, 'seeded admins');
+    assert.ok(admins.some(a => a.role === 'SuperAdmin'));
+  });
+
+  test('isolates projects, tasks, and commercial data between companies', () => {
+    // Create projects in two different companies
+    const projHintonn = Store.createProject({ name: 'Hintonn AI Core', companyId: 'comp_hintonn' });
+    const projLnt = Store.createProject({ name: 'L&T Solar Station', companyId: 'comp_lnt' });
+
+    Store.createTask({ projectId: projHintonn.id, title: 'AI Pipeline', companyId: 'comp_hintonn', teamId: 'team_ai' });
+    Store.createTask({ projectId: projLnt.id, title: 'Inverter Grid Installation', companyId: 'comp_lnt', teamId: 'team_civil' });
+
+    Store.createInvoice({ billNumber: 'HIN-001', companyId: 'comp_hintonn', projectName: 'Hintonn AI Core' });
+    Store.createInvoice({ billNumber: 'LNT-001', companyId: 'comp_lnt', projectName: 'L&T Solar Station' });
+
+    // SuperAdmin / global view sees both
+    Store.setActiveCompanyId('all');
+    assert.strictEqual(Store.getProjects().length, 2);
+    assert.strictEqual(Store.getTasks().length, 2);
+    assert.strictEqual(Store.getInvoices().length, 2);
+
+    // Company-specific filtering (L&T Admin or member view)
+    Store.setActiveCompanyId('comp_lnt');
+    const lntProjects = Store.getProjects();
+    assert.strictEqual(lntProjects.length, 1);
+    assert.strictEqual(lntProjects[0].name, 'L&T Solar Station');
+
+    const lntTasks = Store.getTasks();
+    assert.strictEqual(lntTasks.length, 1);
+    assert.strictEqual(lntTasks[0].title, 'Inverter Grid Installation');
+
+    const lntInvoices = Store.getInvoices();
+    assert.strictEqual(lntInvoices.length, 1);
+    assert.strictEqual(lntInvoices[0].billNumber, 'LNT-001');
+
+    // Hintonn HQ Admin view
+    Store.setActiveCompanyId('comp_hintonn');
+    assert.strictEqual(Store.getProjects().length, 1);
+    assert.strictEqual(Store.getProjects()[0].name, 'Hintonn AI Core');
+    assert.strictEqual(Store.getInvoices()[0].billNumber, 'HIN-001');
+
+    // Reset to all for following tests
+    Store.setActiveCompanyId('all');
+  });
+
+  test('teams and company admins CRUD management', () => {
+    // Create new team within a company
+    const newTeam = Store.createTeam({ name: 'Cloud Infrastructure', companyId: 'comp_lnt', description: 'K8s & DevOps' });
+    assert.strictEqual(newTeam.name, 'Cloud Infrastructure');
+    assert.strictEqual(Store.getTeams('comp_lnt').some(t => t.id === newTeam.id), true);
+
+    // Assign new company admin
+    const newAdmin = Store.assignCompanyAdmin('ops.lead@lnt.com', 'comp_lnt', 'L&T Ops Lead');
+    assert.strictEqual(newAdmin.email, 'ops.lead@lnt.com');
+    assert.strictEqual(Store.getAdmins('comp_lnt').some(a => a.email === 'ops.lead@lnt.com'), true);
+
+    // Provision new tenant company
+    const newCompany = Store.createCompany({ name: 'Adani Renewables PMO', code: 'ADANI', adminEmail: 'admin@adani.com' });
+    assert.strictEqual(Store.getCompany(newCompany.id).name, 'Adani Renewables PMO');
+  });
+});

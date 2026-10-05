@@ -969,10 +969,16 @@ const Store = {
   },
 
   // ─── Bank Guarantees ───
-  getBankGuarantees() { return this._data.bankGuarantees || []; },
+  getBankGuarantees(companyId) {
+    const list = this._data.bankGuarantees || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(b => b.companyId === targetComp || (!b.companyId && targetComp === 'comp_hintonn'));
+  },
   getBankGuarantee(id) { return (this._data.bankGuarantees || []).find(b => b.id === id || b.ref === id); },
   createBankGuarantee(d) {
-    const bg = { id: d.id || d.ref || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const bg = { id: d.id || d.ref || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.bankGuarantees.push(bg);
     this._addActivity('bankGuarantee', `Registered BG <strong>${this._esc(bg.ref)}</strong> — ${bg.projectName || ''}`);
     this._save(); this._notify();
@@ -996,10 +1002,16 @@ const Store = {
   },
 
   // ─── DLP Records ───
-  getDlpRecords() { return this._data.dlpRecords || []; },
+  getDlpRecords(companyId) {
+    const list = this._data.dlpRecords || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(r => r.companyId === targetComp || (!r.companyId && targetComp === 'comp_hintonn'));
+  },
   getDlpRecord(id) { return (this._data.dlpRecords || []).find(r => r.id === id); },
   createDlpRecord(d) {
-    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const r = { id: d.id || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.dlpRecords.push(r);
     this._addActivity('dlpRecord', `Created DLP record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1023,10 +1035,16 @@ const Store = {
   },
 
   // ─── Retention Records ───
-  getRetentionRecords() { return this._data.retentionRecords || []; },
+  getRetentionRecords(companyId) {
+    const list = this._data.retentionRecords || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(r => r.companyId === targetComp || (!r.companyId && targetComp === 'comp_hintonn'));
+  },
   getRetentionRecord(id) { return (this._data.retentionRecords || []).find(r => r.id === id); },
   createRetentionRecord(d) {
-    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const r = { id: d.id || this._genId(), companyId: d.companyId || activeComp, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.retentionRecords.push(r);
     this._addActivity('retentionRecord', `Created retention record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1047,6 +1065,91 @@ const Store = {
     this._addActivity('retentionRecord', `Deleted retention record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
     this._deleteFromFirestore('retentionRecords', id);
+  },
+
+  // ─── Teams (within Companies) ───
+  getTeams(companyId) {
+    const list = (this._data && this._data.teams) || [];
+    const target = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    return target ? list.filter(t => t.companyId === target) : list;
+  },
+  getTeam(id) {
+    return ((this._data && this._data.teams) || []).find(t => t.id === id);
+  },
+  createTeam(d) {
+    const targetComp = d.companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn');
+    const team = {
+      id: d.id || ('team_' + Date.now().toString(36)),
+      companyId: targetComp,
+      name: d.name || 'New Team',
+      leadId: d.leadId || '',
+      memberIds: Array.isArray(d.memberIds) ? d.memberIds : [],
+      description: d.description || '',
+      createdAt: new Date().toISOString()
+    };
+    if (!Array.isArray(this._data.teams)) this._data.teams = [];
+    this._data.teams.push(team);
+    this._addActivity('team', `Created team <strong>${this._esc(team.name)}</strong>`);
+    this._save(); this._notify();
+    this._syncToFirestore('teams', team.id, team);
+    return team;
+  },
+  updateTeam(id, d) {
+    const team = this.getTeam(id); if (!team) return null;
+    Object.assign(team, d, { updatedAt: new Date().toISOString() });
+    this._save(); this._notify();
+    this._syncToFirestore('teams', team.id, team);
+    return team;
+  },
+  deleteTeam(id) {
+    const team = this.getTeam(id); if (!team) return;
+    this._data.teams = (this._data.teams || []).filter(t => t.id !== id);
+    this._save(); this._notify();
+    this._deleteFromFirestore('teams', id);
+  },
+
+  // ─── Company Admins & SuperAdmins ───
+  getAdmins(companyId) {
+    const list = (this._data && this._data.admins) || [];
+    const target = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    return target ? list.filter(a => a.companyId === target) : list;
+  },
+  getSuperAdmins() {
+    return (this._data && this._data.super_admins) || [];
+  },
+  assignCompanyAdmin(email, companyId, name) {
+    const comp = this.getCompany ? this.getCompany(companyId) : null;
+    const admin = {
+      id: 'admin_' + Date.now().toString(36),
+      email: email.trim().toLowerCase(),
+      name: name || email.split('@')[0],
+      role: 'Admin',
+      companyId: companyId,
+      companyName: comp ? comp.name : 'PMO Workspace',
+      isActive: true,
+      assignedAt: new Date().toISOString()
+    };
+    if (!Array.isArray(this._data.admins)) this._data.admins = [];
+    this._data.admins.push(admin);
+    if (comp && !comp.adminEmails.includes(admin.email)) {
+      comp.adminEmails.push(admin.email);
+      this._syncToFirestore('companies', comp.id, comp);
+    }
+    this._save(); this._notify();
+    this._syncToFirestore('admins', admin.id, admin);
+    return admin;
+  },
+  revokeCompanyAdmin(adminId) {
+    const admin = ((this._data && this._data.admins) || []).find(a => a.id === adminId || a.email === adminId);
+    if (!admin) return;
+    this._data.admins = (this._data.admins || []).filter(a => a.id !== admin.id);
+    const comp = this.getCompany ? this.getCompany(admin.companyId) : null;
+    if (comp) {
+      comp.adminEmails = comp.adminEmails.filter(e => e.toLowerCase() !== admin.email.toLowerCase());
+      this._syncToFirestore('companies', comp.id, comp);
+    }
+    this._save(); this._notify();
+    this._deleteFromFirestore('admins', admin.id);
   },
 
   // Milestones
@@ -1073,6 +1176,8 @@ const Store = {
     const m = this._data.milestones.find(x => x.id === id); if (!m) return null;
     Object.assign(m, d);
     this._addActivity('milestone', `Updated milestone <strong>${this._esc(m.name)}</strong>`);
+    const proj = this.getProject(m.projectId);
+    if (proj) this._syncToFirestore('projects', proj.id, proj);
     this._save(); this._notify();
     this._syncToFirestore('milestones', m.id, m);
     return m;
@@ -1113,6 +1218,8 @@ const Store = {
   updateIssue(id, d) {
     const i = this._data.issues.find(x => x.id === id); if (!i) return null;
     Object.assign(i, d, { updatedAt: new Date().toISOString() });
+    const proj = this.getProject(i.projectId);
+    if (proj) this._syncToFirestore('projects', proj.id, proj);
     this._save(); this._notify();
     this._syncToFirestore('issues', i.id, i);
     return i;

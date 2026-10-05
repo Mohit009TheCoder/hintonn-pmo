@@ -33,7 +33,7 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies','super_admins','admins']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
@@ -148,7 +148,7 @@ const Store = {
     if (!this._db) return;
     this._unsubFirestore = [];
 
-    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
+    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications', 'super_admins', 'admins'];
 
     syncCollections.forEach(colName => {
       const unsub = this._db.collection(colName).onSnapshot(snapshot => {

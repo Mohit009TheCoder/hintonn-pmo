@@ -1020,10 +1020,18 @@ const Store = {
   },
 
   // ─── Bank Guarantees ───
-  getBankGuarantees() { return this._data.bankGuarantees || []; },
+  getBankGuarantees(companyId) {
+    const list = this._data.bankGuarantees || [];
+    if (companyId === '__all__') return list;
+    const scope = companyId || this._resolveTenantScope();
+    if (!scope || scope === 'all') return list;
+    return list.filter(b => !b.companyId || b.companyId === scope || (scope === 'comp_hintonn' && !b.companyId));
+  },
   getBankGuarantee(id) { return (this._data.bankGuarantees || []).find(b => b.id === id || b.ref === id); },
   createBankGuarantee(d) {
-    const bg = { id: d.id || d.ref || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    const bg = { id: d.id || d.ref || this._genId(), companyId: d.companyId || assignedCid, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.bankGuarantees.push(bg);
     this._addActivity('bankGuarantee', `Registered BG <strong>${this._esc(bg.ref)}</strong> — ${bg.projectName || ''}`);
     this._save(); this._notify();
@@ -1047,10 +1055,18 @@ const Store = {
   },
 
   // ─── DLP Records ───
-  getDlpRecords() { return this._data.dlpRecords || []; },
+  getDlpRecords(companyId) {
+    const list = this._data.dlpRecords || [];
+    if (companyId === '__all__') return list;
+    const scope = companyId || this._resolveTenantScope();
+    if (!scope || scope === 'all') return list;
+    return list.filter(r => !r.companyId || r.companyId === scope || (scope === 'comp_hintonn' && !r.companyId));
+  },
   getDlpRecord(id) { return (this._data.dlpRecords || []).find(r => r.id === id); },
   createDlpRecord(d) {
-    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    const r = { id: d.id || this._genId(), companyId: d.companyId || assignedCid, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.dlpRecords.push(r);
     this._addActivity('dlpRecord', `Created DLP record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1074,10 +1090,18 @@ const Store = {
   },
 
   // ─── Retention Records ───
-  getRetentionRecords() { return this._data.retentionRecords || []; },
+  getRetentionRecords(companyId) {
+    const list = this._data.retentionRecords || [];
+    if (companyId === '__all__') return list;
+    const scope = companyId || this._resolveTenantScope();
+    if (!scope || scope === 'all') return list;
+    return list.filter(r => !r.companyId || r.companyId === scope || (scope === 'comp_hintonn' && !r.companyId));
+  },
   getRetentionRecord(id) { return (this._data.retentionRecords || []).find(r => r.id === id); },
   createRetentionRecord(d) {
-    const r = { id: d.id || this._genId(), ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    const r = { id: d.id || this._genId(), companyId: d.companyId || assignedCid, ...d, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.retentionRecords.push(r);
     this._addActivity('retentionRecord', `Created retention record for <strong>${r.projectName || ''}</strong>`);
     this._save(); this._notify();
@@ -1101,17 +1125,29 @@ const Store = {
   },
 
   // Milestones
-  getMilestones(projectId) {
-    const list = (this._data && this._data.milestones) || [];
-    return projectId ? list.filter(m => m.projectId === projectId) : list;
+  getMilestones(projectId, companyId) {
+    let list = (this._data && this._data.milestones) || [];
+    if (projectId) list = list.filter(m => m.projectId === projectId);
+    if (companyId !== '__all__') {
+      const scope = companyId || this._resolveTenantScope();
+      if (scope && scope !== 'all') {
+        const projectIds = new Set(this.getProjects(scope).map(p => p.id));
+        list = list.filter(m => (m.companyId && m.companyId === scope) || (m.projectId && projectIds.has(m.projectId)) || (!m.companyId && scope === 'comp_hintonn'));
+      }
+    }
+    return list;
   },
   createMilestone(d) {
+    const proj = d.projectId ? this.getProject(d.projectId) : null;
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    const companyId = d.companyId || (proj ? proj.companyId : null) || assignedCid;
     const m = { id: this._genId(), projectId: d.projectId, name: d.name, dueDate: d.dueDate||'',
-      status: d.status||'pending', taskIds: d.taskIds||[],
+      status: d.status||'pending', taskIds: d.taskIds||[], companyId: companyId,
       createdAt: new Date().toISOString() };
     this._data.milestones.push(m);
-    const proj = this.getProject(m.projectId);
     if (proj) {
+      if (!Array.isArray(proj.milestoneIds)) proj.milestoneIds = [];
       proj.milestoneIds.push(m.id);
       this._syncToFirestore('projects', proj.id, proj);
     }
@@ -1123,6 +1159,10 @@ const Store = {
   updateMilestone(id, d) {
     const m = this._data.milestones.find(x => x.id === id); if (!m) return null;
     Object.assign(m, d);
+    if (m.projectId) {
+      const proj = this.getProject(m.projectId);
+      if (proj) this._syncToFirestore('projects', proj.id, proj);
+    }
     this._addActivity('milestone', `Updated milestone <strong>${this._esc(m.name)}</strong>`);
     this._save(); this._notify();
     this._syncToFirestore('milestones', m.id, m);
@@ -1141,17 +1181,29 @@ const Store = {
   },
 
   // Issues
-  getIssues(projectId) {
-    const list = (this._data && this._data.issues) || [];
-    return projectId ? list.filter(i => i.projectId === projectId) : list;
+  getIssues(projectId, companyId) {
+    let list = (this._data && this._data.issues) || [];
+    if (projectId) list = list.filter(i => i.projectId === projectId);
+    if (companyId !== '__all__') {
+      const scope = companyId || this._resolveTenantScope();
+      if (scope && scope !== 'all') {
+        const projectIds = new Set(this.getProjects(scope).map(p => p.id));
+        list = list.filter(i => (i.companyId && i.companyId === scope) || (i.projectId && projectIds.has(i.projectId)) || (!i.companyId && scope === 'comp_hintonn'));
+      }
+    }
+    return list;
   },
   createIssue(d) {
+    const proj = d.projectId ? this.getProject(d.projectId) : null;
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
+    const companyId = d.companyId || (proj ? proj.companyId : null) || assignedCid;
     const i = { id: this._genId(), projectId: d.projectId, title: d.title, description: d.description||'',
-      status: d.status||'open', priority: d.priority||'medium', assigneeId: d.assigneeId||'',
+      status: d.status||'open', priority: d.priority||'medium', assigneeId: d.assigneeId||'', companyId: companyId,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     this._data.issues.push(i);
-    const proj = this.getProject(i.projectId);
     if (proj) {
+      if (!Array.isArray(proj.issueIds)) proj.issueIds = [];
       proj.issueIds.push(i.id);
       this._syncToFirestore('projects', proj.id, proj);
     }
@@ -1164,6 +1216,10 @@ const Store = {
   updateIssue(id, d) {
     const i = this._data.issues.find(x => x.id === id); if (!i) return null;
     Object.assign(i, d, { updatedAt: new Date().toISOString() });
+    if (i.projectId) {
+      const proj = this.getProject(i.projectId);
+      if (proj) this._syncToFirestore('projects', proj.id, proj);
+    }
     this._save(); this._notify();
     this._syncToFirestore('issues', i.id, i);
     return i;

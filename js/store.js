@@ -283,12 +283,106 @@ const Store = {
   // ─── CRUD helpers ───
   _genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
 
+  // ─── Tenant Context & Scoping (Multi-Company & Multi-Team) ───
+  _activeCompanyId: null,
+
+  getActiveCompanyId() {
+    if (this._activeCompanyId) return this._activeCompanyId;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const stored = sessionStorage.getItem('hintonn-active-company');
+        if (stored) {
+          this._activeCompanyId = stored;
+          return stored;
+        }
+      }
+    } catch (e) {}
+    if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
+      const u = Auth.getCurrentUser();
+      if (u) {
+        if (typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin()) {
+          return 'all';
+        }
+        return u.companyId || 'comp_hintonn';
+      }
+    }
+    return 'all';
+  },
+
+  setActiveCompany(companyId) {
+    this._activeCompanyId = companyId || 'all';
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('hintonn-active-company', this._activeCompanyId);
+      }
+    } catch (e) {}
+    this._notify();
+    if (typeof App !== 'undefined' && typeof App.refresh === 'function') {
+      App.refresh();
+    }
+  },
+
+  _resolveTenantScope(explicitCid) {
+    if (explicitCid && explicitCid !== '__all__') return explicitCid;
+    if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
+      const u = Auth.getCurrentUser();
+      if (u && typeof Auth.isSuperAdmin === 'function' && !Auth.isSuperAdmin()) {
+        return u.companyId || 'comp_hintonn';
+      }
+    }
+    return this.getActiveCompanyId();
+  },
+
+  _defaultCompanies() {
+    return [
+      {
+        id: 'comp_hintonn',
+        name: 'Hintonn AI Infrastructure',
+        code: 'HNT',
+        status: 'active',
+        contactPerson: 'Mohit Jain',
+        adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'],
+        teams: ['AI & Technology', 'Civil & Infrastructure', 'Project Management', 'Finance & Commercial', 'Operations & Site'],
+        createdAt: '2025-01-01T00:00:00.000Z'
+      },
+      {
+        id: 'comp_buildcon',
+        name: 'BuildCon Infrastructure',
+        code: 'BCN',
+        status: 'active',
+        contactPerson: 'Riya Sharma',
+        adminEmails: ['riya.sharma@buildcon.in'],
+        teams: ['Civil Engineering', 'Structural Works', 'Site Supervision', 'Procurement'],
+        createdAt: '2025-02-01T00:00:00.000Z'
+      },
+      {
+        id: 'comp_metro',
+        name: 'MMRDA Metro Rail',
+        code: 'MMR',
+        status: 'active',
+        contactPerson: 'Chief Project Manager',
+        adminEmails: ['metro.admin@mmrda.gov.in'],
+        teams: ['Viaduct Engineering', 'Rolling Stock', 'Safety & Quality', 'Signaling'],
+        createdAt: '2025-03-01T00:00:00.000Z'
+      }
+    ];
+  },
+
   // Projects
-  getProjects() { return (this._data && this._data.projects) || []; },
+  getProjects(companyId) {
+    const list = (this._data && this._data.projects) || [];
+    if (companyId === '__all__') return list;
+    const scope = companyId || this._resolveTenantScope();
+    if (!scope || scope === 'all') return list;
+    return list.filter(p => !p.companyId || p.companyId === scope || (scope === 'comp_hintonn' && !p.companyId));
+  },
   getProject(id) { return ((this._data && this._data.projects) || []).find(p => p.id === id); },
   createProject(d) {
+    const scope = this._resolveTenantScope(d.companyId);
+    const assignedCid = (scope && scope !== 'all') ? scope : 'comp_hintonn';
     const p = { id: this._genId(), name: d.name, description: d.description||'', type: d.type||'Business',
       status: 'planning', priority: d.priority||'medium', progress: 0,
+      companyId: d.companyId || assignedCid, team: d.team || '',
       startDate: d.startDate||'', endDate: d.endDate||'', memberIds: d.memberIds||[],
       taskIds: [], milestoneIds: [], issueIds: [], tags: d.tags||[],
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
@@ -326,9 +420,15 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId) {
-    const tasks = (this._data && this._data.tasks) || [];
-    return projectId ? tasks.filter(t => t.projectId === projectId && !t.isPersonal) : tasks;
+  getTasks(projectId, companyId) {
+    let tasks = (this._data && this._data.tasks) || [];
+    if (projectId) tasks = tasks.filter(t => t.projectId === projectId && !t.isPersonal);
+    if (companyId === '__all__') return tasks;
+    const scope = companyId || this._resolveTenantScope();
+    if (scope && scope !== 'all') {
+      tasks = tasks.filter(t => !t.companyId || t.companyId === scope || (scope === 'comp_hintonn' && !t.companyId));
+    }
+    return tasks;
   },
   getTask(id) { return ((this._data && this._data.tasks) || []).find(t => t.id === id); },
   createTask(d) {

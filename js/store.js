@@ -33,17 +33,31 @@ const Store = {
     if (saved) {
       this._data = JSON.parse(saved);
       // Ensure all keys exist
-      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies']
+      ['projects','tasks','members','milestones','issues','comments','notifications','activities','settings','invoices','dlpRecords','retentionRecords','bankGuarantees','companies','teams','admins','super_admins']
         .forEach(k => { if (!this._data[k]) this._data[k] = []; });
       
       // Ensure default members are loaded if array is empty
       if (this._data.members.length === 0) {
         this._data.members = defaultMembers;
       }
+      if (!this._data.companies || this._data.companies.length === 0) {
+        this._data.companies = [
+          { id: 'comp_hintonn', name: 'Hintonn PMO (HQ)', code: 'HIN', adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
+          { id: 'comp_lnt', name: 'Larsen & Toubro PMO', code: 'LNT', adminEmails: ['lnt.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
+          { id: 'comp_tata', name: 'Tata Projects PMO', code: 'TATA', adminEmails: ['tata.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() }
+        ];
+      }
+      if (!this._data.teams || this._data.teams.length === 0) {
+        this._data.teams = [
+          { id: 'team_ai', companyId: 'comp_hintonn', name: 'AI & Software Engineering', leadId: 'm2', memberIds: ['m2', 'm4', 'm_1790601440429'], description: 'Antigravity AI PMO, ML agents, and full-stack delivery' },
+          { id: 'team_civil', companyId: 'comp_hintonn', name: 'Civil & EPC Site Operations', leadId: 'm1', memberIds: ['m1'], description: 'Site works, execution, and subcontractor delivery' },
+          { id: 'team_finance', companyId: 'comp_hintonn', name: 'Commercial & Financial Control', leadId: 'm3', memberIds: ['m3'], description: 'Invoicing, bank guarantees, DLP, and cash flow' }
+        ];
+      }
       if (!this._data.settings) this._data.settings = {};
       this._data.settings.currentUser = 'm2';
 
-      // Ensure tasks have start dates, valid assignees, and subtasks array (Admin m1 excluded from tasks)
+      // Ensure tasks have start dates, valid assignees, companyId, and subtasks array
       if (this._data.tasks) {
         this._data.tasks.forEach(t => {
           if (t.assigneeId === 'm5' || t.assigneeId === 'm1') t.assigneeId = 'm3';
@@ -56,6 +70,14 @@ const Store = {
           if (!Array.isArray(t.assigneeIds)) {
             t.assigneeIds = t.assigneeId ? [t.assigneeId] : [];
           }
+          if (!t.companyId) {
+            t.companyId = 'comp_hintonn';
+          }
+        });
+      }
+      if (this._data.projects) {
+        this._data.projects.forEach(p => {
+          if (!p.companyId) p.companyId = 'comp_hintonn';
         });
       }
     } else {
@@ -148,7 +170,7 @@ const Store = {
     if (!this._db) return;
     this._unsubFirestore = [];
 
-    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'notifications'];
+    const syncCollections = ['projects', 'tasks', 'milestones', 'issues', 'comments', 'activities', 'members', 'invoices', 'bankGuarantees', 'dlpRecords', 'retentionRecords', 'companies', 'teams', 'admins', 'super_admins', 'notifications'];
 
     syncCollections.forEach(colName => {
       const unsub = this._db.collection(colName).onSnapshot(snapshot => {

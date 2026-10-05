@@ -1,7 +1,11 @@
 // ─── Hintonn PM Authentication & Session Management ───
 // Google OAuth + Email/Password login. No phone/mobile login.
-// Admin = mohithintonn@gmail.com ONLY.
+// SuperAdmin = mohithintonn@gmail.com, admin@hintonn.com.
 const Auth = {
+  _SUPER_ADMIN_EMAILS: ['mohithintonn@gmail.com', 'admin@hintonn.com'],
+  _DEFAULT_COMPANY_ID: 'comp_hintonn',
+  _DEFAULT_COMPANY_NAME: 'Hintonn PMO',
+
   // Pre-configured User Database (existing users are pre-approved)
   users: [
     {
@@ -10,6 +14,11 @@ const Auth = {
       loginId: 'Mohit',
       name: 'Mohit Jain',
       role: 'Admin',
+      isSuperAdmin: true,
+      adminLevel: 'super',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn PMO',
+      teamId: 'team_exec',
       email: 'mohithintonn@gmail.com',
       googleEmail: 'mohithintonn@gmail.com',
       initials: 'MJ',
@@ -22,6 +31,11 @@ const Auth = {
       loginId: 'admin',
       name: 'Mohit Jain',
       role: 'Admin',
+      isSuperAdmin: true,
+      adminLevel: 'super',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn PMO',
+      teamId: 'team_exec',
       email: 'admin@hintonn.com',
       googleEmail: 'mohithintonn@gmail.com',
       initials: 'MJ',
@@ -34,6 +48,9 @@ const Auth = {
       loginId: 'Preet',
       name: 'Preet Bhavsar',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn PMO',
+      teamId: 'team_ai',
       email: 'preethintonn@gmail.com',
       googleEmail: 'preethintonn@gmail.com',
       initials: 'PB',
@@ -46,6 +63,9 @@ const Auth = {
       loginId: 'Hirvi',
       name: 'Hirvi Sanghavi',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn PMO',
+      teamId: 'team_ai',
       email: 'hirvihintonn@gmail.com',
       googleEmail: 'hirvihintonn@gmail.com',
       initials: 'HS',
@@ -58,6 +78,9 @@ const Auth = {
       loginId: 'MohitDev',
       name: 'MOHIT JAIN',
       role: 'AI Developer',
+      companyId: 'comp_hintonn',
+      companyName: 'Hintonn PMO',
+      teamId: 'team_ai',
       email: 'mohitjain12104@gmail.com',
       googleEmail: 'mohitjain12104@gmail.com',
       initials: 'MJ',
@@ -140,8 +163,36 @@ const Auth = {
     return this.isAuthenticated();
   },
 
-  // ─── Admin email whitelist — ONLY this email gets Admin role ───
+  // ─── SuperAdmin and Admin verification ───
   _ADMIN_EMAILS: ['mohithintonn@gmail.com', 'admin@hintonn.com'],
+
+  isSuperAdmin() {
+    if (!this.currentUser) return false;
+    const email = (this.currentUser.email || this.currentUser.googleEmail || '').toLowerCase();
+    return this.currentUser.isSuperAdmin === true || this.currentUser.role === 'SuperAdmin' || this._SUPER_ADMIN_EMAILS.includes(email);
+  },
+
+  isAdmin() {
+    if (!this.currentUser) return false;
+    return this.isSuperAdmin() || this.currentUser.role === 'Admin';
+  },
+
+  getCompanyId() {
+    return (this.currentUser && this.currentUser.companyId) || this._DEFAULT_COMPANY_ID;
+  },
+
+  getCompanyName() {
+    return (this.currentUser && this.currentUser.companyName) || this._DEFAULT_COMPANY_NAME;
+  },
+
+  getTeamId() {
+    return (this.currentUser && this.currentUser.teamId) || 'team_ai';
+  },
+
+  canManageCompany(companyId) {
+    if (this.isSuperAdmin()) return true;
+    return this.isAdmin() && this.getCompanyId() === companyId;
+  },
 
   // RBAC Permission Matrix based on Role
   permissions: {
@@ -167,12 +218,14 @@ const Auth = {
     settings: ['ADMIN'],
     'audit-logs': ['ADMIN'],
     timeline: ['ADMIN'],
-    'user-approvals': ['ADMIN']
+    'user-approvals': ['ADMIN'],
+    companies: ['ADMIN']
   },
 
   hasAccess(module) {
     if (!this.currentUser) return false;
     const roleMap = {
+      'SuperAdmin': 'ADMIN',
       'Admin': 'ADMIN',
       'AI Developer': 'DEV',
       'Project Manager': 'PM',
@@ -191,12 +244,27 @@ const Auth = {
     const emailLower = (user.email || '').toLowerCase();
     const googleEmailLower = (user.googleEmail || '').toLowerCase();
     
-    const isAdmin = this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower);
+    const isSuper = this._SUPER_ADMIN_EMAILS.includes(emailLower) || this._SUPER_ADMIN_EMAILS.includes(googleEmailLower);
+    const isAdmin = isSuper || this._ADMIN_EMAILS.includes(emailLower) || this._ADMIN_EMAILS.includes(googleEmailLower) || user.role === 'Admin';
 
-    if (isAdmin) {
+    if (isSuper) {
+      user.role = 'Admin';
+      user.isSuperAdmin = true;
+      user.adminLevel = 'super';
+      user.approved = true;
+      user.companyId = user.companyId || this._DEFAULT_COMPANY_ID;
+      user.companyName = user.companyName || this._DEFAULT_COMPANY_NAME;
+      user.title = user.title || 'Executive PMO & Lead';
+    } else if (isAdmin) {
       user.role = 'Admin';
       user.approved = true;
-      user.title = user.title || 'Executive PMO & Lead';
+      user.companyId = user.companyId || this._DEFAULT_COMPANY_ID;
+      user.companyName = user.companyName || this._DEFAULT_COMPANY_NAME;
+      user.title = user.title || 'Company PMO Admin';
+    } else {
+      user.companyId = user.companyId || this._DEFAULT_COMPANY_ID;
+      user.companyName = user.companyName || this._DEFAULT_COMPANY_NAME;
+      user.teamId = user.teamId || 'team_ai';
     }
     return user;
   },

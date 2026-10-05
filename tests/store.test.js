@@ -281,3 +281,110 @@ describe('Stats', () => {
     assert.strictEqual(s.completedMilestones, 1);
   });
 });
+
+describe('Multi-tenant isolation & Admin governance', () => {
+  test('Super Admin & Company Admin tables and helper methods', () => {
+    assert.ok(Store.isSuperAdminEmail('mohithintonn@gmail.com'));
+    assert.ok(Store.isSuperAdminEmail('admin@hintonn.com'));
+    assert.ok(!Store.isSuperAdminEmail('random@buildcon.in'));
+
+    const saList = Store.getSuperAdmins();
+    assert.ok(saList.length >= 1);
+    assert.strictEqual(saList[0].email, 'mohithintonn@gmail.com');
+
+    const ca = Store.addCompanyAdmin({
+      email: 'ca@buildcon.in',
+      name: 'BuildCon Lead',
+      companyId: 'comp_buildcon',
+      companyName: 'BuildCon Infrastructure',
+      team: 'Civil Engineering'
+    });
+    assert.ok(ca.id);
+    const buildconAdmins = Store.getCompanyAdmins('comp_buildcon');
+    assert.ok(buildconAdmins.some(a => a.email === 'ca@buildcon.in'));
+    assert.strictEqual(Store.getCompanyAdmins('comp_metro').filter(a => a.email === 'ca@buildcon.in').length, 0);
+  });
+
+  test('Tenant isolation: company users cannot see other company data', () => {
+    // Create projects for different companies
+    const p1 = Store.createProject({ name: 'Metro Line', companyId: 'comp_metro' });
+    const p2 = Store.createProject({ name: 'Hintonn AI', companyId: 'comp_hintonn' });
+
+    // Simulate user from comp_metro
+    sb.Auth = {
+      getCurrentUser: () => ({ id: 'u_metro', email: 'worker@metro.in', role: 'Project Manager', companyId: 'comp_metro' }),
+      isSuperAdmin: () => false
+    };
+
+    const metroProjects = Store.getProjects();
+    assert.ok(metroProjects.some(p => p.id === p1.id));
+    assert.ok(!metroProjects.some(p => p.id === p2.id), 'Cross-tenant project data must not leak');
+
+    // Simulate user from comp_hintonn
+    sb.Auth = {
+      getCurrentUser: () => ({ id: 'u_hintonn', email: 'eng@hintonn.com', role: 'AI Developer', companyId: 'comp_hintonn' }),
+      isSuperAdmin: () => false
+    };
+
+    const hintonnProjects = Store.getProjects();
+    assert.ok(hintonnProjects.some(p => p.id === p2.id));
+    assert.ok(!hintonnProjects.some(p => p.id === p1.id), 'Cross-tenant project data must not leak');
+  });
+
+  test('Super Admin can switch views between all and specific companies', () => {
+    const p1 = Store.createProject({ name: 'Metro Line', companyId: 'comp_metro' });
+    const p2 = Store.createProject({ name: 'Hintonn AI', companyId: 'comp_hintonn' });
+
+    // Simulate Super Admin
+    sb.Auth = {
+      getCurrentUser: () => ({ id: 'sa', email: 'mohithintonn@gmail.com', role: 'Admin', isSuperAdmin: true, companyId: 'all' }),
+      isSuperAdmin: () => true
+    };
+
+    Store.setActiveCompany('all');
+    let allProjects = Store.getProjects();
+    assert.ok(allProjects.some(p => p.id === p1.id));
+    assert.ok(allProjects.some(p => p.id === p2.id));
+
+    // Switch view to comp_metro
+    Store.setActiveCompany('comp_metro');
+    let filtered = Store.getProjects();
+    assert.ok(filtered.some(p => p.id === p1.id));
+    assert.ok(!filtered.some(p => p.id === p2.id));
+
+    // Switch view to comp_hintonn
+    Store.setActiveCompany('comp_hintonn');
+    filtered = Store.getProjects();
+    assert.ok(!filtered.some(p => p.id === p1.id));
+    assert.ok(filtered.some(p => p.id === p2.id));
+  });
+
+  test('Department / team member filtering', () => {
+    Store.createMember({ id: 'm_ai', name: 'AI Engineer', companyId: 'comp_hintonn', team: 'AI & Technology' });
+    Store.createMember({ id: 'm_site', name: 'Site Supervisor', companyId: 'comp_hintonn', team: 'Operations & Site' });
+
+    sb.Auth = {
+      getCurrentUser: () => ({ id: 'adm', email: 'admin@hintonn.com', role: 'Admin', isSuperAdmin: true, companyId: 'all' }),
+      isSuperAdmin: () => true
+    };
+
+    const aiMembers = Store.getMembers('comp_hintonn', 'AI & Technology');
+    assert.ok(aiMembers.some(m => m.id === 'm_ai'));
+    assert.ok(!aiMembers.some(m => m.id === 'm_site'), 'Other department member excluded when team specified');
+  });
+
+  test('Financial and compliance records are isolated by tenant', () => {
+    const bg1 = Store.createBankGuarantee({ ref: 'BG-METRO', companyId: 'comp_metro' });
+    const bg2 = Store.createBankGuarantee({ ref: 'BG-HINTONN', companyId: 'comp_hintonn' });
+
+    sb.Auth = {
+      getCurrentUser: () => ({ id: 'fin_metro', email: 'fin@metro.gov', role: 'Finance', companyId: 'comp_metro' }),
+      isSuperAdmin: () => false
+    };
+
+    const metroBGs = Store.getBankGuarantees();
+    assert.ok(metroBGs.some(b => b.id === bg1.id));
+    assert.ok(!metroBGs.some(b => b.id === bg2.id), 'Cross-company bank guarantees must not leak');
+  });
+});
+

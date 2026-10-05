@@ -567,8 +567,13 @@ const Store = {
   },
 
   // Members
-  getMembers() { return (this._data && this._data.members) || []; },
-  getAssignees() { return ((this._data && this._data.members) || []).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
+  getMembers(companyId) {
+    const list = (this._data && this._data.members) || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(m => m.companyId === targetComp || (!m.companyId && targetComp === 'comp_hintonn'));
+  },
+  getAssignees(companyId) { return this.getMembers(companyId).filter(m => m.role !== 'Admin' && m.id !== 'm1'); },
   getMember(id) {
     if (!id) return null;
     return ((this._data && this._data.members) || []).find(m =>
@@ -584,8 +589,11 @@ const Store = {
 
   // Member CRUD
   createMember(d) {
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
     const m = { id: d.id || this._genId(), name: d.name, role: d.role || 'AI Developer',
       designation: d.designation || d.role || 'AI Developer', email: d.email || '',
+      companyId: d.companyId || activeComp,
+      teamId: d.teamId || '',
       initials: d.initials || '', color: d.color || '#2563EB' };
     this._data.members.push(m);
     this._addActivity('member', `Added team member <strong>${this._esc(m.name)}</strong> as ${m.designation}`);

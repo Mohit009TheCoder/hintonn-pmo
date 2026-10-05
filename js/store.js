@@ -305,11 +305,43 @@ const Store = {
   // ─── CRUD helpers ───
   _genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); },
 
+  // ─── Multi-Tenant Isolation & Scoping ───
+  _activeCompanyId: 'all',
+  getActiveCompanyId() {
+    if (typeof Auth !== 'undefined' && Auth.getCurrentUser && Auth.getCurrentUser()) {
+      if (Auth.isSuperAdmin && Auth.isSuperAdmin()) {
+        return this._activeCompanyId || 'all';
+      }
+      return (Auth.getCompanyId && Auth.getCompanyId()) || 'comp_hintonn';
+    }
+    return this._activeCompanyId || 'all';
+  },
+  setActiveCompanyId(companyId) {
+    if (typeof Auth !== 'undefined' && Auth.isSuperAdmin && !Auth.isSuperAdmin()) {
+      return false; // Company admins and developers are locked to their own company
+    }
+    this._activeCompanyId = companyId || 'all';
+    this._save();
+    this._notify();
+    return true;
+  },
+  isCompanyIsolated() {
+    return this.getActiveCompanyId() !== 'all';
+  },
+
   // Projects
-  getProjects() { return (this._data && this._data.projects) || []; },
+  getProjects(companyId) {
+    const list = (this._data && this._data.projects) || [];
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (!targetComp) return list;
+    return list.filter(p => p.companyId === targetComp || (!p.companyId && targetComp === 'comp_hintonn'));
+  },
   getProject(id) { return ((this._data && this._data.projects) || []).find(p => p.id === id); },
   createProject(d) {
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const compId = d.companyId || activeComp;
     const p = { id: this._genId(), name: d.name, description: d.description||'', type: d.type||'Business',
+      companyId: compId, teamId: d.teamId || '',
       status: 'planning', priority: d.priority||'medium', progress: 0,
       startDate: d.startDate||'', endDate: d.endDate||'', memberIds: d.memberIds||[],
       taskIds: [], milestoneIds: [], issueIds: [], tags: d.tags||[],
@@ -348,9 +380,23 @@ const Store = {
   },
 
   // Tasks
-  getTasks(projectId) {
-    const tasks = (this._data && this._data.tasks) || [];
-    return projectId ? tasks.filter(t => t.projectId === projectId && !t.isPersonal) : tasks;
+  getTasks(projectId, companyId, teamId) {
+    let tasks = (this._data && this._data.tasks) || [];
+    if (projectId) {
+      tasks = tasks.filter(t => t.projectId === projectId && !t.isPersonal);
+    }
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    if (targetComp) {
+      tasks = tasks.filter(t => {
+        if (t.companyId) return t.companyId === targetComp;
+        const p = this.getProject(t.projectId);
+        return (p && p.companyId) ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
+      });
+    }
+    if (teamId) {
+      tasks = tasks.filter(t => t.teamId === teamId);
+    }
+    return tasks;
   },
   getTask(id) { return ((this._data && this._data.tasks) || []).find(t => t.id === id); },
   createTask(d) {
@@ -380,7 +426,14 @@ const Store = {
     const createdBy = d.createdBy || (authUser ? (authUser.name || '') : '');
     const userId = d.userId || (authUser ? authUser.id : '') || creatorId;
 
+    const proj = d.projectId ? this.getProject(d.projectId) : null;
+    const activeComp = this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : 'comp_hintonn';
+    const taskCompanyId = d.companyId || (proj ? (proj.companyId || activeComp) : activeComp);
+    const taskTeamId = d.teamId || (proj ? (proj.teamId || '') : '');
+
     const t = { id: this._genId(), projectId: d.projectId || '', title: d.title, description: d.description||'',
+      companyId: taskCompanyId,
+      teamId: taskTeamId,
       isPersonal: isPersonal,
       completed: completed,
       status: d.status || (completed ? 'done' : 'todo'), priority: d.priority||'medium',

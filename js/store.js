@@ -1407,10 +1407,18 @@ const Store = {
   },
 
   // Stats
-  getStats() {
-    const projects = this._data.projects;
-    const tasks = this._data.tasks;
-    const issues = this._data.issues;
+  getStats(companyId) {
+    const projects = this.getProjects(companyId);
+    const targetComp = companyId || (this.getActiveCompanyId() !== 'all' ? this.getActiveCompanyId() : null);
+    const tasks = targetComp ? this.getTasks(null, targetComp) : (this._data.tasks || []);
+    const issues = targetComp ? (this._data.issues || []).filter(i => {
+      const p = this.getProject(i.projectId);
+      return p ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
+    }) : (this._data.issues || []);
+    const milestones = targetComp ? (this._data.milestones || []).filter(m => {
+      const p = this.getProject(m.projectId);
+      return p ? p.companyId === targetComp : (targetComp === 'comp_hintonn');
+    }) : (this._data.milestones || []);
     const now = new Date();
     return {
       totalProjects: projects.length,
@@ -1420,8 +1428,8 @@ const Store = {
       completedTasks: tasks.filter(t => t.status === 'done').length,
       overdueTasks: tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done').length,
       openIssues: issues.filter(i => i.status === 'open').length,
-      totalMilestones: this._data.milestones.length,
-      completedMilestones: this._data.milestones.filter(m => m.status === 'completed').length,
+      totalMilestones: milestones.length,
+      completedMilestones: milestones.filter(m => m.status === 'completed').length,
     };
   },
 
@@ -1704,8 +1712,30 @@ const Store = {
 
   // ─── Seed Data ───
   _seedData() {
+    const companies = [
+      { id: 'comp_hintonn', name: 'Hintonn PMO (HQ)', code: 'HIN', adminEmails: ['mohithintonn@gmail.com', 'admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
+      { id: 'comp_lnt', name: 'Larsen & Toubro PMO', code: 'LNT', adminEmails: ['lnt.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() },
+      { id: 'comp_tata', name: 'Tata Projects PMO', code: 'TATA', adminEmails: ['tata.admin@hintonn.com'], status: 'active', createdAt: new Date().toISOString() }
+    ];
+
+    const teams = [
+      { id: 'team_ai', companyId: 'comp_hintonn', name: 'AI & Software Engineering', leadId: 'm2', memberIds: ['m2', 'm4', 'm_1790601440429'], description: 'Antigravity AI PMO, ML agents, and full-stack delivery' },
+      { id: 'team_civil', companyId: 'comp_hintonn', name: 'Civil & EPC Site Operations', leadId: 'm1', memberIds: ['m1'], description: 'Site works, execution, and subcontractor delivery' },
+      { id: 'team_finance', companyId: 'comp_hintonn', name: 'Commercial & Financial Control', leadId: 'm3', memberIds: ['m3'], description: 'Invoicing, bank guarantees, DLP, and cash flow' }
+    ];
+
+    const admins = [
+      { id: 'admin_1', userId: 'mohit', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true },
+      { id: 'admin_2', userId: 'admin_hintonn', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', isActive: true }
+    ];
+
+    const super_admins = [
+      { id: 'super_1', email: 'mohithintonn@gmail.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true },
+      { id: 'super_2', email: 'admin@hintonn.com', name: 'Mohit Jain', role: 'SuperAdmin', isActive: true }
+    ];
+
     const members = [
-      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
+      { id: 'm3', name: 'Mohit Jain', role: 'Admin', designation: 'Executive PMO & Lead', color: '#4F46E5', email: 'mohithintonn@gmail.com', initials: 'MJ', companyId: 'comp_hintonn', companyName: 'Hintonn PMO', teamId: 'team_finance', activeTasks: 0, completedTasks: 0, hoursLogged: 0 }
     ];
 
     const projects = [];
@@ -1719,10 +1749,9 @@ const Store = {
     const bankGuarantees = [];
     const dlpRecords = [];
     const retentionRecords = [];
-    const companies = [];
 
     return { projects, tasks, members, milestones, issues, comments, notifications, activities,
-      invoices, bankGuarantees, dlpRecords, retentionRecords, companies,
+      invoices, bankGuarantees, dlpRecords, retentionRecords, companies, teams, admins, super_admins,
       settings: { workspaceName: 'Hintonn AI', currentUser: 'm3' } };
   }
 };

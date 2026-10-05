@@ -37,7 +37,10 @@ function loadServiceAccount() {
     for (const doc of snapshot.docs) {
       await doc.ref.update({
         role: 'Admin',
-        approved: true
+        // isActive is the field firestore.rules / User Approvals actually check
+        isActive: true,
+        isRejected: false,
+        approved: true // kept for older UI reads
       });
       console.log(`Updated user ${doc.id} (email match) to Admin and approved.`);
       found = true;
@@ -50,7 +53,10 @@ function loadServiceAccount() {
     for (const doc of gSnapshot.docs) {
       await doc.ref.update({
         role: 'Admin',
-        approved: true
+        // isActive is the field firestore.rules / User Approvals actually check
+        isActive: true,
+        isRejected: false,
+        approved: true // kept for older UI reads
       });
       console.log(`Updated user ${doc.id} (googleEmail match) to Admin and approved.`);
       found = true;

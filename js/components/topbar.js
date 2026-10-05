@@ -40,6 +40,49 @@ const Topbar = {
         avatar.style.background = user.color;
       }
     }
+
+    // Render Tenant Control (Company Switcher for Super Admin or Company Badge for Member)
+    let tenantControl = document.getElementById('topbar-tenant-control');
+    if (!tenantControl) {
+      tenantControl = document.createElement('div');
+      tenantControl.id = 'topbar-tenant-control';
+      tenantControl.className = 'topbar-tenant-control';
+      tenantControl.style.cssText = 'display:flex;align-items:center;margin-right:10px;';
+      const actions = document.querySelector('.topbar-actions');
+      if (actions && actions.parentNode) {
+        actions.parentNode.insertBefore(tenantControl, actions);
+      }
+    }
+
+    if (tenantControl) {
+      const isSuper = typeof Auth !== 'undefined' && typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin();
+      if (isSuper) {
+        const companies = (typeof Store !== 'undefined' && typeof Store.getCompanies === 'function') ? Store.getCompanies() : [];
+        const activeCid = (typeof Store !== 'undefined' && typeof Store.getActiveCompanyId === 'function') ? Store.getActiveCompanyId() : 'all';
+        tenantControl.innerHTML = `
+          <div style="display:inline-flex;align-items:center;gap:6px;background:var(--color-bg-card);border:1px solid var(--color-border-subtle);border-radius:var(--radius-md);padding:3px 8px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <span style="font-size:13px" title="Super Admin Tenant Switcher">🏢</span>
+            <select id="tenantCompanySelect" onchange="Store.setActiveCompany(this.value)" aria-label="Active Company Tenant" style="background:transparent;border:none;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;outline:none;padding:2px 0;">
+              <option value="all" ${activeCid === 'all' ? 'selected' : ''}>🏢 All Companies (Global)</option>
+              ${companies.map(c => `<option value="${Utils.escapeHtml(c.id)}" ${activeCid === c.id ? 'selected' : ''}>${Utils.escapeHtml(c.name)}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        const compName = (typeof Auth !== 'undefined' && Auth.getCompanyName && Auth.getCompanyName()) || 'Hintonn AI';
+        const teamName = (typeof Auth !== 'undefined' && Auth.getUserTeam && Auth.getUserTeam()) || 'AI & Tech';
+        const isCompAdmin = typeof Auth !== 'undefined' && typeof Auth.isCompanyAdmin === 'function' && Auth.isCompanyAdmin();
+        tenantControl.innerHTML = `
+          <div style="display:inline-flex;align-items:center;gap:6px;background:var(--color-bg-page);border:1px solid var(--color-border-subtle);border-radius:var(--radius-pill);padding:4px 10px;font-size:12px;">
+            <span style="font-size:12px">🏢</span>
+            <span style="font-weight:600;color:var(--color-text-primary);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${Utils.escapeHtml(compName)}">${Utils.escapeHtml(compName)}</span>
+            <span style="color:var(--color-border-strong);font-weight:400">·</span>
+            <span style="color:var(--color-primary-600);font-weight:600;font-size:11px">${Utils.escapeHtml(teamName)}</span>
+            ${isCompAdmin ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200);margin-left:2px">Admin</span>` : ''}
+          </div>
+        `;
+      }
+    }
   },
 
   getUserDropdown() {
@@ -62,18 +105,28 @@ const Topbar = {
     const dropdown = this.getUserDropdown();
     if (!dropdown) return;
     const user = (typeof Auth !== 'undefined' && Auth.getCurrentUser()) || { name: 'Mohit Jain', role: 'Admin', email: 'mohithintonn@gmail.com', initials: 'MJ', color: '#4F46E5' };
-    const isAdmin = user && user.role === 'Admin';
+    const isSuper = typeof Auth !== 'undefined' && typeof Auth.isSuperAdmin === 'function' && Auth.isSuperAdmin();
+    const isAdmin = user && (user.role === 'Admin' || isSuper);
+    const roleLabel = isSuper ? 'Super Admin' : (user.role === 'Admin' ? 'Company Admin' : (user.role || 'Member'));
+    const companyName = user.companyName || (typeof Auth !== 'undefined' && Auth.getCompanyName && Auth.getCompanyName()) || 'Hintonn AI';
+    const teamName = user.team || (typeof Auth !== 'undefined' && Auth.getUserTeam && Auth.getUserTeam()) || 'AI & Tech';
 
     dropdown.innerHTML = `
       <div style="padding:14px 16px;border-bottom:1px solid var(--color-border-subtle);background:var(--color-bg-page)">
-        <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);margin-bottom:3px">${Utils.escapeHtml(user.name)}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200)">${Utils.escapeHtml(user.role)}</span>
+        <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);margin-bottom:4px">${Utils.escapeHtml(user.name)}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-primary-50);color:var(--color-primary-700);border:1px solid var(--color-primary-200)">${Utils.escapeHtml(roleLabel)}</span>
+          <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:var(--color-bg-subtle);color:var(--color-text-secondary);border:1px solid var(--color-border-subtle)">🏢 ${Utils.escapeHtml(companyName)}</span>
         </div>
-        <div style="font-size:12px;color:var(--color-text-muted)">${user.googleEmail || user.email}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:3px">Team: <strong style="color:var(--color-text-secondary)">${Utils.escapeHtml(teamName)}</strong></div>
+        <div style="font-size:12px;color:var(--color-text-muted)">${Utils.escapeHtml(user.googleEmail || user.email || '')}</div>
       </div>
       <div style="padding:6px">
         ${isAdmin ? `
+        <a href="#user-approvals" class="menu-item dropdown-item" onclick="Topbar.closeUserMenu();App.navigate('user-approvals')">
+          ${Icons.users}
+          <span>User Approvals</span>
+        </a>
         <a href="#settings" class="menu-item dropdown-item" onclick="Topbar.closeUserMenu();App.navigate('settings')">
           ${Icons.settings}
           <span>Settings & Profile</span>

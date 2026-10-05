@@ -998,10 +998,17 @@ const Auth = {
   // ─── Admin: Add user directly (pre-approved) ───
   // No password handling here — the user signs up with their own password
   // through Firebase Authentication; this only registers the approved profile.
-  adminAddUser(name, email, role) {
+  adminAddUser(name, email, role, companyId, teamId) {
     const cleanName = (name || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanRole = role || 'AI Developer';
+    const targetCompId = companyId || this.getCompanyId();
+    let compName = this.getCompanyName();
+    if (typeof Store !== 'undefined' && typeof Store.getCompany === 'function') {
+      const c = Store.getCompany(targetCompId);
+      if (c && c.name) compName = c.name;
+    }
+    const targetTeamId = teamId || this.getTeamId();
 
     const existing = this.users.find(u =>
       (u.email && u.email.toLowerCase() === cleanEmail) ||
@@ -1018,6 +1025,7 @@ const Auth = {
     const newUser = {
       id: newId, memberId: newMemberId, loginId: cleanName.split(' ')[0] || cleanName,
       name: cleanName, role: cleanRole, email: cleanEmail,
+      companyId: targetCompId, companyName: compName, teamId: targetTeamId,
       googleEmail: cleanEmail, initials: initials, color: chosenColor,
       approved: true, approvedDate: new Date().toISOString(), requestSource: 'Admin Direct Add'
     };
@@ -1027,11 +1035,15 @@ const Auth = {
     if (typeof Store !== 'undefined' && typeof Store.getMembers === 'function') {
       const members = Store.getMembers();
       if (!members.some(m => m.email === cleanEmail)) {
-        Store.createMember({ id: newMemberId, name: cleanName, role: cleanRole, designation: cleanRole, email: cleanEmail, initials: initials, color: chosenColor, activeTasks: 0, completedTasks: 0, hoursLogged: 0 });
+        Store.createMember({
+          id: newMemberId, name: cleanName, role: cleanRole, designation: cleanRole,
+          email: cleanEmail, companyId: targetCompId, teamId: targetTeamId,
+          initials: initials, color: chosenColor, activeTasks: 0, completedTasks: 0, hoursLogged: 0
+        });
       }
     }
     if (typeof Store !== 'undefined' && typeof Store.addNotification === 'function') {
-      Store.addNotification({ type: 'user-approval', text: `👤 New team member <strong>${cleanName}</strong> (${cleanRole}) added by admin. Access auto-approved.` });
+      Store.addNotification({ type: 'user-approval', text: `👤 New team member <strong>${cleanName}</strong> (${cleanRole}) added by admin for ${compName}. Access auto-approved.` });
     }
     return { success: true, user: newUser };
   },
